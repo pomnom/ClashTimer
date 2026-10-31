@@ -38,14 +38,38 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
 
 **🏰 Multi desa** · **🎵 Nada notifikasi** (termasuk Alarm keras) — seperti versi sebelumnya
 
-**📱 Widget layar utama** (tahan lama layar HP → Widget → Clash Timer · desa)
-- Ukuran 4×2 (bisa diperbesar): otomatis menampilkan desa yang pekerjanya (builder, lab, pet,
-  Builder Base, Star Lab) **paling cepat bebas**
-- Builder: hitung mundur builder berikutnya + jumlah bebas; Lab (+Pet) atau Star Lab; saran berikutnya;
-  helper (Home) atau Clock Tower (Builder Base), dengan ikon bangunan
-- Tombol 🏠/🛠 di pojok untuk ganti Home Village ↔ Builder Base (menampilkan kapan sisi lain bebas)
-- Ketuk widget → buka tab Rencana desa itu. Diperbarui saat upgrade selesai, saat data berubah,
-  dan tiap 30 menit; mengikuti tema terang/gelap HP
+**📱 Widget layar utama** (tahan lama layar HP → Widget → Clash Timer · semua desa)
+- Ukuran 4×2 (bisa diperbesar): satu baris per desa dengan kolom Builder, Lab, Builder Base &
+  Star Lab — hitung mundur (< 24 jam) atau sisa hari/jam, **bebas** (hijau), "max" bila tidak ada
+  lagi yang bisa di-upgrade, "–" bila belum dibangun
+- Desa yang paling cepat bebas di atas; perbesar widget untuk menampilkan lebih banyak desa.
+  Baris bawah: saran untuk pekerja yang bebas, atau upgrade berikutnya yang selesai
+- Tablet: huruf lebih besar, baris mengisi tinggi widget, dan nama upgrade tampil di bawah tiap waktu
+- Ketuk baris → tab Rencana desa itu. Diperbarui saat upgrade selesai, saat data berubah, dan tiap
+  30 menit; mengikuti tema terang/gelap
+- Widget lama "Clash Timer · desa" sudah dihapus; bila masih ada di layar, hapus lalu pasang widget ini
+
+**🔔 Notifikasi interaktif**
+- "Upgrade selesai" menampilkan saran berikutnya untuk pekerja itu + tombol **Sudah dimulai**
+  (timer langsung dipasang tanpa membuka aplikasi)
+- Pengingat **Clock Tower siap lagi** (22 jam setelah boost gratis dicatat), **event dimulai** &
+  **berakhir besok**, dan **Gold Pass berakhir besok** (bila API diisi)
+
+**📋 Update cepat**
+- Setelah Copy export di game lalu membuka aplikasi: kartu "Export baru untuk … — Update"
+- Tekan lama ikon aplikasi → **Update desa**, atau tile Quick Settings **Update desa**
+
+**💰 Kebutuhan sumber daya**
+- Tab Rencana: total Gold/Elixir/DE (dan Gold/Elixir BB) untuk upgrade yang dimulai dalam
+  24 jam / 3 hari / 7 hari + upgrade termahal tiap sumber daya. Beranda: ringkasan 24 jam
+
+**🔑 API resmi Clash of Clans (opsional)** — Pengaturan → API resmi
+- Buat key di developer.clashofclans.com → My Account → Create New Key, IP address
+  **45.79.218.79** (proxy RoyaleAPI), salin Token, tempel di aplikasi
+- Otomatis: nama akun & clan, **jadwal CWL asli** clan Anda (menggantikan perkiraan tanggal 1),
+  akhir musim Gold Pass, dan peringatan bila export ketinggalan (level hero/TH di game lebih tinggi)
+- Key hanya disimpan di HP; permintaan lewat cocproxy.royaleapi.dev. Data event (Hammer Jam)
+  tidak tersedia di API resmi
 
 **⚙️ Opsi per desa — langsung di Beranda**
 - Kartu **Opsi desa ini** di Beranda: strategi saran, Gold Pass (Builder & Research Boost), CWL
