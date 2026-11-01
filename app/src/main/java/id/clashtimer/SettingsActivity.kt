@@ -171,6 +171,43 @@ class SettingsActivity : AppCompatActivity() {
                 "Data tiap perangkat terpisah: update di HP tidak mengubah widget di tablet (pakai Pindah data).",
         )
         box.addView(Ui.outlined(this, "Buka info aplikasi") { Background.openAppInfo(this) }.apply { isAllCaps = false }, Ui.matchWrap())
+
+        updateSection()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Kembali dari izin "Instal aplikasi tidak dikenal": lanjutkan update.
+        UpdateUi.resume(this)
+    }
+
+    // ---------------------------------------------------------------- update aplikasi
+
+    private fun updateSection() {
+        sub("🔄 Update aplikasi", "Langsung dari GitHub Releases (github.com/${Updater.REPO})")
+        val zone = java.time.ZoneId.systemDefault()
+        val installed = Updater.installedBuild(this)
+        val latest = Updater.latest(this)
+        val avail = Updater.available(this)
+        val status = when {
+            avail != null -> "build ${avail.build} tersedia (${Updater.mb(avail.size)})"
+            latest != null -> "sudah versi terbaru"
+            else -> "belum dicek"
+        }
+        val checked = Updater.lastChecked(this).takeIf { it > 0 }?.let { " · dicek ${Fmt.at(it, zone)}" } ?: ""
+        val err = Updater.lastError(this)?.let { "\nCek terakhir gagal: $it" } ?: ""
+        note("Terpasang: build $installed (versi ${Updater.installedName(this)}) · $status$checked$err")
+        if (avail != null) {
+            box.addView(Ui.filled(this, "⬆️ Unduh & pasang build ${avail.build}") { UpdateUi.start(this, avail) }
+                .apply { isAllCaps = false }, Ui.matchWrap())
+        }
+        box.addView(Ui.outlined(this, "Cek update sekarang") { UpdateUi.checkNow(this) { render() } }
+            .apply { isAllCaps = false }, Ui.matchWrap())
+        switchRow("Cek otomatis saat aplikasi dibuka", Updater.autoCheck(this)) { Updater.setAutoCheck(this, it) }
+        note("Ada build baru → kartu \"Update\" muncul di layar utama. APK diunduh di dalam aplikasi lalu langsung dihapus " +
+            "setelah diserahkan ke pemasang Android, jadi tidak memenuhi penyimpanan. Pertama kali Android meminta izin " +
+            "\"Instal aplikasi tidak dikenal\" untuk Clash Timer; setelah itu cukup ketuk Update di konfirmasi Android " +
+            "(HyperOS bisa menambah pemindaian keamanan). Data tetap aman karena kunci tanda tangannya sama.")
     }
 
     // ---------------------------------------------------------------- pindah data

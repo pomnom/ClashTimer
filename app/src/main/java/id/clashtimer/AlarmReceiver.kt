@@ -67,6 +67,8 @@ class AlarmReceiver : BroadcastReceiver() {
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         runCatching { Attacks.schedule(context) }
+        // Setelah update terpasang (MY_PACKAGE_REPLACED): pastikan file APK unduhan sudah terhapus.
+        Updater.cleanup(context)
         val pending = goAsync()
         AlarmReceiver.processDue(context) { pending.finish() }
     }

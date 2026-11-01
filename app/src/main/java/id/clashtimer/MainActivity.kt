@@ -87,6 +87,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Notifier.createChannels(this)
+        Updater.cleanup(this) // sisa unduhan update yang gagal / sudah terpasang
         savedInstanceState?.let { st ->
             st.getString("tab")?.let { t -> runCatching { tab = Tab.valueOf(t) } }
             showBB = st.getBoolean("bb", false)
@@ -230,6 +231,8 @@ class MainActivity : AppCompatActivity() {
         handler.removeCallbacks(tick)
         handler.post(tick)
         ApiSync.maybeSync(this)
+        UpdateUi.resume(this)
+        Updater.maybeCheck(this) { renderBody() }
     }
 
     override fun onPause() {
@@ -446,6 +449,7 @@ class MainActivity : AppCompatActivity() {
         scroll2?.visibility = if (split) View.VISIBLE else View.GONE
         if (tag == null) {
             addClipOffer(body)
+            UpdateUi.offer(this, body)
             addWarnings(body)
             body.addView(Ui.text(this,
                 "Belum ada desa.\n\nDi Clash of Clans: Settings → More Settings → paling bawah \"Export village data\" → Copy.\n\n" +
@@ -458,6 +462,7 @@ class MainActivity : AppCompatActivity() {
         }
         val b = planFor(tag)
         addClipOffer(body)
+        UpdateUi.offer(this, body)
         try {
             if (split && right != null) {
                 HomeView.render(this, body, tag, showBB, b)

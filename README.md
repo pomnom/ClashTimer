@@ -171,6 +171,15 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
 **📦 Pindah data & cadangan** (Pengaturan) — Salin semua data / Tempel data (HP ↔ tablet) atau simpan /
   buka file cadangan .json: desa, timer, opsi, riwayat & API key.
 
+**🔄 Update dari dalam aplikasi** (Pengaturan → Update aplikasi)
+- Saat aplikasi dibuka (paling sering tiap 3 jam) Clash Timer mengecek rilis terbaru di GitHub
+  (`build-N` = nomor versi aplikasi). Ada yang baru → kartu **Update** di layar utama
+- Ketuk Update → APK diunduh dengan progres (ukuran & checksum diperiksa) → konfirmasi pemasangan Android.
+  Pertama kali Android meminta izin "Instal aplikasi tidak dikenal" untuk Clash Timer; di Android 12+
+  update berikutnya bisa tanpa konfirmasi (bila sistem HP mengizinkan)
+- File APK dihapus begitu diserahkan ke pemasang Android; sisa unduhan yang gagal dihapus saat aplikasi
+  dibuka atau setelah update terpasang — tidak memenuhi penyimpanan HP
+
 **🖥️ Layar lebar** — di tablet atau HP landscape, Beranda dan Rencana tampil berdampingan.
 
 **Data game tambahan**
@@ -189,8 +198,10 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
 2. Upload `ClashTimer.zip` yang baru → **Commit changes**.
 3. GitHub Actions otomatis mengekstrak zip ke repo (README, kode & resource ikut terbarui; file yang
    sudah tidak ada di zip ikut terhapus), menghapus zip-nya, lalu membuat APK.
-4. Tunggu tab **Actions** selesai, lalu unduh APK dari **Releases** dan install di atas versi lama
-   (data tetap aman karena kunci tanda tangan sama).
+4. Tunggu tab **Actions** selesai. Buka Clash Timer → kartu **⬆️ build baru tersedia → Update**
+   (atau Pengaturan → Update aplikasi → Cek update sekarang): APK diunduh di dalam aplikasi, dipasang lewat
+   konfirmasi Android, dan file-nya langsung dihapus. Data tetap aman karena kunci tanda tangan sama.
+   Mengunduh APK manual dari **Releases** tetap bisa.
 - Folder `.github/workflows` tidak ikut diperbarui dari zip (token Actions tidak boleh mengubah file
   workflow) — bila workflow berubah, salin manual dari `.github/workflows/build-apk.yml`.
 - Mengedit file langsung di GitHub (tanpa zip) juga langsung dibuatkan APK dari kode di repo.
