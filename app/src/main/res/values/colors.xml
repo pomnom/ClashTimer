@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="launcher_bg">#2E7D32</color>
+
+    <!-- Widget (tema terang); versi gelap ada di values-night -->
+    <color name="widget_bg">#F5FFFFFF</color>
+    <color name="widget_text">#1B1C18</color>
+    <color name="widget_text2">#5F6159</color>
+    <color name="widget_green">#2E7D32</color>
+    <color name="widget_accent">#9A5F0E</color>
+    <color name="widget_divider">#26888780</color>
+</resources>

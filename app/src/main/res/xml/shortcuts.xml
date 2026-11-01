@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_import"
+        android:shortcutId="import_clipboard"
+        android:shortcutLongLabel="@string/shortcut_import_long"
+        android:shortcutShortLabel="@string/shortcut_import_short">
+        <intent
+            android:action="id.clashtimer.IMPORT_CLIPBOARD"
+            android:targetClass="id.clashtimer.MainActivity"
+            android:targetPackage="id.clashtimer" />
+    </shortcut>
+</shortcuts>

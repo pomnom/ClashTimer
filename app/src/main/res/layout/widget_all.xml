@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget "Semua desa": satu baris per desa (Builder, Lab, Builder Base, Star Lab).
+     a_rows sengaja kosong: Widgets.kt mengisinya dengan widget_all_row untuk tiap desa. Sebelum
+     pembaruan pertama widget hanya menampilkan "Memuat…" (tidak ada data contoh yang terlihat seperti
+     data asli). Pratinjau di daftar widget: widget_all_preview. Alias widget_all_b (values/layouts.xml)
+     menunjuk ke layout ini. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/a_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:orientation="vertical"
+    android:paddingStart="12dp"
+    android:paddingTop="8dp"
+    android:paddingEnd="12dp"
+    android:paddingBottom="8dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/a_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="🏰 Semua desa"
+            android:textColor="@color/widget_text"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/a_summary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:maxLines="1"
+            android:textColor="@color/widget_text2"
+            android:textSize="12sp" />
+
+        <!-- Jam terakhir diperbarui; ketuk untuk memperbarui -->
+        <TextView
+            android:id="@+id/a_refresh"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:maxLines="1"
+            android:paddingStart="4dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:text="↻"
+            android:textColor="@color/widget_text2"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <!-- Judul kolom -->
+    <LinearLayout
+        android:id="@+id/a_cols"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="2dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="16dp"
+            android:layout_weight="1.25" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="16dp"
+            android:layout_weight="1"
+            android:autoSizeMaxTextSize="11sp"
+            android:autoSizeMinTextSize="7sp"
+            android:autoSizeStepGranularity="1sp"
+            android:autoSizeTextType="uniform"
+            android:gravity="center_vertical"
+            android:maxLines="1"
+            android:text="🔨 Builder"
+            android:textColor="@color/widget_text2" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="16dp"
+            android:layout_weight="1"
+            android:autoSizeMaxTextSize="11sp"
+            android:autoSizeMinTextSize="7sp"
+            android:autoSizeStepGranularity="1sp"
+            android:autoSizeTextType="uniform"
+            android:gravity="center_vertical"
+            android:maxLines="1"
+            android:text="🧪 Lab"
+            android:textColor="@color/widget_text2" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="16dp"
+            android:layout_weight="1"
+            android:autoSizeMaxTextSize="11sp"
+            android:autoSizeMinTextSize="7sp"
+            android:autoSizeStepGranularity="1sp"
+            android:autoSizeTextType="uniform"
+            android:gravity="center_vertical"
+            android:maxLines="1"
+            android:text="🛠 BB"
+            android:textColor="@color/widget_text2" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="16dp"
+            android:layout_weight="1"
+            android:autoSizeMaxTextSize="11sp"
+            android:autoSizeMinTextSize="7sp"
+            android:autoSizeStepGranularity="1sp"
+            android:autoSizeTextType="uniform"
+            android:gravity="center_vertical"
+            android:maxLines="1"
+            android:text="⭐ Star Lab"
+            android:textColor="@color/widget_text2" />
+    </LinearLayout>
+
+    <!-- Pesan (memuat / belum ada desa); disembunyikan saat baris desa tampil -->
+    <TextView
+        android:id="@+id/a_message"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:ellipsize="end"
+        android:maxLines="3"
+        android:text="⏳ Memuat… Bila tidak berubah, buka Clash Timer sekali."
+        android:textColor="@color/widget_text2"
+        android:textSize="12sp" />
+
+    <LinearLayout
+        android:id="@+id/a_rows"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
+
+    <FrameLayout
+        android:id="@+id/a_footer_line"
+        android:layout_width="match_parent"
+        android:layout_height="0.5dp"
+        android:background="@color/widget_divider"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/a_footer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="@color/widget_text2"
+        android:textSize="12sp"
+        android:visibility="gone" />
+</LinearLayout>

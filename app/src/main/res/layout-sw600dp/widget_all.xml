@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tablet (sw600dp): huruf lebih besar, baris mengisi tinggi widget, catatan bawah di dasar.
+     a_rows sengaja kosong (diisi Widgets.kt); sebelum pembaruan pertama hanya tampil "Memuat…".
+     Pratinjau di daftar widget: widget_all_preview. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/a_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:orientation="vertical"
+    android:paddingStart="20dp"
+    android:paddingTop="16dp"
+    android:paddingEnd="20dp"
+    android:paddingBottom="14dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/a_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="🏰 Semua desa"
+            android:textColor="@color/widget_text"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/a_summary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:maxLines="1"
+            android:textColor="@color/widget_text2"
+            android:textSize="15sp" />
+
+        <!-- Jam terakhir diperbarui; ketuk untuk memperbarui -->
+        <TextView
+            android:id="@+id/a_refresh"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:maxLines="1"
+            android:paddingStart="6dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:text="↻"
+            android:textColor="@color/widget_text2"
+            android:textSize="15sp" />
+    </LinearLayout>
+
+    <!-- Judul kolom -->
+    <LinearLayout
+        android:id="@+id/a_cols"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:layout_marginBottom="4dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="22dp"
+            android:layout_weight="1.2" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="22dp"
+            android:layout_weight="1"
+            android:autoSizeMaxTextSize="15sp"
+            android:autoSizeMinTextSize="10sp"
+            android:autoSizeStepGranularity="1sp"
+            android:autoSizeTextType="uniform"
+            android:gravity="center_vertical"
+            android:maxLines="1"
+            android:paddingEnd="10dp"
+            android:text="🔨 Builder"
+            android:textColor="@color/widget_text2" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="22dp"
+            android:layout_weight="1"
+            android:autoSizeMaxTextSize="15sp"
+            android:autoSizeMinTextSize="10sp"
+            android:autoSizeStepGranularity="1sp"
+            android:autoSizeTextType="uniform"
+            android:gravity="center_vertical"
+            android:maxLines="1"
+            android:paddingEnd="10dp"
+            android:text="🧪 Lab"
+            android:textColor="@color/widget_text2" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="22dp"
+            android:layout_weight="1"
+            android:autoSizeMaxTextSize="15sp"
+            android:autoSizeMinTextSize="10sp"
+            android:autoSizeStepGranularity="1sp"
+            android:autoSizeTextType="uniform"
+            android:gravity="center_vertical"
+            android:maxLines="1"
+            android:paddingEnd="10dp"
+            android:text="🛠 BB"
+            android:textColor="@color/widget_text2" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="22dp"
+            android:layout_weight="1"
+            android:autoSizeMaxTextSize="15sp"
+            android:autoSizeMinTextSize="10sp"
+            android:autoSizeStepGranularity="1sp"
+            android:autoSizeTextType="uniform"
+            android:gravity="center_vertical"
+            android:maxLines="1"
+            android:text="⭐ Star Lab"
+            android:textColor="@color/widget_text2" />
+    </LinearLayout>
+
+    <!-- Pesan (memuat / belum ada desa); disembunyikan saat baris desa tampil -->
+    <TextView
+        android:id="@+id/a_message"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:ellipsize="end"
+        android:maxLines="3"
+        android:text="⏳ Memuat… Bila tidak berubah, buka Clash Timer sekali."
+        android:textColor="@color/widget_text2"
+        android:textSize="15sp" />
+
+    <LinearLayout
+        android:id="@+id/a_rows"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical" />
+
+    <FrameLayout
+        android:id="@+id/a_footer_line"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/widget_divider"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/a_footer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="@color/widget_text2"
+        android:textSize="15sp"
+        android:visibility="gone" />
+</LinearLayout>

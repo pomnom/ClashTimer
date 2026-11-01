@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Alias widget_all dengan id berbeda. Widgets.kt bergantian memakai widget_all dan widget_all_b
+         setiap kali memperbarui widget, sehingga launcher selalu membuat tampilan baru dan tidak
+         menimpa tampilan lama (mis. layout dari versi aplikasi sebelumnya yang masih tersimpan). -->
+    <item name="widget_all_b" type="layout">@layout/widget_all</item>
+</resources>

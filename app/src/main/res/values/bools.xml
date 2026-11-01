@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- true di tablet (values-sw600dp): widget memakai layout besar dengan nama upgrade per kolom -->
+    <bool name="widget_large">false</bool>
+</resources>

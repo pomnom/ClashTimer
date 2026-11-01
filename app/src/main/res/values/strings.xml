@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Clash Timer</string>
+    <string name="widget_all_desc">Builder, Lab, Builder Base &amp; Star Lab semua desa dalam satu widget</string>
+    <string name="shortcut_import_short">Update desa</string>
+    <string name="shortcut_import_long">Update desa dari clipboard</string>
+    <string name="tile_import">Update desa</string>
+</resources>
