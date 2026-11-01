@@ -54,7 +54,8 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
 - **Builder ke-6 (B.O.B)**: checklist 6 syarat (BH9 + B.O.B Control, 3 gear-up, troop Lv18,
   pertahanan Lv9, BM + BC = 45) dengan perkiraan tanggal tiap syarat dan tanggal B.O.B terbuka. Bangunan
   **dan jebakan** baru (mis. Mine, Mega Mine) dipasang dulu supaya Builder Hall bisa naik ke BH9
-- Jam tidur/kerja, sesi helper, hero yang ditunda karena CWL, potongan event
+- Jam tidur/kerja, sesi helper, potongan event. Hero yang bentrok CWL **tidak dimasukkan ke saran & antrean**
+  selama CWL — cukup disebut sekali di banner CWL (Beranda & Rencana), lalu dilanjutkan setelah CWL selesai
 
 **📊 Progres**
 - Persentase menuju max TH/BH, perkiraan bulan selesai builder & lab, hari kerja tersisa

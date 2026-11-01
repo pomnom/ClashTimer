@@ -35,6 +35,12 @@ object PlanView {
             return
         }
         targetCard(act, box, b, sim, bb, zone)
+        if (!bb && sim.cwlDeferred.isNotEmpty() && ps.cwl.enabled) {
+            val w = ps.cwl.next(now)
+            box.addView(Ui.banner(act,
+                "⚔️ CWL ${Fmt.dateShort(w.first, zone)}–${Fmt.dateShort(w.last + 1, zone)}: upgrade " + sim.cwlDeferred.joinToString(", ") +
+                    " ditunda — tidak dimasukkan ke antrean selama CWL, dilanjutkan setelah CWL selesai.", Ui.GOLD))
+        }
         val mode = pref(act, "plan_mode")
         modeRow(act, box, mode)
         if (mode == 1) timeline(act, box, b, sim, bb, now, zone)

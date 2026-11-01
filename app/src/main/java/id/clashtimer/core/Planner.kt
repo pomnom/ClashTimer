@@ -207,6 +207,8 @@ class SimResult(
     val heroDone: Long? = null,
     /** Town Hall berikutnya selesai (strategi Rush TH). */
     val hallDone: Long? = null,
+    /** Hero yang ditunda karena CWL (tidak dimasukkan ke antrean selama CWL). */
+    val cwlDeferred: List<String> = emptyList(),
 )
 
 /** Ringkasan urutan tercepat untuk ditampilkan & disimpan (tanpa hasil simulasinya). */
@@ -813,6 +815,9 @@ object Planner {
         val rushHall = ps.strategy == Strategy.RUSH && Lane.BUILDER in lanesWanted
         var hallDone: Long? = null
         var heroDone: Long? = null
+        val cwlDeferred = LinkedHashSet<String>()
+        // Hanya CWL terdekat yang dilaporkan (CWL bulan berikutnya belum relevan).
+        val nearCwlEnd = if (ps.cwl.enabled) ps.cwl.next(now).last else Long.MIN_VALUE
 
         // Kebutuhan sumber daya per rentang waktu (dihitung untuk semua langkah, bukan hanya yang disimpan)
         val windows = longArrayOf(DAY, 3 * DAY, 7 * DAY)
@@ -897,7 +902,6 @@ object Planner {
 
             val lane = nextLane.lane
             var best: Scored? = null
-            var bestBlocked: Scored? = null
             var cwlBlocked: Long? = null
             if (sixthMode && lane.bb) {
                 val opts = Sixth.options(v, gd, lane, ps).map { (c, tier) -> score(c, tStart, ps, tier = tier) }
@@ -914,7 +918,7 @@ object Planner {
                         val w = ps.cwl.overlap(s.start, s.finish)
                         if (w != null) {
                             cwlBlocked = minOf(cwlBlocked ?: Long.MAX_VALUE, w.last + 1)
-                            if (bestBlocked == null || s.score > bestBlocked.score) bestBlocked = s
+                            if (w.first <= nearCwlEnd) cwlDeferred += c.item.name
                             continue
                         }
                     }
@@ -938,10 +942,9 @@ object Planner {
                 nextLane.lastFinish = pick.finish
                 addNeed(pick)
                 if (steps.size < keepSteps) {
-                    val blocked = bestBlocked
-                    val note = blocked?.takeIf { it.score > pick.score }?.let { "⚔️ ${it.c.item.name} ditunda (CWL)" } ?: pick.reason
+                    // Hero yang ditunda karena CWL tidak disebut di tiap langkah (lihat SimResult.cwlDeferred).
                     steps += PlannedStep(
-                        lane, nextLane.index, c.shortTitle, pick.start, pick.finish, pick.idle, note, pick.duration,
+                        lane, nextLane.index, c.shortTitle, pick.start, pick.finish, pick.idle, pick.reason, pick.duration,
                         c.item, c.fromLevel, c.toLevel, c.isNew, c.gear, false, pick.cost, pick.event?.name, pick.tier,
                     )
                 }
@@ -968,7 +971,7 @@ object Planner {
         return SimResult(
             doneFor(Lane.BUILDER), doneFor(Lane.LAB), doneFor(Lane.PET),
             doneFor(Lane.BB_BUILDER), doneFor(Lane.STAR_LAB), steps, builderIdle, truncated, helperEvents,
-            running, sixth, needs, heroDone, hallDone,
+            running, sixth, needs, heroDone, hallDone, cwlDeferred.toList(),
         )
     }
 

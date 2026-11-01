@@ -184,9 +184,12 @@ object HomeView {
         if (!bb && b != null && b.ps.cwl.enabled) {
             val w = b.ps.cwl.next(now)
             if (w.first - now < 3 * DAY) {
-                val txt = if (now >= w.first) "⚔️ CWL berlangsung sampai ${Fmt.at(w.last + 1, zone)} · hero yang bentrok tidak disarankan"
-                else "⚔️ CWL mulai ${Fmt.at(w.first, zone)} · hero yang bentrok tidak disarankan"
-                box.addView(Ui.banner(act, txt, Ui.GOLD).also { topMargin(it, act, 12) })
+                // Hero yang ditunda tidak masuk saran & antrean; cukup disebut di sini.
+                val deferred = b.slots.filter { it.lane == Lane.BUILDER }.flatMap { it.cwlSkipped }.map { it.item.name }.distinct()
+                val names = if (deferred.isEmpty()) "upgrade hero yang bentrok ditunda" else "ditunda: " + deferred.joinToString(", ")
+                val txt = if (now >= w.first) "⚔️ CWL berlangsung sampai ${Fmt.at(w.last + 1, zone)} · $names"
+                else "⚔️ CWL mulai ${Fmt.at(w.first, zone)} · $names"
+                box.addView(Ui.banner(act, "$txt (dilanjutkan setelah CWL)", Ui.GOLD).also { topMargin(it, act, 12) })
             }
             val fin = ups.associate { it.id to it.finishAt }
             for (i in b.village.insts) {
@@ -410,9 +413,6 @@ object HomeView {
                 line.addView(tc, Ui.weight1())
                 wrap.addView(line)
                 pick.reason?.let { wrap.addView(Ui.muted(act, it)) }
-                if (slot.cwlSkipped.isNotEmpty()) {
-                    wrap.addView(Ui.muted(act, "⚔️ Ditunda karena CWL: " + slot.cwlSkipped.joinToString(", ") { it.item.name }))
-                }
                 eventTip(act, b, pick)?.let { wrap.addView(it) }
                 sixthNote(act, b, slot, pick)?.let { wrap.addView(it) }
                 val r = Ui.hbox(act).apply { setPadding(0, Ui.dp(act, 6), 0, 0) }
@@ -786,11 +786,6 @@ object HomeView {
                 })
             }
             if (list.isEmpty()) col.addView(Ui.muted(act, "Tidak ada upgrade yang tersedia.", Ui.BODY_M))
-            if (slot.cwlSkipped.isNotEmpty()) {
-                col.addView(Ui.muted(act, "⚔️ Disembunyikan (CWL): " + slot.cwlSkipped.joinToString(", ") { it.title }).apply {
-                    setPadding(Ui.dp(act, 4), Ui.dp(act, 8), 0, 0)
-                })
-            }
             val title = if (canStart) "Pilih yang Anda mulai" else "Opsi saat bebas ${Fmt.at(slot.start, zone)}"
             dialog = MaterialAlertDialogBuilder(act)
                 .setTitle(title)
