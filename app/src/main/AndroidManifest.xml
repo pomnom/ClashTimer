@@ -13,10 +13,6 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- Ikon (assets.clashk.ing), API Clash of Clans, dan cek update di GitHub. -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Memasang update Clash Timer yang diunduh dari GitHub Releases (selalu dengan konfirmasi Android). -->
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
-    <!-- Android 12+: update berikutnya bisa tanpa konfirmasi bila Clash Timer sudah tercatat sebagai pemasangnya. -->
-    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
 
     <!-- Membuka Clash of Clans dari notifikasi pengingat serangan -->
     <queries>
@@ -103,11 +99,6 @@
         <!-- Cek serangan war / CWL / Raid lewat API -->
         <receiver
             android:name=".AttackReceiver"
-            android:exported="false" />
-
-        <!-- Hasil pemasangan update (PackageInstaller) -->
-        <receiver
-            android:name=".UpdateReceiver"
             android:exported="false" />
 
         <receiver

@@ -175,12 +175,6 @@ class SettingsActivity : AppCompatActivity() {
         updateSection()
     }
 
-    override fun onResume() {
-        super.onResume()
-        // Kembali dari izin "Instal aplikasi tidak dikenal": lanjutkan update.
-        UpdateUi.resume(this)
-    }
-
     // ---------------------------------------------------------------- update aplikasi
 
     private fun updateSection() {
@@ -204,10 +198,10 @@ class SettingsActivity : AppCompatActivity() {
         box.addView(Ui.outlined(this, "Cek update sekarang") { UpdateUi.checkNow(this) { render() } }
             .apply { isAllCaps = false }, Ui.matchWrap())
         switchRow("Cek otomatis saat aplikasi dibuka", Updater.autoCheck(this)) { Updater.setAutoCheck(this, it) }
-        note("Ada build baru → kartu \"Update\" muncul di layar utama. APK diunduh di dalam aplikasi lalu langsung dihapus " +
-            "setelah diserahkan ke pemasang Android, jadi tidak memenuhi penyimpanan. Pertama kali Android meminta izin " +
-            "\"Instal aplikasi tidak dikenal\" untuk Clash Timer; setelah itu cukup ketuk Update di konfirmasi Android " +
-            "(HyperOS bisa menambah pemindaian keamanan). Data tetap aman karena kunci tanda tangannya sama.")
+        note("Ada build baru → kartu \"Update\" muncul di layar utama. APK diunduh lewat pengunduh Android, lalu dipasang " +
+            "dari notifikasi \"Unduhan selesai\" (atau daftar Unduhan). File APK dihapus otomatis begitu build baru dibuka, " +
+            "atau setelah 3 hari bila tidak dipasang. Clash Timer sengaja tidak memasang APK sendiri supaya tidak ditandai " +
+            "Play Protect. Data tetap aman karena kunci tanda tangannya sama.")
     }
 
     // ---------------------------------------------------------------- pindah data

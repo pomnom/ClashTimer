@@ -1,8 +1,5 @@
 package id.clashtimer
 
-import android.content.Intent
-import android.net.Uri
-import android.provider.Settings
 import android.view.Gravity
 import android.widget.LinearLayout
 import android.widget.ProgressBar
@@ -11,13 +8,9 @@ import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import id.clashtimer.core.Fmt
 import java.time.ZoneId
-import java.util.concurrent.atomic.AtomicBoolean
 
-/** Tampilan update aplikasi: kartu "versi baru", dialog unduhan, izin pemasangan. */
+/** Tampilan update aplikasi: kartu "versi baru", dialog unduhan, langkah pasang. */
 object UpdateUi {
-
-    /** Rilis yang menunggu izin "Instal aplikasi tidak dikenal"; dilanjutkan saat kembali ke aplikasi. */
-    private var pending: Updater.Release? = null
 
     /** Kartu di layar utama bila ada build baru di GitHub. */
     fun offer(act: MainActivity, box: LinearLayout) {
@@ -26,7 +19,7 @@ object UpdateUi {
         val (card, col) = Ui.card(act, padV = 12, tinted = true)
         col.addView(Ui.text(act, "⬆️ Clash Timer build ${r.build} tersedia", Ui.TITLE_S))
         val date = if (r.publishedAt > 0) " · ${Fmt.at(r.publishedAt, ZoneId.systemDefault())}" else ""
-        col.addView(Ui.muted(act, "Terpasang build ${Updater.installedBuild(act)} · ${Updater.mb(r.size)}$date · diunduh & dipasang langsung dari aplikasi"))
+        col.addView(Ui.muted(act, "Terpasang build ${Updater.installedBuild(act)} · ${Updater.mb(r.size)}$date · diunduh di aplikasi, APK dihapus otomatis"))
         val row = LinearLayout(act).apply { gravity = Gravity.END }
         row.addView(Ui.flat(act, "Nanti") {
             Updater.dismiss(act, r.build)
@@ -37,86 +30,126 @@ object UpdateUi {
         box.addView(card)
     }
 
-    /** Dipanggil di onResume: lanjutkan update setelah izin pemasangan diberikan. */
-    fun resume(act: AppCompatActivity) {
-        val r = pending ?: return
-        if (!Updater.canInstall(act)) return
-        pending = null
-        start(act, r)
+    /**
+     * Unduh lewat pengunduh Android (notifikasi progres), lalu pasang dari Unduhan. Aplikasi ini sengaja tidak
+     * memasang APK sendiri: izin itu membuat Play Protect menandai Clash Timer sebagai tidak aman.
+     */
+    fun start(act: AppCompatActivity, r: Updater.Release) {
+        val app = act.applicationContext
+        // Sudah diunduh sebelumnya: langsung ke langkah pasang.
+        val prev = Updater.download(app)
+        if (prev != null && prev.second == r.build) {
+            val p = Updater.progress(app, prev.first)
+            when (p?.status) {
+                android.app.DownloadManager.STATUS_SUCCESSFUL -> { ready(act, r); return }
+                android.app.DownloadManager.STATUS_RUNNING, android.app.DownloadManager.STATUS_PENDING,
+                android.app.DownloadManager.STATUS_PAUSED -> { watch(act, r, prev.first); return }
+            }
+        }
+        val id = runCatching { Updater.enqueue(app, r) }.getOrElse { e ->
+            failed(act, r, e.message ?: "tidak bisa mulai mengunduh")
+            return
+        }
+        watch(act, r, id)
     }
 
-    fun start(act: AppCompatActivity, r: Updater.Release) {
-        if (Updater.busy.get()) {
-            Toast.makeText(act, "Update sedang diunduh…", Toast.LENGTH_SHORT).show()
-            return
-        }
-        if (!Updater.canInstall(act)) {
-            pending = r
-            MaterialAlertDialogBuilder(act)
-                .setTitle("Izinkan pemasangan update")
-                .setMessage("Android perlu izin \"Instal aplikasi tidak dikenal\" untuk Clash Timer (sekali saja). " +
-                    "Aktifkan di halaman berikutnya lalu kembali ke Clash Timer — update langsung berlanjut.")
-                .setPositiveButton("Buka pengaturan") { _, _ ->
-                    runCatching {
-                        act.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${act.packageName}")))
-                    }.onFailure {
-                        pending = null
-                        Toast.makeText(act, "Buka Pengaturan HP → Aplikasi → Clash Timer → Instal aplikasi tidak dikenal", Toast.LENGTH_LONG).show()
-                    }
-                }
-                .setNegativeButton("Batal") { _, _ -> pending = null }
-                .show()
-            return
-        }
-
+    /** Dialog progres: membaca status unduhan tiap ½ detik. */
+    private fun watch(act: AppCompatActivity, r: Updater.Release, id: Long) {
+        val app = act.applicationContext
         val pad = Ui.dp(act, 20)
         val col = Ui.vbox(act).apply { setPadding(pad, Ui.dp(act, 8), pad, 0) }
-        val label = Ui.muted(act, "Menghubungi GitHub…", Ui.BODY_M)
+        val label = Ui.muted(act, "Menyiapkan unduhan…", Ui.BODY_M)
         val bar = ProgressBar(act, null, android.R.attr.progressBarStyleHorizontal).apply { max = 1000; isIndeterminate = true }
         col.addView(label)
         col.addView(bar, Ui.matchWrap().apply { topMargin = Ui.dp(act, 10) })
-        col.addView(Ui.muted(act, "File APK dihapus otomatis setelah diserahkan ke pemasang Android.").apply {
+        col.addView(Ui.muted(act, "Unduhan tetap berjalan walau dialog ini ditutup (lihat notifikasi).").apply {
             setPadding(0, Ui.dp(act, 10), 0, 0)
         })
-        val cancelled = AtomicBoolean(false)
+        val handler = android.os.Handler(android.os.Looper.getMainLooper())
+        var stopped = false
         val dialog = MaterialAlertDialogBuilder(act)
-            .setTitle("Update ke build ${r.build}")
+            .setTitle("Mengunduh build ${r.build}")
             .setView(col)
-            .setNegativeButton("Batal") { _, _ -> cancelled.set(true) }
+            .setPositiveButton("Sembunyikan") { _, _ -> stopped = true }
+            .setNegativeButton("Batalkan") { _, _ ->
+                stopped = true
+                Updater.forget(app)
+            }
             .setCancelable(false)
             .show()
-        val app = act.applicationContext
-        Updater.busy.set(true)
-        Thread {
-            val res = runCatching {
-                val apk = Updater.download(app, r, { done, total ->
-                    act.runOnUiThread {
-                        bar.isIndeterminate = total <= 0
-                        if (total > 0) bar.progress = (done * 1000 / total).toInt()
-                        label.text = "Mengunduh ${Updater.mb(done)}" + if (total > 0) " / ${Updater.mb(total)}" else ""
+        val poll = object : Runnable {
+            override fun run() {
+                if (stopped || act.isFinishing || act.isDestroyed) return
+                val p = Updater.progress(app, id)
+                when (p?.status) {
+                    null -> {
+                        stopped = true
+                        runCatching { dialog.dismiss() }
+                        failed(act, r, "unduhan dihapus atau dibatalkan")
+                        return
                     }
-                }) { cancelled.get() }
-                act.runOnUiThread {
-                    bar.isIndeterminate = true
-                    label.text = "Menyiapkan pemasangan…"
+                    android.app.DownloadManager.STATUS_SUCCESSFUL -> {
+                        stopped = true
+                        bar.isIndeterminate = true
+                        label.text = "Memeriksa file…"
+                        Updater.busy.set(true)
+                        Thread {
+                            val ok = Updater.verify(app, id, r)
+                            Updater.busy.set(false)
+                            act.runOnUiThread {
+                                runCatching { dialog.dismiss() }
+                                if (ok) ready(act, r)
+                                else {
+                                    Updater.forget(app)
+                                    failed(act, r, "file rusak (checksum beda)")
+                                }
+                            }
+                        }.start()
+                        return
+                    }
+                    android.app.DownloadManager.STATUS_FAILED -> {
+                        stopped = true
+                        runCatching { dialog.dismiss() }
+                        Updater.forget(app)
+                        failed(act, r, "pengunduh Android gagal (kode ${p.reason})")
+                        return
+                    }
+                    else -> {
+                        val total = p.total.takeIf { it > 0 } ?: r.size
+                        bar.isIndeterminate = total <= 0 || p.done <= 0
+                        if (total > 0) bar.progress = (p.done * 1000 / total).toInt()
+                        label.text = if (p.status == android.app.DownloadManager.STATUS_PAUSED) "Menunggu jaringan…"
+                        else "Mengunduh ${Updater.mb(p.done)}" + if (total > 0) " / ${Updater.mb(total)}" else ""
+                    }
                 }
-                Updater.install(app, apk)
+                handler.postDelayed(this, 500)
             }
-            Updater.busy.set(false)
-            act.runOnUiThread {
-                runCatching { dialog.dismiss() }
-                val e = res.exceptionOrNull() ?: return@runOnUiThread
-                Updater.cleanup(app)
-                if (e is InterruptedException || cancelled.get()) return@runOnUiThread
-                if (act.isFinishing || act.isDestroyed) return@runOnUiThread
-                MaterialAlertDialogBuilder(act)
-                    .setTitle("Update gagal")
-                    .setMessage((e.message ?: e.javaClass.simpleName) + "\n\nCoba lagi, atau unduh APK dari GitHub Releases (github.com/${Updater.REPO}).")
-                    .setPositiveButton("Coba lagi") { _, _ -> start(act, r) }
-                    .setNegativeButton("Tutup", null)
-                    .show()
+        }
+        handler.post(poll)
+    }
+
+    /** Unduhan selesai: pasang dari notifikasi atau daftar Unduhan. */
+    private fun ready(act: AppCompatActivity, r: Updater.Release) {
+        if (act.isFinishing || act.isDestroyed) return
+        MaterialAlertDialogBuilder(act)
+            .setTitle("Build ${r.build} siap dipasang")
+            .setMessage("Ketuk notifikasi \"Unduhan selesai\", atau tekan Pasang lalu pilih ${Updater.fileName(r.build)} di Unduhan → Update.\n\n" +
+                "File APK dihapus otomatis begitu build baru dibuka (atau setelah 3 hari bila tidak dipasang).")
+            .setPositiveButton("Pasang") { _, _ ->
+                if (!Updater.openDownloads(act)) Toast.makeText(act, "Buka aplikasi File / Unduhan lalu pilih ${Updater.fileName(r.build)}", Toast.LENGTH_LONG).show()
             }
-        }.start()
+            .setNegativeButton("Nanti", null)
+            .show()
+    }
+
+    private fun failed(act: AppCompatActivity, r: Updater.Release, why: String) {
+        if (act.isFinishing || act.isDestroyed) return
+        MaterialAlertDialogBuilder(act)
+            .setTitle("Update gagal")
+            .setMessage("$why\n\nCoba lagi, atau unduh APK dari GitHub Releases (github.com/${Updater.REPO}).")
+            .setPositiveButton("Coba lagi") { _, _ -> start(act, r) }
+            .setNegativeButton("Tutup", null)
+            .show()
     }
 
     /** Tombol "Cek update sekarang" di Pengaturan. */

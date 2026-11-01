@@ -231,7 +231,6 @@ class MainActivity : AppCompatActivity() {
         handler.removeCallbacks(tick)
         handler.post(tick)
         ApiSync.maybeSync(this)
-        UpdateUi.resume(this)
         Updater.maybeCheck(this) { renderBody() }
     }
 

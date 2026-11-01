@@ -1,17 +1,14 @@
 package id.clashtimer
 
-import android.app.PendingIntent
-import android.content.BroadcastReceiver
+import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageInstaller
-import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
+import android.os.Environment
 import android.os.Handler
 import android.os.Looper
-import android.widget.Toast
 import org.json.JSONObject
-import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
@@ -21,16 +18,14 @@ import java.util.concurrent.atomic.AtomicBoolean
  * Update aplikasi dari GitHub Releases (github.com/pomnom/ClashTimer). Setiap build Actions membuat rilis
  * "build-N" berisi ClashTimer.apk, dan nomor versi aplikasi = N, jadi cukup dibandingkan.
  *
- * APK diunduh ke cache lalu diserahkan ke PackageInstaller Android; file langsung dihapus begitu isinya
- * tersalin ke pemasang (salinan milik Android dibersihkan sistem sendiri). Sisa unduhan yang gagal dihapus
- * saat aplikasi dibuka berikutnya atau setelah update terpasang.
+ * APK diunduh lewat DownloadManager lalu dipasang dari Unduhan; file-nya dihapus otomatis setelah build baru
+ * berjalan (lihat [cleanup]).
  */
 object Updater {
     const val REPO = "pomnom/ClashTimer"
     private const val API = "https://api.github.com/repos/$REPO/releases/latest"
     /** Paling sering cek otomatis (saat aplikasi dibuka). */
     private const val CHECK_EVERY = 3 * 3_600_000L
-    const val ACTION_STATUS = "id.clashtimer.UPDATE_STATUS"
 
     class Release(
         val build: Int,
@@ -43,7 +38,7 @@ object Updater {
         val digest: String?,
     )
 
-    /** Sedang mengunduh / menyerahkan ke pemasang (jangan bersihkan cache). */
+    /** Sedang memeriksa unduhan (jangan dibersihkan). */
     val busy = AtomicBoolean(false)
     private val main = Handler(Looper.getMainLooper())
 
@@ -136,138 +131,107 @@ object Updater {
         }
     }.onFailure { prefs(ctx).edit().putString("error", it.message ?: it.javaClass.simpleName).apply() }
 
-    // ---------------------------------------------------------------- unduh & pasang
+    // ---------------------------------------------------------------- unduh
 
-    private fun apkFile(ctx: Context) = File(ctx.cacheDir, "update.apk")
+    /*
+     * Tanpa izin memasang aplikasi (REQUEST_INSTALL_PACKAGES): aplikasi yang bisa mengunduh DAN memasang APK
+     * ditandai Play Protect sebagai berbahaya. APK diunduh lewat DownloadManager Android ke folder Unduhan,
+     * lalu dipasang dari notifikasi "Unduhan selesai" / aplikasi Unduhan. File-nya dihapus otomatis begitu
+     * build baru berjalan (atau setelah 3 hari bila tidak dipasang).
+     */
 
-    /** Hapus sisa unduhan (bila tidak sedang mengunduh). */
+    private const val KEEP = 3 * 24 * 3_600_000L
+
+    private fun dm(ctx: Context): DownloadManager? = ctx.getSystemService(DownloadManager::class.java)
+
+    fun fileName(build: Int) = "ClashTimer-build-$build.apk"
+
+    /** Unduhan update yang tercatat: (id DownloadManager, build). */
+    fun download(ctx: Context): Pair<Long, Int>? {
+        val p = prefs(ctx)
+        val id = p.getLong("dl_id", -1L)
+        return if (id > 0) id to p.getInt("dl_build", 0) else null
+    }
+
+    class Progress(val status: Int, val done: Long, val total: Long, val reason: Int)
+
+    fun progress(ctx: Context, id: Long): Progress? = runCatching {
+        dm(ctx)?.query(DownloadManager.Query().setFilterById(id))?.use { c ->
+            if (!c.moveToFirst()) return@use null
+            Progress(
+                c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS)),
+                c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)),
+                c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)),
+                c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON)),
+            )
+        }
+    }.getOrNull()
+
+    /** Mulai unduh APK [r] (unduhan update sebelumnya dihapus). */
+    fun enqueue(ctx: Context, r: Release): Long {
+        val dm = dm(ctx) ?: throw IllegalStateException("pengunduh Android tidak tersedia")
+        forget(ctx)
+        val req = DownloadManager.Request(Uri.parse(r.url))
+            .setTitle("Clash Timer build ${r.build}")
+            .setDescription("Ketuk untuk memasang update")
+            .setMimeType("application/vnd.android.package-archive")
+            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            .addRequestHeader("User-Agent", "ClashTimer-Android")
+        if (Build.VERSION.SDK_INT >= 29) req.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName(r.build))
+        else req.setDestinationInExternalFilesDir(ctx, Environment.DIRECTORY_DOWNLOADS, fileName(r.build))
+        val id = dm.enqueue(req)
+        prefs(ctx).edit().putLong("dl_id", id).putInt("dl_build", r.build).putLong("dl_at", System.currentTimeMillis()).apply()
+        return id
+    }
+
+    /** Periksa SHA-256 file unduhan bila GitHub memberikannya (memblokir). */
+    fun verify(ctx: Context, id: Long, r: Release): Boolean {
+        val d = r.digest ?: return true
+        val dm = dm(ctx) ?: return true
+        return runCatching {
+            val md = MessageDigest.getInstance("SHA-256")
+            dm.openDownloadedFile(id).use { pfd ->
+                java.io.FileInputStream(pfd.fileDescriptor).use { input ->
+                    val buf = ByteArray(64 * 1024)
+                    while (true) {
+                        val n = input.read(buf)
+                        if (n < 0) break
+                        md.update(buf, 0, n)
+                    }
+                }
+            }
+            val hex = md.digest().joinToString("") { b -> "%02x".format(b) }
+            d.removePrefix("sha256:").equals(hex, ignoreCase = true)
+        }.getOrDefault(true)
+    }
+
+    /** Hapus unduhan update yang tercatat (file APK ikut terhapus). */
+    fun forget(ctx: Context) {
+        val (id, _) = download(ctx) ?: return
+        runCatching { dm(ctx)?.remove(id) }
+        prefs(ctx).edit().remove("dl_id").remove("dl_build").remove("dl_at").apply()
+    }
+
+    /**
+     * Hapus APK update yang sudah tidak dibutuhkan: build-nya sudah terpasang, atau tidak dipasang dalam 3 hari.
+     * Dipanggil saat aplikasi dibuka dan setelah update terpasang (MY_PACKAGE_REPLACED).
+     */
     fun cleanup(ctx: Context) {
         if (busy.get()) return
+        // Sisa versi sebelumnya (unduhan ke cache).
         runCatching {
             ctx.cacheDir.listFiles()?.filter { it.name.startsWith("update") && (it.name.endsWith(".apk") || it.name.endsWith(".part")) }
                 ?.forEach { it.delete() }
         }
+        val (_, build) = download(ctx) ?: return
+        val at = prefs(ctx).getLong("dl_at", 0L)
+        if (installedBuild(ctx) >= build || System.currentTimeMillis() - at > KEEP) forget(ctx)
     }
 
-    /** Boleh memasang aplikasi (Android 8+: izin "Instal aplikasi tidak dikenal" untuk Clash Timer). */
-    fun canInstall(ctx: Context): Boolean = ctx.packageManager.canRequestPackageInstalls()
-
-    /**
-     * Unduh APK ke cache (memblokir). [progress] dipanggil dengan (terunduh, total); [cancelled] dicek tiap
-     * potongan. Ukuran (dan SHA-256 bila GitHub memberikannya) diperiksa.
-     */
-    fun download(ctx: Context, r: Release, progress: (Long, Long) -> Unit, cancelled: () -> Boolean): File {
-        val part = File(ctx.cacheDir, "update.part")
-        val out = apkFile(ctx)
-        part.delete()
-        out.delete()
-        val conn = URL(r.url).openConnection() as HttpURLConnection
-        conn.connectTimeout = 15_000
-        conn.readTimeout = 30_000
-        conn.instanceFollowRedirects = true
-        conn.setRequestProperty("User-Agent", "ClashTimer-Android")
-        try {
-            val code = conn.responseCode
-            if (code !in 200..299) throw IllegalStateException("unduhan gagal (HTTP $code)")
-            val total = conn.contentLengthLong.takeIf { it > 0 } ?: r.size
-            val md = MessageDigest.getInstance("SHA-256")
-            var done = 0L
-            var last = 0L
-            conn.inputStream.use { input ->
-                part.outputStream().use { o ->
-                    val buf = ByteArray(64 * 1024)
-                    while (true) {
-                        if (cancelled()) throw InterruptedException("dibatalkan")
-                        val n = input.read(buf)
-                        if (n < 0) break
-                        o.write(buf, 0, n)
-                        md.update(buf, 0, n)
-                        done += n
-                        val now = System.currentTimeMillis()
-                        if (now - last > 150) { last = now; progress(done, total) }
-                    }
-                }
-            }
-            progress(done, total)
-            if (r.size > 0 && done != r.size) throw IllegalStateException("ukuran file tidak cocok, coba lagi")
-            r.digest?.let { d ->
-                val hex = md.digest().joinToString("") { b -> "%02x".format(b) }
-                if (!d.removePrefix("sha256:").equals(hex, ignoreCase = true)) throw IllegalStateException("file rusak (checksum beda), coba lagi")
-            }
-            if (!part.renameTo(out)) throw IllegalStateException("tidak bisa menyimpan file")
-            return out
-        } catch (e: Exception) {
-            part.delete()
-            out.delete()
-            throw e
-        } finally {
-            conn.disconnect()
-        }
-    }
-
-    /**
-     * Serahkan APK ke pemasang Android lalu hapus file-nya. Android menampilkan konfirmasi "Update"
-     * (lewat [UpdateReceiver]); hasilnya juga dikirim ke sana.
-     */
-    fun install(ctx: Context, apk: File) {
-        val installer = ctx.packageManager.packageInstaller
-        val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
-            setAppPackageName(ctx.packageName)
-            setInstallReason(PackageManager.INSTALL_REASON_USER)
-            // Android 12+: tanpa konfirmasi bila Clash Timer sudah tercatat sebagai pemasangnya sendiri.
-            if (Build.VERSION.SDK_INT >= 31) setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
-        }
-        val id = installer.createSession(params)
-        try {
-            installer.openSession(id).use { session ->
-                session.openWrite("ClashTimer.apk", 0, apk.length()).use { out ->
-                    apk.inputStream().use { it.copyTo(out, 64 * 1024) }
-                    session.fsync(out)
-                }
-                // Isi sudah ada di pemasang Android: file unduhan tidak dibutuhkan lagi.
-                apk.delete()
-                val flags = PendingIntent.FLAG_UPDATE_CURRENT or if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0
-                val status = PendingIntent.getBroadcast(ctx, 7001,
-                    Intent(ctx, UpdateReceiver::class.java).setAction(ACTION_STATUS), flags)
-                session.commit(status.intentSender)
-            }
-        } catch (e: Exception) {
-            runCatching { installer.abandonSession(id) }
-            throw e
-        } finally {
-            apk.delete()
-        }
-    }
+    /** Daftar Unduhan Android (tempat memasang APK yang sudah diunduh). */
+    fun openDownloads(ctx: Context): Boolean = runCatching {
+        ctx.startActivity(Intent(DownloadManager.ACTION_VIEW_DOWNLOADS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }.isSuccess
 
     fun mb(bytes: Long): String = String.format(java.util.Locale.ROOT, "%.1f MB", bytes / 1024.0 / 1024.0).replace('.', ',')
-}
-
-/** Hasil pemasangan dari PackageInstaller: minta konfirmasi pengguna, atau laporkan gagal. */
-class UpdateReceiver : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) {
-        when (intent.getIntExtra(PackageInstaller.EXTRA_STATUS, Int.MIN_VALUE)) {
-            PackageInstaller.STATUS_PENDING_USER_ACTION -> {
-                val confirm = if (Build.VERSION.SDK_INT >= 33) intent.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
-                else @Suppress("DEPRECATION") intent.getParcelableExtra(Intent.EXTRA_INTENT)
-                if (confirm != null) runCatching { context.startActivity(confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-            }
-            PackageInstaller.STATUS_SUCCESS -> Updater.cleanup(context)
-            PackageInstaller.STATUS_FAILURE_ABORTED -> {
-                Updater.cleanup(context)
-                Toast.makeText(context, "Update dibatalkan", Toast.LENGTH_SHORT).show()
-            }
-            else -> {
-                Updater.cleanup(context)
-                val code = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, 0)
-                val why = when (code) {
-                    PackageInstaller.STATUS_FAILURE_CONFLICT, PackageInstaller.STATUS_FAILURE_INCOMPATIBLE ->
-                        "kunci tanda tangan APK berbeda dengan yang terpasang"
-                    PackageInstaller.STATUS_FAILURE_STORAGE -> "penyimpanan HP penuh"
-                    PackageInstaller.STATUS_FAILURE_BLOCKED -> "diblokir oleh sistem"
-                    else -> intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: "kode $code"
-                }
-                Toast.makeText(context, "Update gagal: $why", Toast.LENGTH_LONG).show()
-            }
-        }
-    }
 }
