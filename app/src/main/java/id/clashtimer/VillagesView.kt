@@ -23,8 +23,7 @@ object VillagesView {
         val ups = Store.upgrades(act)
         val freeTotal = rows.sumOf { r -> r.cells.filter { !it.lane.bb }.sumOf { it.free } }
         box.addView(Ui.sectionRow(act,
-            if (freeTotal > 0) "$freeTotal pekerja Home Village bebas" else "Semua pekerja Home Village sibuk",
-            "paling cepat di atas"))
+            if (freeTotal > 0) "$freeTotal pekerja Home Village bebas" else "Semua pekerja Home Village sibuk", help = Help.Topic.VILLAGES))
         val cards = rows.map { card(act, it, ups, now, zone) }
         if (wide) {
             cards.chunked(2).forEach { pair ->
@@ -42,10 +41,6 @@ object VillagesView {
                 marginStart = Ui.dp(act, 8)
             })
         box.addView(add)
-        box.addView(Ui.muted(act, "Ketuk desa atau kotaknya untuk membuka · tahan untuk ganti nama / hapus. Desa baru ditambah otomatis saat meng-import export akun lain.").apply {
-            setPadding(Ui.dp(act, 4), Ui.dp(act, 10), Ui.dp(act, 4), 0)
-            gravity = Gravity.CENTER
-        })
     }
 
     private fun card(act: MainActivity, r: Widgets.VRow, ups: List<Upgrade>, now: Long, zone: ZoneId): View {

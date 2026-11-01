@@ -33,7 +33,7 @@ object ProgressView {
 
         val open = p.categories.filter { it.remainingSec > 0 }.sortedBy { it.pct }
         val doneCats = p.categories.filter { it.remainingSec <= 0 }
-        box.addView(Ui.sectionRow(act, "Kategori", "sisa biaya"))
+        box.addView(Ui.sectionRow(act, "Kategori", "sisa biaya", Help.Topic.PROGRESS))
         val (card, col) = Ui.card(act, padH = 0, padV = 0)
         var n = 0
         for (c in open) {
@@ -151,7 +151,7 @@ object ProgressView {
         if (crafted.isEmpty()) return
         val gd = Repo.gameData(act)
         val th = b.village.th
-        box.addView(Ui.sectionRow(act, "🛠️ Crafting Station", "modul / max TH$th"))
+        box.addView(Ui.sectionRow(act, "🛠️ Crafting Station", "modul / max TH$th", Help.Topic.CRAFTING))
         val (card, col) = Ui.card(act)
         crafted.forEachIndexed { i, c ->
             val def = gd.craftedDef(c.defenseId)
@@ -172,9 +172,6 @@ object ProgressView {
                 col.addView(Ui.muted(act, "Berikutnya: " + next.joinToString(" · ") { "${Fmt.money(it.cost)} · ${Fmt.durSec(it.time)}" }))
             }
         }
-        col.addView(Ui.muted(act, "Pertahanan rakitan berganti tiap fase Crafting; upgrade modul memakai builder.").apply {
-            setPadding(0, Ui.dp(act, 8), 0, 0)
-        })
         box.addView(card)
     }
 
@@ -182,7 +179,7 @@ object ProgressView {
     private var simCache: Triple<String, Int, List<Scenarios.Row>>? = null
 
     private fun simulationCard(act: MainActivity, box: LinearLayout, b: PlanBundle, bb: Boolean, zone: ZoneId) {
-        box.addView(Ui.sectionRow(act, "🔮 Simulasi", "bagaimana jika"))
+        box.addView(Ui.sectionRow(act, "🔮 Simulasi", "bagaimana jika", Help.Topic.SIMULATION))
         val (card, col) = Ui.card(act)
         val cached = simCache?.takeIf { it.first == b.tag && it.second == b.version }?.third
         fun show(rows: List<Scenarios.Row>) {
@@ -213,13 +210,9 @@ object ProgressView {
                 box2.addView(Ui.text(act, if (lines.isEmpty()) "Tidak memengaruhi ${if (bb) "Builder Base" else "Home Village"}" else lines.joinToString("\n"), Ui.BODY_M))
                 col.addView(box2)
             }
-            col.addView(Ui.muted(act, "Simulasi memakai jam tidur, helper, CWL & item yang diprioritaskan/disembunyikan; tanpa potion/book.").apply {
-                setPadding(0, Ui.dp(act, 6), 0, 0)
-            })
         }
         if (cached != null) show(cached)
         else {
-            col.addView(Ui.muted(act, "Bandingkan tanggal selesai: dengan/tanpa Gold Pass, Hammer Jam, tiga strategi saran, dan builder ke-6."))
             col.addView(Ui.outlined(act, "Hitung simulasi") {
                 col.removeAllViews()
                 col.addView(Ui.muted(act, "Menghitung… (beberapa detik)"))

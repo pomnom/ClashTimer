@@ -104,12 +104,12 @@ object HomeView {
 
         // --- semua pekerja sekilas
         val gobN = if (bb) 0 else ups.count { it.extra && it.finishAt > now }
-        box.addView(Ui.sectionRow(act, "Pekerja", "$regular dari $total $workers sibuk" + if (gobN > 0) " + $gobN Goblin" else ""))
+        box.addView(Ui.sectionRow(act, "Pekerja", "$regular/$total sibuk" + if (gobN > 0) " + $gobN Goblin" else "", Help.Topic.HOME))
         workerGrid(act, box, tag, bb, b, ups, gd, now, total, nowSlot)
 
         // --- baru selesai: perlu ditandai
         if (finished.isNotEmpty()) {
-            box.addView(Ui.sectionRow(act, "Baru selesai", "ketuk untuk menandai"))
+            box.addView(Ui.sectionRow(act, "Baru selesai"))
             val (fc, fcol) = Ui.card(act, padH = 0, padV = 0)
             finished.take(3).forEachIndexed { i, u ->
                 if (i > 0) fcol.addView(Ui.divider(act))
@@ -218,10 +218,6 @@ object HomeView {
         row.addView(Ui.outlined(act, "📋 Update desa") { act.importFromClipboard() }.apply { isAllCaps = false },
             Ui.weight1().apply { marginStart = Ui.dp(act, 8) })
         box.addView(row)
-        box.addView(Ui.muted(act, "Ketuk sebuah upgrade untuk menandai selesai atau batal. Setelah memulai upgrade di game, tekan \"Sudah dimulai\" pada saran — atau Update desa.").apply {
-            setPadding(Ui.dp(act, 4), Ui.dp(act, 12), Ui.dp(act, 4), 0)
-            gravity = Gravity.CENTER
-        })
     }
 
     private fun topMargin(v: View, act: MainActivity, dp: Int) {
@@ -253,7 +249,7 @@ object HomeView {
             ellipsize = android.text.TextUtils.TruncateAt.END
             setPadding(Ui.dp(act, 8), 0, Ui.dp(act, 8), 0)
         }, Ui.weight1())
-        row.addView(Ui.muted(act, "Opsi ›"))
+        row.addView(Ui.muted(act, "›"))
         box.addView(row, Ui.matchWrap().apply { topMargin = Ui.dp(act, 2) })
     }
 
@@ -414,7 +410,6 @@ object HomeView {
                 wrap.addView(line)
                 pick.reason?.let { wrap.addView(Ui.muted(act, it)) }
                 eventTip(act, b, pick)?.let { wrap.addView(it) }
-                sixthNote(act, b, slot, pick)?.let { wrap.addView(it) }
                 val r = Ui.hbox(act).apply { setPadding(0, Ui.dp(act, 6), 0, 0) }
                 if (canStart) {
                     r.addView(Ui.filled(act, "Sudah dimulai") { act.startPick(tag, pick) }.apply { isAllCaps = false }, Ui.weight1())
@@ -448,12 +443,6 @@ object HomeView {
         }
     }
 
-    /** Penjelasan bila strategi builder ke-6 aktif tetapi saran teratas bukan langkahnya. */
-    private fun sixthNote(act: MainActivity, b: PlanBundle, slot: LaneSlot, pick: Scored): View? {
-        if (!slot.lane.bb || b.ps.bbStrategy != BBStrategy.SIXTH || Sixth.done(b.village) || pick.tier > 0) return null
-        return Ui.muted(act, "Belum ada langkah builder ke-6 untuk ${slot.lane.label} saat ini — ini saran biasa yang tidak menghambat.")
-    }
-
     private fun freeRow(act: MainActivity, tag: String, slot: LaneSlot, pick: Scored, head: String): View {
         val line = Ui.hbox(act).apply { setPadding(Ui.dp(act, 12), Ui.dp(act, 10), Ui.dp(act, 14), Ui.dp(act, 8)); gravity = Gravity.TOP }
         ItemMenu.attach(act, line, tag, pick.c.item.id)
@@ -461,7 +450,6 @@ object HomeView {
         val col = Ui.vbox(act).apply { setPadding(Ui.dp(act, 12), 0, 0, 0) }
         val top = Ui.hbox(act)
         top.addView(Ui.text(act, head, Ui.TITLE_S).apply { setTextColor(Ui.GREEN) }, Ui.weight1())
-        top.addView(Ui.pill(act, "saran", Ui.GOLD))
         col.addView(top)
         col.addView(Ui.text(act, pick.c.title, Ui.BODY_M))
         col.addView(Ui.muted(act, pickLine(pick, act.zoneId())))
@@ -540,11 +528,9 @@ object HomeView {
             val name = if (u.kind == Kind.LAB) "Lab Assistant" else "Apprentice"
             pill(if (level != null) "$name +${level}j/hari" else "dibantu $name", if (u.kind == Kind.LAB) Ui.VIOLET else Ui.GREEN)
         }
-        if (gear && !done) pill("Master Builder", Ui.GOLD)
         if (u.extra && !done) pill(if (u.kind == Kind.BUILDER) "👺 Goblin Builder" else "👺 Goblin Researcher", Ui.GREY)
         if (u.note.contains("⚡") && !done) pill("⚡ dipercepat", Ui.GOLD)
         if (u.note.contains("🎉") && !done) pill("🎉 event", Ui.VIOLET)
-        if (!done && u.note.contains("dimulai di aplikasi", ignoreCase = true)) pill("dimulai di aplikasi", Ui.GREY)
         if (pills.childCount > 0) col.addView(pills, Ui.matchWrap().apply { topMargin = Ui.dp(act, 3) })
         line.addView(col, Ui.weight1())
 
@@ -593,7 +579,7 @@ object HomeView {
         if (names.isEmpty()) return
         val (card, col) = Ui.card(act, tinted = true)
         col.addView(Ui.text(act, "💪 Super troop aktif: " + names.joinToString(", "), Ui.BODY_M))
-        col.addView(Ui.muted(act, "Dari API · ${Fmt.at(st.optLong("at"), zone)} (boost aktif 3 hari; waktu habisnya tidak tersedia di API)"))
+        col.addView(Ui.muted(act, "Dari API · ${Fmt.at(st.optLong("at"), zone)}"))
         box.addView(card, Ui.matchWrap().apply { topMargin = Ui.dp(act, 8) })
     }
 
@@ -639,7 +625,7 @@ object HomeView {
             rows += line
         }
         if (rows.isEmpty()) return
-        box.addView(Ui.sectionRow(act, "Helper"))
+        box.addView(Ui.sectionRow(act, "Helper", help = Help.Topic.HELPERS))
         val (card, col) = Ui.card(act, padH = 0, padV = 0)
         rows.forEachIndexed { i, v ->
             if (i > 0) col.addView(Ui.divider(act))
@@ -664,7 +650,7 @@ object HomeView {
         val readyAt = lastFree?.let { it + ClockTower.COOLDOWN }?.takeIf { it > now }
         val potions = Store.items(act, tag)[MagicItem.CLOCK_TOWER_POTION] ?: 0
 
-        box.addView(Ui.sectionRow(act, "Clock Tower", "Lv$level · 10× selama $minutes menit"))
+        box.addView(Ui.sectionRow(act, "Clock Tower", "Lv$level · 10× selama $minutes menit", Help.Topic.CLOCK))
         val (card, col) = Ui.card(act, padV = 12)
         val top = Ui.hbox(act)
         top.addView(Icons.view(act, Icons.forItem(ct.item, level), 44, "⏱️", Ui.GOLD))
@@ -676,7 +662,6 @@ object HomeView {
             else -> "Boost gratis siap dipakai" to Ui.GREEN
         }
         tc.addView(Ui.text(act, state, Ui.BODY_M).apply { setTextColor(color) })
-        tc.addView(Ui.muted(act, "Mempercepat Master Builder & Star Lab (bukan gear-up di Home Village)."))
         top.addView(tc, Ui.weight1())
         col.addView(top)
         val r = Ui.hbox(act).apply { setPadding(0, Ui.dp(act, 8), 0, 0) }
@@ -694,7 +679,7 @@ object HomeView {
 
     private fun needsMini(act: MainActivity, box: LinearLayout, sim: id.clashtimer.core.SimResult?) {
         val n = sim?.needs?.firstOrNull() ?: return
-        box.addView(Ui.sectionRow(act, "💰 Kebutuhan 24 jam", "ketuk untuk 3 & 7 hari"))
+        box.addView(Ui.sectionRow(act, "💰 Kebutuhan 24 jam", help = Help.Topic.NEEDS))
         val (card, col) = Ui.card(act, padV = 10)
         card.setOnClickListener { act.openTab(MainActivity.Tab.PLAN) }
         if (n.costs.isEmpty()) {
@@ -714,14 +699,14 @@ object HomeView {
         if (b == null || b.ps.bbStrategy != BBStrategy.SIXTH) return
         val six = b.simBB?.sixth ?: return
         val done = six.reqs.count { it.done }
-        box.addView(Ui.sectionRow(act, "Menuju builder ke-6", "$done/${six.reqs.size} syarat"))
+        box.addView(Ui.sectionRow(act, "Menuju builder ke-6", "$done/${six.reqs.size} syarat", Help.Topic.SIXTH))
         val (card, col) = Ui.card(act, padV = 12)
         card.setOnClickListener { act.openTab(MainActivity.Tab.PLAN) }
         val eta = six.doneAt
         col.addView(Ui.text(act, if (eta != null) "B.O.B terbuka ±${Fmt.date(eta, zone)}" else "Belum bisa diperkirakan", Ui.TITLE_S))
         col.addView(Ui.bar(act, 100.0 * done / six.reqs.size.coerceAtLeast(1)))
         val next = six.reqs.firstOrNull { !it.done }
-        col.addView(Ui.muted(act, (next?.let { "Berikutnya: ${it.label} · ${it.detail}" } ?: "Semua syarat selesai") + "\nKetuk untuk melihat rencana lengkap ›"))
+        col.addView(Ui.muted(act, next?.let { "Berikutnya: ${it.label} · ${it.detail}" } ?: "Semua syarat selesai"))
         box.addView(card)
     }
 
@@ -733,7 +718,7 @@ object HomeView {
             b2.start <= now && b2.end > now && b2.kind.lanes.any { it.bb == bb } && b2.kind.group != "clock"
         }
         if (tips.isEmpty() && active.isEmpty()) return
-        box.addView(Ui.sectionRow(act, "Potion & item", "ketuk untuk memakai"))
+        box.addView(Ui.sectionRow(act, "Potion & item", help = Help.Topic.ITEMS))
         val (card, col) = Ui.card(act, padH = 0, padV = 0)
         var n = 0
         for (a in active) {
@@ -743,7 +728,7 @@ object HomeView {
             line.addView(Icons.view(act, mi?.icon, 36, mi?.emoji ?: "⚡", Ui.GOLD))
             val c = Ui.vbox(act).apply { setPadding(Ui.dp(act, 12), 0, 0, 0) }
             c.addView(Ui.text(act, "${a.kind.label} aktif", Ui.TITLE_S).apply { setTextColor(Ui.GOLD) })
-            c.addView(Ui.muted(act, "${a.kind.speedLabel} sampai ${Fmt.time(a.end, zone)} · sudah dihitung ke timer"))
+            c.addView(Ui.muted(act, "${a.kind.speedLabel} sampai ${Fmt.time(a.end, zone)}"))
             line.addView(c, Ui.weight1())
             col.addView(line)
         }
@@ -773,9 +758,6 @@ object HomeView {
             val list = slot.ranked.take(60)
             val col = Ui.vbox(act).apply { setPadding(Ui.dp(act, 12), Ui.dp(act, 4), Ui.dp(act, 12), Ui.dp(act, 4)) }
             var dialog: AlertDialog? = null
-            if (canStart) col.addView(Ui.muted(act, "Ketuk yang Anda mulai di game — timer & notifikasi langsung dipasang.").apply {
-                setPadding(Ui.dp(act, 4), 0, 0, Ui.dp(act, 6))
-            })
             list.forEachIndexed { i, p ->
                 if (i > 0) col.addView(Ui.divider(act))
                 col.addView(optionRow(act, p, i == 0, zone) {

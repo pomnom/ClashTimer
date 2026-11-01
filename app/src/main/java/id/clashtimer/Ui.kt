@@ -93,10 +93,15 @@ object Ui {
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 1).coerceAtLeast(1))
     }
 
-    /** Judul bagian kecil: kiri judul, kanan keterangan. */
-    fun sectionRow(ctx: Context, left: String, right: String? = null): View {
-        val row = hbox(ctx).apply { setPadding(dp(ctx, 4), dp(ctx, 16), dp(ctx, 4), dp(ctx, 6)) }
-        row.addView(muted(ctx, left, BODY_M), weight1())
+    /** Judul bagian kecil: kiri judul (+ tombol "?" bila ada tutorial), kanan keterangan. */
+    fun sectionRow(ctx: Context, left: String, right: String? = null, help: Help.Topic? = null, extra: (() -> String?)? = null): View {
+        val row = hbox(ctx).apply { setPadding(dp(ctx, 4), dp(ctx, if (help != null) 8 else 16), dp(ctx, 4), dp(ctx, if (help != null) 0 else 6)) }
+        if (help == null) row.addView(muted(ctx, left, BODY_M), weight1())
+        else {
+            row.addView(muted(ctx, left, BODY_M))
+            row.addView(Help.button(ctx, help, extra))
+            row.addView(View(ctx), weight1())
+        }
         if (right != null) row.addView(muted(ctx, right, BODY_M))
         return row
     }

@@ -11,6 +11,8 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
   Builder Base & Star Lab — "2 bebas" + saran, atau hitung mundur upgrade yang paling cepat selesai —
   plus Goblin Builder/Researcher. Ketuk untuk membuka, tahan untuk ganti nama / hapus
 - Warna tetap di semua layar: hijau = bebas, emas = builder sibuk, ungu = lab, merah = menganggur
+- Tampilan bersih: penjelasan & tutorial ada di tombol **?** di samping judul bagian (Beranda, Rencana,
+  Timeline, Kebutuhan, Builder ke-6, Clock Tower, Desa, Opsi desa, Progres, Pengaturan)
 
 **🏠 Beranda**
 - Hitung mundur besar "builder berikutnya bebas" + satu saran upgrade (dengan ikon)

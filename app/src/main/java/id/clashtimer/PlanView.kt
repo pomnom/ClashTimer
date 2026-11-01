@@ -38,8 +38,7 @@ object PlanView {
         if (!bb && sim.cwlDeferred.isNotEmpty() && ps.cwl.enabled) {
             val w = ps.cwl.next(now)
             box.addView(Ui.banner(act,
-                "⚔️ CWL ${Fmt.dateShort(w.first, zone)}–${Fmt.dateShort(w.last + 1, zone)}: upgrade " + sim.cwlDeferred.joinToString(", ") +
-                    " ditunda — tidak dimasukkan ke antrean selama CWL, dilanjutkan setelah CWL selesai.", Ui.GOLD))
+                "⚔️ CWL s/d ${Fmt.dateShort(w.last + 1, zone)}: ${sim.cwlDeferred.joinToString(", ")} ditunda", Ui.GOLD))
         }
         val mode = pref(act, "plan_mode")
         modeRow(act, box, mode)
@@ -47,14 +46,7 @@ object PlanView {
         if (bb) sim.sixth?.let { sixthCard(act, box, it, now, zone) }
         if (bb) capacityLine(act, box, b)
         needsCard(act, box, sim, now, zone)
-        if (mode == 1) {
-            box.addView(Ui.muted(act,
-                "Garis waktu = perkiraan bila setiap pekerja langsung diisi saran teratas saat Anda online. " +
-                    "Dihitung ${Fmt.time(b.computedAt, zone)}. Ketuk batang untuk detail.").apply {
-                setPadding(Ui.dp(act, 4), Ui.dp(act, 10), Ui.dp(act, 4), 0)
-            })
-            return
-        }
+        if (mode == 1) return
 
         val running = sim.running.filter { it.lane.bb == bb }.sortedBy { it.finish }
         val steps = sim.steps.filter { it.lane.bb == bb }
@@ -93,16 +85,10 @@ object PlanView {
         }
 
         if (!bb && sim.builderIdle7d > 0) {
-            box.addView(Ui.muted(act, "💤 Builder menganggur 7 hari ke depan karena Anda offline: ±${Fmt.dur(sim.builderIdle7d)}", Ui.BODY_M).apply {
+            box.addView(Ui.muted(act, "💤 Builder menganggur ±${Fmt.dur(sim.builderIdle7d)} dalam 7 hari").apply {
                 setPadding(Ui.dp(act, 4), Ui.dp(act, 12), Ui.dp(act, 4), 0)
             })
         }
-        val extra = if (ps.skipCollectors) " Collector tidak disarankan (Pengaturan)." else ""
-        box.addView(Ui.muted(act,
-            "Rencana = perkiraan bila setiap pekerja langsung diisi saran teratas saat Anda online (jam tidur & helper dihitung).$extra " +
-                "Dihitung ${Fmt.time(b.computedAt, zone)}. Ketuk langkah untuk detail; setelah memulai di game tekan \"Sudah dimulai\".").apply {
-            setPadding(Ui.dp(act, 4), Ui.dp(act, 10), Ui.dp(act, 4), 0)
-        })
     }
 
     private fun section(act: MainActivity, box: LinearLayout, title: String, right: String, rows: List<View>) {
@@ -125,7 +111,7 @@ object PlanView {
         Lane.STAR_LAB -> "Star Lab"
     }
 
-    /** "🎯 Target max TH ±7 Feb 09:13 · 14j lebih cepat dari urutan lama" + urutan yang dipilih. */
+    /** "🎯 Target max TH: ±7 Feb 09:13" + selisih dengan urutan lama. */
     private fun targetCard(act: MainActivity, box: LinearLayout, b: PlanBundle, sim: id.clashtimer.core.SimResult, bb: Boolean, zone: ZoneId) {
         val ps = b.ps
         val t = Planner.target(sim, ps, bb).takeIf { it != Long.MAX_VALUE }
@@ -136,19 +122,20 @@ object PlanView {
         }
         val info = if (bb) b.bbTarget else b.homeTarget
         val (card, col) = Ui.card(act, padV = 10, tinted = true)
-        col.addView(Ui.text(act, if (t != null) "🎯 Target $label: ±${Fmt.at(t, zone)}" else "🎯 Target $label: belum tercapai dalam rencana", Ui.TITLE_S))
-        if (info != null) {
-            val lanes = info.policies.keys.filter { Planner.laneCount(b.village, it, ps) > 0 }.sortedBy { it.ordinal }
-            val groups = lanes.groupBy { ps.policyFor(it) }
-            val how = groups.entries.joinToString(" · ") { (p, ls) -> ls.joinToString(" & ") { laneWord(it) } + ": " + p.label }
-            val diff = if (t != null && info.legacy != null) info.legacy - t else null
-            val cmp = when {
-                diff == null -> ""
-                diff >= 3_600_000L -> " — ${Fmt.dur(diff)} lebih cepat dari urutan lama"
-                diff <= -3_600_000L -> ""
-                else -> " — sama cepat dengan urutan lama"
+        val head = Ui.hbox(act)
+        head.addView(Ui.text(act, if (t != null) "🎯 Target $label: ±${Fmt.at(t, zone)}" else "🎯 Target $label: belum tercapai dalam rencana", Ui.TITLE_S), Ui.weight1())
+        head.addView(Help.button(act, Help.Topic.PLAN) {
+            val lanes = info?.policies?.keys?.filter { Planner.laneCount(b.village, it, ps) > 0 }?.sortedBy { it.ordinal }.orEmpty()
+            val how = lanes.groupBy { ps.policyFor(it) }.entries.joinToString("\n") { (p, ls) ->
+                "• " + ls.joinToString(" & ") { laneWord(it) } + ": " + p.label
             }
-            col.addView(Ui.muted(act, "Urutan tercepat dari ${info.tried} simulasi$cmp.\n$how").apply { setPadding(0, Ui.dp(act, 2), 0, 0) })
+            (if (how.isNotEmpty()) "Urutan yang dipakai desa ini (dari ${info?.tried ?: 0} simulasi):\n$how\n\n" else "") +
+                "Dihitung ${Fmt.time(b.computedAt, zone)}."
+        })
+        col.addView(head)
+        val diff = if (t != null && info?.legacy != null) info.legacy - t else null
+        if (diff != null && diff >= 3_600_000L) {
+            col.addView(Ui.muted(act, "${Fmt.dur(diff)} lebih cepat dari urutan lama").apply { setPadding(0, Ui.dp(act, 2), 0, 0) })
         }
         box.addView(card, Ui.matchWrap(6, act).apply { topMargin = Ui.dp(act, 6) })
     }
@@ -167,6 +154,7 @@ object PlanView {
             setPref(act, "plan_mode", it)
             act.renderBody()
         })
+        row.addView(Help.button(act, if (mode == 1) Help.Topic.TIMELINE else Help.Topic.PLAN))
         row.addView(View(act), Ui.weight1())
         if (mode == 1) {
             row.addView(Ui.segmented(act, listOf("24 jam", "3 hari"), pref(act, "tl_range")) {
@@ -196,7 +184,7 @@ object PlanView {
         box.addView(card, Ui.matchWrap(6, act).apply { topMargin = Ui.dp(act, 6) })
         val idle = tv.bars.filter { it.idle }.sumOf { (minOf(it.end, to) - maxOf(it.start, now)).coerceAtLeast(0) }
         if (idle > 30 * 60_000L) {
-            box.addView(Ui.muted(act, "💤 Pekerja menganggur ±${Fmt.dur(idle)} dalam ${if (long) "3 hari" else "24 jam"} ini (garis merah) — biasanya karena jam tidur/offline.").apply {
+            box.addView(Ui.muted(act, "💤 Menganggur ±${Fmt.dur(idle)} dalam ${if (long) "3 hari" else "24 jam"}").apply {
                 setPadding(Ui.dp(act, 4), 0, Ui.dp(act, 4), Ui.dp(act, 4))
             })
         }
@@ -237,11 +225,9 @@ object PlanView {
             btn.maxLines = 1
             row.addView(btn, Ui.weight1().apply { if (!first) marginStart = Ui.dp(act, 6) })
         }
-        val desc: String
         if (bb && Store.bobDone(act, b.tag)) {
             // B.O.B sudah terbuka: tidak ada lagi yang perlu dipilih.
             button("Max · otomatis", true, true) {}
-            desc = "B.O.B sudah terbuka (terbaca dari export), jadi saran Builder Base otomatis memakai strategi Max."
         } else if (bb) {
             val cur = b.ps.bbStrategy
             BBStrategy.entries.forEachIndexed { i, s ->
@@ -250,7 +236,6 @@ object PlanView {
                     act.dataChanged()
                 }
             }
-            desc = cur.desc
         } else {
             val cur = b.ps.strategy
             Strategy.entries.forEachIndexed { i, s ->
@@ -259,10 +244,8 @@ object PlanView {
                     act.dataChanged()
                 }
             }
-            desc = cur.desc
         }
         box.addView(row, Ui.matchWrap())
-        box.addView(Ui.muted(act, desc).apply { setPadding(Ui.dp(act, 4), Ui.dp(act, 2), Ui.dp(act, 4), Ui.dp(act, 4)) })
     }
 
     private fun chips(act: MainActivity, box: LinearLayout, b: PlanBundle, bb: Boolean, now: Long, zone: ZoneId) {
@@ -324,7 +307,7 @@ object PlanView {
     private fun needsCard(act: MainActivity, box: LinearLayout, sim: id.clashtimer.core.SimResult, now: Long, zone: ZoneId) {
         val needs = sim.needs
         if (needs.isEmpty()) return
-        box.addView(Ui.sectionRow(act, "💰 Kebutuhan sumber daya", "upgrade yang dimulai"))
+        box.addView(Ui.sectionRow(act, "💰 Kebutuhan sumber daya", help = Help.Topic.NEEDS))
         val (card, col) = Ui.card(act, padV = 10)
         val seg = Ui.hbox(act)
         listOf("24 jam", "3 hari", "7 hari").forEachIndexed { i, label ->
@@ -357,16 +340,13 @@ object PlanView {
                 col.addView(line)
             }
         }
-        col.addView(Ui.muted(act, "Sesuai rencana di bawah; Gold Pass & event sudah dihitung. Pastikan gudang cukup untuk upgrade termahal.").apply {
-            setPadding(0, Ui.dp(act, 8), 0, 0)
-        })
         box.addView(card)
     }
 
     // ---------------------------------------------------------------- builder ke-6
 
     private fun sixthCard(act: MainActivity, box: LinearLayout, six: SixthPlan, now: Long, zone: ZoneId) {
-        box.addView(Ui.sectionRow(act, "Menuju builder ke-6 (B.O.B)", "${six.reqs.count { it.done }}/${six.reqs.size}"))
+        box.addView(Ui.sectionRow(act, "Menuju builder ke-6 (B.O.B)", "${six.reqs.count { it.done }}/${six.reqs.size}", Help.Topic.SIXTH))
         val (card, col) = Ui.card(act, padV = 12)
         val eta = six.doneAt
         if (eta != null) {
@@ -399,11 +379,6 @@ object PlanView {
             })
             col.addView(line)
         }
-        col.addView(Ui.muted(act,
-            "Perkiraan tanpa Clock Tower boost, book & gem. Gear-up dikerjakan Master Builder di Home Village " +
-                "(bayar Gold Home Village) dan butuh level bangunan di kedua desa. Level B.O.B Control diklaim gratis tiap syarat terpenuhi.").apply {
-            setPadding(0, Ui.dp(act, 10), 0, 0)
-        })
         box.addView(card)
     }
 
@@ -456,7 +431,6 @@ object PlanView {
         if (warn.isNotEmpty()) col.addView(Ui.text(act, warn.joinToString(" · "), Ui.BODY_S).apply {
             setTextColor(if (s.event != null && s.note == null && s.idle <= 30 * 60_000L) Ui.VIOLET else Ui.AMBER)
         })
-        if (s.gear) col.addView(Ui.text(act, "Home Village · Master Builder", Ui.BODY_S).apply { setTextColor(Ui.GOLD) })
         line.addView(col, Ui.weight1())
 
         val right = Ui.vbox(act).apply { gravity = Gravity.END }

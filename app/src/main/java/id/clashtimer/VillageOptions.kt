@@ -92,8 +92,11 @@ object VillageOptions {
             gravity = android.view.Gravity.CENTER_HORIZONTAL
             bottomMargin = Ui.dp(act, 12)
         })
-        col.addView(Ui.text(act, "Opsi ${name(act, tag)}", Ui.TITLE_M))
-        col.addView(Ui.muted(act, (if (bb) "Builder Base" else "Home Village") + " · hanya untuk desa ini · ketuk untuk mengubah").apply {
+        val head = Ui.hbox(act)
+        head.addView(Ui.text(act, "Opsi ${name(act, tag)}", Ui.TITLE_M), Ui.weight1())
+        head.addView(Help.button(act, Help.Topic.OPTIONS))
+        col.addView(head)
+        col.addView(Ui.muted(act, if (bb) "Builder Base" else "Home Village").apply {
             setPadding(0, 0, 0, Ui.dp(act, 10))
         })
         fill(act, col, tag, bb, Store.planSettings(act, tag)) { dialog.dismiss() }
@@ -145,9 +148,6 @@ object VillageOptions {
         col.addView(tile(act, "📌 Prioritas & disembunyikan",
             if (nPin + nHide == 0) "Tahan lama sebuah upgrade" else "$nPin didahulukan · $nHide disembunyikan") { ItemMenu.manage(act, tag) },
             Ui.matchWrap().apply { topMargin = Ui.dp(act, 8) })
-        val api = if (Store.apiKey(act).isNotBlank()) "CWL & upgrade yang selesai lebih cepat (API)" else "CWL bila API key diisi di Pengaturan"
-        col.addView(Ui.muted(act, "🔎 Otomatis: jumlah builder, helper, B.O.B & gear-up (export), Gold Pass (dari lama timer saat import), $api. " +
-            "Strategi & collector sesuai pilihan Anda.").apply { setPadding(Ui.dp(act, 2), Ui.dp(act, 8), Ui.dp(act, 2), 0) })
     }
 
     private fun tileView(act: MainActivity, label: String, value: String, onClick: () -> Unit): View {

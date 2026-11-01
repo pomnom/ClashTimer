@@ -80,9 +80,13 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     /** Judul kecil di dalam satu bagian. */
-    private fun sub(title: String, subtitle: String? = null) {
+    /** Judul kecil di dalam satu bagian; [help] = tombol "?" berisi penjelasannya. */
+    private fun sub(title: String, subtitle: String? = null, help: Help.Topic? = null) {
         val col = Ui.vbox(this).apply { setPadding(Ui.dp(this@SettingsActivity, 4), Ui.dp(this@SettingsActivity, 12), Ui.dp(this@SettingsActivity, 4), Ui.dp(this@SettingsActivity, 4)) }
-        col.addView(Ui.text(this, title, Ui.TITLE_S))
+        val head = Ui.hbox(this)
+        head.addView(Ui.text(this, title, Ui.TITLE_S))
+        if (help != null) head.addView(Help.button(this, help))
+        col.addView(head)
         if (subtitle != null) col.addView(Ui.muted(this, subtitle))
         box.addView(col)
     }
@@ -93,7 +97,7 @@ class SettingsActivity : AppCompatActivity() {
         val s = ps.schedule
 
         box.addView(Ui.section(this, "🌐 Untuk semua desa", "Jam istirahat, API, event, ikon, nada & notifikasi"))
-        note("Gold Pass (dari lama timer) dan CWL (dari API) terdeteksi otomatis per desa; strategi saran & opsi collector dipilih lewat ikon opsi desa di bagian atas layar utama.")
+        note("Opsi per desa (strategi, Gold Pass, CWL, collector) ada di ikon opsi di layar utama.")
 
         apiSection()
         backupSection()
@@ -114,11 +118,7 @@ class SettingsActivity : AppCompatActivity() {
             row("Hari kerja", days.ifBlank { "tidak ada" }) { pickDays() }
         }
 
-        sub("🎉 Event", "Hammer Jam, Builder Base Bonanza, dll.")
-        box.addView(Ui.muted(this, "Supercell tidak menyediakan jadwal event yang bisa dibaca aplikasi. " +
-            "Saat event muncul di game, aktifkan di sini dan cocokkan tanggalnya — saran, rencana dan timer langsung memakai potongannya.").apply {
-            setPadding(Ui.dp(this@SettingsActivity, 4), 0, Ui.dp(this@SettingsActivity, 4), Ui.dp(this@SettingsActivity, 6))
-        })
+        sub("🎉 Event", "Hammer Jam, Builder Base Bonanza, dll.", Help.Topic.EVENTS)
         EventsUi.renderList(this, box) { render() }
         box.addView(Ui.outlined(this, "+ Tambah event") { EventsUi.addPreset(this) { render() } }.apply { isAllCaps = false }, Ui.matchWrap())
 
@@ -134,7 +134,7 @@ class SettingsActivity : AppCompatActivity() {
             setPadding(Ui.dp(this@SettingsActivity, 4), Ui.dp(this@SettingsActivity, 4), Ui.dp(this@SettingsActivity, 4), Ui.dp(this@SettingsActivity, 4))
         })
 
-        sub("🎵 Nada notifikasi", "Alarm keras berbunyi berulang dengan volume alarm sampai notifikasi dibuka, diusap, atau ditekan Matikan")
+        sub("🎵 Nada notifikasi", help = Help.Topic.NOTIFY)
         row("Upgrade selesai & helper", Notifier.toneTitle(this, Notifier.KEY_DONE)) { pickTone(Notifier.KEY_DONE) }
         row("Pengingat sebelum selesai", Notifier.toneTitle(this, Notifier.KEY_EARLY)) { pickTone(Notifier.KEY_EARLY) }
         val tests = Ui.hbox(this)
@@ -148,7 +148,7 @@ class SettingsActivity : AppCompatActivity() {
             }
         }.apply { isAllCaps = false }, Ui.matchWrap())
 
-        sub("🔔 Notifikasi")
+        sub("🔔 Notifikasi", help = Help.Topic.NOTIFY)
         val early = Store.earlyMinutes(this)
         row("Pengingat sebelum selesai", if (early == 0) "Tidak ada" else "$early menit sebelumnya") { pickEarly() }
         switchRow("Notifikasi helper", Store.notifyHelpers(this)) {
@@ -159,17 +159,8 @@ class SettingsActivity : AppCompatActivity() {
             Store.setStrongAlarm(this, it)
             AlarmScheduler.schedule(this)
         }
-        box.addView(Ui.muted(this, "Mode alarm kuat memakai alarm sistem sehingga tidak ditunda saat HP tidur; efeknya ada ikon jam kecil di status bar.").apply {
-            setPadding(Ui.dp(this@SettingsActivity, 4), 0, Ui.dp(this@SettingsActivity, 4), Ui.dp(this@SettingsActivity, 8))
-        })
 
-        sub("📱 Widget & berjalan di latar", "Widget diperbarui saat data berubah, saat upgrade selesai, dan paling lambat tiap 30 menit")
-        note(
-            (if (Background.isXiaomi()) Background.TIP_BODY + " " else
-                "Bila widget atau notifikasi sering telat: izinkan aplikasi berjalan tanpa batasan baterai (dan Autostart bila HP punya). ") +
-                "Jam ↻ di widget menunjukkan kapan terakhir diperbarui — ketuk untuk memperbarui sekarang. " +
-                "Data tiap perangkat terpisah: update di HP tidak mengubah widget di tablet (pakai Pindah data).",
-        )
+        sub("📱 Widget & berjalan di latar", help = Help.Topic.WIDGET)
         box.addView(Ui.outlined(this, "Buka info aplikasi") { Background.openAppInfo(this) }.apply { isAllCaps = false }, Ui.matchWrap())
 
         updateSection()
@@ -178,7 +169,7 @@ class SettingsActivity : AppCompatActivity() {
     // ---------------------------------------------------------------- update aplikasi
 
     private fun updateSection() {
-        sub("🔄 Update aplikasi", "Langsung dari GitHub Releases (github.com/${Updater.REPO})")
+        sub("🔄 Update aplikasi", "github.com/${Updater.REPO}", Help.Topic.UPDATE)
         val zone = java.time.ZoneId.systemDefault()
         val installed = Updater.installedBuild(this)
         val latest = Updater.latest(this)
@@ -198,16 +189,12 @@ class SettingsActivity : AppCompatActivity() {
         box.addView(Ui.outlined(this, "Cek update sekarang") { UpdateUi.checkNow(this) { render() } }
             .apply { isAllCaps = false }, Ui.matchWrap())
         switchRow("Cek otomatis saat aplikasi dibuka", Updater.autoCheck(this)) { Updater.setAutoCheck(this, it) }
-        note("Ada build baru → kartu \"Update\" muncul di layar utama. APK diunduh lewat pengunduh Android, lalu dipasang " +
-            "dari notifikasi \"Unduhan selesai\" (atau daftar Unduhan). File APK dihapus otomatis begitu build baru dibuka, " +
-            "atau setelah 3 hari bila tidak dipasang. Clash Timer sengaja tidak memasang APK sendiri supaya tidak ditandai " +
-            "Play Protect. Data tetap aman karena kunci tanda tangannya sama.")
     }
 
     // ---------------------------------------------------------------- pindah data
 
     private fun backupSection() {
-        sub("📦 Pindah data & cadangan", "HP ↔ tablet: semua desa, timer, opsi, riwayat & API key")
+        sub("📦 Pindah data & cadangan", "HP ↔ tablet: semua desa, timer, opsi, riwayat & API key", Help.Topic.BACKUP)
         val dp8 = Ui.dp(this, 8)
         val r = Ui.hbox(this)
         r.addView(Ui.outlined(this, "Salin semua data") { copyAll() }.apply { isAllCaps = false }, Ui.weight1())
@@ -222,8 +209,7 @@ class SettingsActivity : AppCompatActivity() {
             runCatching { openFile.launch(arrayOf("application/json", "text/plain", "application/octet-stream", "*/*")) }
         }.apply { isAllCaps = false }, Ui.weight1().apply { marginStart = dp8 })
         box.addView(r2)
-        note("Di perangkat lain: Pengaturan → Tempel data (atau Buka file). Data di perangkat tujuan diganti seluruhnya. " +
-            "Isinya termasuk API key — jangan bagikan teks/file ini ke orang lain.")
+        note("Isinya termasuk API key — jangan dibagikan ke orang lain.")
     }
 
     private fun copyAll() {
