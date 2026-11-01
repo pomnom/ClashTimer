@@ -427,7 +427,14 @@ object Widgets {
         val zone = ZoneId.systemDefault()
 
         val freeTotal = rows.sumOf { r -> r.cells.sumOf { it.free } }
-        rv.setTextViewText(R.id.a_summary, (if (hidden > 0) "${shown.size}/${rows.size} desa · " else "") + "$freeTotal bebas")
+        // Semua sibuk: kapan perlu login berikutnya (pekerja pertama bebas, digeser ke luar jam tidur).
+        val login = if (freeTotal > 0) null else rows.mapNotNull { r ->
+            val first = r.cells.mapNotNull { it.next }.minByOrNull { it.finishAt } ?: return@mapNotNull null
+            val at = runCatching { Store.planSettings(ctx, r.tag).schedule.nextOnline(first.finishAt) }.getOrDefault(first.finishAt)
+            r.name to at
+        }.minByOrNull { it.second }
+        val head = if (login != null) "Login ${short(login.second, now, zone)} · ${login.first}" else "$freeTotal bebas"
+        rv.setTextViewText(R.id.a_summary, (if (hidden > 0) "${shown.size}/${rows.size} desa · " else "") + head)
         rv.setTextColor(R.id.a_summary, color(ctx, if (freeTotal > 0) R.color.widget_green else R.color.widget_text2))
         // Semua bagian diatur tegas setiap kali (tidak bergantung pada keadaan tampilan sebelumnya).
         rv.setViewVisibility(R.id.a_cols, View.VISIBLE)

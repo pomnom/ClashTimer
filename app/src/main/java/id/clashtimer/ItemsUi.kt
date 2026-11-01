@@ -64,7 +64,7 @@ object ItemsUi {
                     val mi = chunk.getOrNull(i)
                     val lp = Ui.weight1().apply { if (i > 0) marginStart = Ui.dp(act, 6) }
                     if (mi == null) {
-                        row.addView(View(act), lp)
+                        row.addView(Ui.space(act), lp)
                         continue
                     }
                     val boost = mi.boost?.let { k -> active.firstOrNull { it.kind.group == k.group } }

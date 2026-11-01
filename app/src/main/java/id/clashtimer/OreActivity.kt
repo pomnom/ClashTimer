@@ -40,11 +40,12 @@ class OreActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Ui.init(this)
         tag = intent.getStringExtra(EXTRA_TAG) ?: Store.selectedTag(this) ?: run { finish(); return }
         title = "⚒️ Ore · ${Store.villageName(this, tag)}"
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         box = Ui.vbox(this).apply { setPadding(Ui.dp(this@OreActivity, 16), 0, Ui.dp(this@OreActivity, 16), Ui.dp(this@OreActivity, 32)) }
-        setContentView(ScrollView(this).apply { addView(box) })
+        setContentView(ScrollView(this).apply { setBackgroundColor(Ui.BG); addView(box) })
         load()
         render()
     }

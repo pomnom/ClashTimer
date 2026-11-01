@@ -82,89 +82,203 @@ object VillageOptions {
         return parts.joinToString(" · ")
     }
 
-    /** Lembar bawah "Opsi desa": strategi, Gold Pass, CWL, collector + tindakan desa. */
-    fun sheet(act: MainActivity, tag: String, bb: Boolean) {
-        val dialog = com.google.android.material.bottomsheet.BottomSheetDialog(act)
-        val col = Ui.vbox(act).apply { setPadding(Ui.dp(act, 16), Ui.dp(act, 8), Ui.dp(act, 16), Ui.dp(act, 20)) }
-        col.addView(View(act).apply {
-            background = Ui.tint(Ui.GREY, Ui.dp(act, 2).toFloat(), 0x66)
-        }, LinearLayout.LayoutParams(Ui.dp(act, 32), Ui.dp(act, 4)).apply {
-            gravity = android.view.Gravity.CENTER_HORIZONTAL
-            bottomMargin = Ui.dp(act, 12)
-        })
-        val head = Ui.hbox(act)
-        head.addView(Ui.text(act, "Opsi ${name(act, tag)}", Ui.TITLE_M), Ui.weight1())
-        head.addView(Help.button(act, Help.Topic.OPTIONS))
-        col.addView(head)
-        col.addView(Ui.muted(act, if (bb) "Builder Base" else "Home Village").apply {
-            setPadding(0, 0, 0, Ui.dp(act, 10))
-        })
-        fill(act, col, tag, bb, Store.planSettings(act, tag)) { dialog.dismiss() }
-        col.addView(Ui.divider(act).apply { (layoutParams as LinearLayout.LayoutParams).topMargin = Ui.dp(act, 14) })
-        fun action(label: String, run: () -> Unit) {
-            col.addView(Ui.flat(act, label) { dialog.dismiss(); run() }.apply {
-                isAllCaps = false
-                gravity = android.view.Gravity.START or android.view.Gravity.CENTER_VERTICAL
-            }, Ui.matchWrap())
+    /** Perkiraan tanggal target per strategi (dihitung di background, satu simulasi per strategi). */
+    private val etaCache = HashMap<String, Long?>()
+
+    private fun etaKey(act: MainActivity, tag: String, name: String) = "$tag|${Store.planVersion(act)}|$name"
+
+    /** Lembar bawah "Opsi desa": Home/BB, strategi (dengan tanggal target), Gold Pass, CWL, collector, tindakan desa. */
+    fun sheet(act: MainActivity, tag: String, bb0: Boolean) {
+        val acc = Store.accounts(act).firstOrNull { it.tag == tag } ?: return
+        var bb = bb0 && acc.bh > 0
+        val dialog = Sheets.open(act, "Opsi ${name(act, tag)}", help = Help.Topic.OPTIONS) { col, dismiss ->
+            val content = Ui.vbox(act)
+            col.addView(content, Ui.matchWrap())
+            lateinit var render: () -> Unit
+            render = {
+                content.removeAllViews()
+                val ps = Store.planSettings(act, tag)
+                if (acc.bh > 0) content.addView(Ui.segmentedWide(act, listOf("Home Village", "Builder Base"), if (bb) 1 else 0) {
+                    bb = it == 1
+                    render()
+                }.apply { background = Ui.rounded(Ui.SURFACE2, Ui.dp(act, 12).toFloat()) }, Ui.matchWrap().apply { topMargin = Ui.dp(act, 12) })
+                content.addView(label(act, "STRATEGI"))
+                strategies(act, content, tag, bb, ps) { render() }
+                content.addView(rows(act, tag, bb, ps), Ui.matchWrap().apply { topMargin = Ui.dp(act, 6) })
+                footer(act, content, tag, dismiss)
+            }
+            render()
+            act.onDataChanged = { render() }
         }
-        action("📋 Update desa dari clipboard") { act.importFromClipboard() }
-        action("⚡ Potion & item") { act.openItems(tag) }
-        action("✏️ Ganti nama desa") { VillagesUi.rename(act, tag) }
-        action("⚙️ Pengaturan aplikasi") { act.openSettings() }
-        dialog.setContentView(android.widget.ScrollView(act).apply { addView(col) })
-        runCatching {
-            dialog.behavior.skipCollapsed = true
-            dialog.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
-        }
-        dialog.show()
+        dialog.setOnDismissListener { act.onDataChanged = null }
     }
 
-    /** Kotak-kotak opsi (2 × 2) + prioritas; [onPick] dipanggil sebelum pemilih dibuka. */
-    private fun fill(act: MainActivity, col: LinearLayout, tag: String, bb: Boolean, ps: PlanSettings, onPick: () -> Unit) {
-        val tiles = ArrayList<View>()
-        fun tile(act: MainActivity, label: String, value: String, onClick: () -> Unit) = tileView(act, label, value) { onPick(); onClick() }
-        val auto = " · otomatis"
-        val gpLabel = "🎫 Gold Pass" + if (goldAuto(act, tag, ps, bb)) auto else ""
+    private fun label(act: MainActivity, text: String) = Ui.text(act, text, Ui.BODY_S).apply {
+        textSize = 12f
+        letterSpacing = 0.05f
+        setTypeface(typeface, android.graphics.Typeface.BOLD)
+        setTextColor(Ui.TEXT2)
+        setPadding(Ui.dp(act, 2), Ui.dp(act, 16), 0, Ui.dp(act, 8))
+    }
+
+    /** Kartu pilihan strategi: radio + nama + akibatnya ("Semua upgrade TH11 selesai ±7 Feb"). */
+    private fun strategies(act: MainActivity, box: LinearLayout, tag: String, bb: Boolean, ps: PlanSettings, refresh: () -> Unit) {
+        val b = act.planFor(tag)
+        val v = b?.village
+        val zone = java.time.ZoneId.systemDefault()
+        class Opt(val name: String, val title: String, val what: String, val selected: Boolean, val ps: PlanSettings, val pick: () -> Unit)
+        val opts = ArrayList<Opt>()
         if (bb) {
-            val bob = Store.bobDone(act, tag)
-            tiles += tile(act, "💡 Strategi BB" + if (bob) auto else "", if (bob) "Max (B.O.B terbuka)" else ps.bbStrategy.label) { pickBbStrategy(act, tag) }
-            tiles += tile(act, "🔨 Builder BB", if (ps.bbBuilders > 0) "${ps.bbBuilders} builder" else "Otomatis") { pickBbBuilders(act, tag) }
-            tiles += tile(act, gpLabel, goldLabel(ps, true) + gpEnd(act)) { pickGoldPass(act, tag) }
-            tiles += tile(act, "⛏️ Collector", if (ps.skipCollectors) "Tidak di-upgrade" else "Di-upgrade") { pickCollectors(act, tag) }
+            if (Store.bobDone(act, tag)) opts += Opt("BB_MAX", "Max · otomatis", "B.O.B sudah terbuka — semua Builder Base max", true, ps) {}
+            else for (s in BBStrategy.entries) opts += Opt("BB_${s.name}", s.label,
+                if (s == BBStrategy.SIXTH) "B.O.B terbuka" else "Semua Builder Base max", s == ps.bbStrategy, ps.withBB(s)) {
+                Store.putPlan(act, "bb_strategy", s.name, tag)
+            }
         } else {
-            tiles += tile(act, "💡 Strategi", shortStrategy(ps.strategy)) { pickStrategy(act, tag) }
-            tiles += tile(act, gpLabel, goldLabel(ps, false) + gpEnd(act)) { pickGoldPass(act, tag) }
-            val cwlAuto = Store.cwlAuto(act, tag) != null
-            tiles += tile(act, "⚔️ CWL" + if (cwlAuto) auto else "", cwlLabel(act, tag, ps)) { pickCwl(act, tag) }
-            tiles += tile(act, "⛏️ Collector", if (ps.skipCollectors) "Tidak di-upgrade" else "Di-upgrade") { pickCollectors(act, tag) }
+            val th = v?.th ?: acc(act, tag)?.th ?: 0
+            for (s in Strategy.entries) {
+                val what = when (s) {
+                    Strategy.MAX -> "Semua upgrade TH$th selesai"
+                    Strategy.RUSH -> "TH${th + 1} mulai · pertahanan belakangan"
+                    Strategy.HERO -> "Semua hero max"
+                }
+                opts += Opt(s.name, shortStrategy(s), what, s == ps.strategy, ps.with(strategy = s)) {
+                    Store.putPlan(act, "strategy", s.name, tag)
+                }
+            }
         }
-        tiles.chunked(2).forEachIndexed { i, pair ->
-            val row = Ui.hbox(act).apply { if (i > 0) setPadding(0, Ui.dp(act, 8), 0, 0) }
-            pair.forEachIndexed { j, t -> row.addView(t, Ui.weight1().apply { if (j > 0) marginStart = Ui.dp(act, 8) }) }
-            col.addView(row)
+        val pending = ArrayList<Pair<Opt, android.widget.TextView>>()
+        for (o in opts) {
+            val card = Ui.hbox(act).apply {
+                background = if (o.selected) Ui.rounded(Ui.FREE_BG, Ui.dp(act, 14).toFloat(), Ui.FREE_LINE, Ui.dp(act, 1))
+                else Ui.rounded(android.graphics.Color.TRANSPARENT, Ui.dp(act, 14).toFloat(), Ui.OUTLINE, Ui.dp(act, 1))
+                setPadding(Ui.dp(act, 14), Ui.dp(act, 12), Ui.dp(act, 14), Ui.dp(act, 12))
+                isClickable = true
+                setOnClickListener {
+                    if (!o.selected) {
+                        o.pick()
+                        act.dataChanged()
+                        refresh()
+                    }
+                }
+            }
+            card.addView(View(act).apply {
+                background = if (o.selected) android.graphics.drawable.LayerDrawable(arrayOf(
+                    Ui.rounded(android.graphics.Color.TRANSPARENT, Ui.dp(act, 10).toFloat(), Ui.FREE, Ui.dp(act, 2)),
+                    Ui.rounded(Ui.FREE, Ui.dp(act, 5).toFloat()),
+                )).apply { setLayerInset(1, Ui.dp(act, 5), Ui.dp(act, 5), Ui.dp(act, 5), Ui.dp(act, 5)) }
+                else Ui.rounded(android.graphics.Color.TRANSPARENT, Ui.dp(act, 10).toFloat(), Ui.OUTLINE, Ui.dp(act, 2))
+            }, LinearLayout.LayoutParams(Ui.dp(act, 20), Ui.dp(act, 20)).apply { marginEnd = Ui.dp(act, 12) })
+            val tc = Ui.vbox(act)
+            tc.addView(Ui.text(act, o.title, Ui.BODY_M).apply {
+                textSize = 15f
+                setTextColor(Ui.TEXT)
+                if (o.selected) setTypeface(typeface, android.graphics.Typeface.BOLD)
+            })
+            val value = Ui.muted(act, o.what).apply { textSize = 13f }
+            tc.addView(value)
+            card.addView(tc, Ui.weight1())
+            box.addView(card, Ui.matchWrap(8, act))
+            // Tanggal target: strategi aktif dari rencana, lainnya disimulasikan.
+            val known = when {
+                o.selected && b != null -> {
+                    val sim = if (bb) b.simBB else b.simHome
+                    sim?.let { id.clashtimer.core.Planner.target(it, b.ps, bb).takeIf { t -> t != Long.MAX_VALUE } }
+                }
+                else -> etaCache[etaKey(act, tag, o.name)]
+            }
+            val cached = o.selected && b != null || etaCache.containsKey(etaKey(act, tag, o.name))
+            if (cached) value.text = o.what + (known?.let { " ±" + Fmt.dateShort(it, zone) } ?: "")
+            else if (b != null) pending += o to value
         }
+        if (pending.isNotEmpty() && b != null) {
+            pending.forEach { (o, tv) -> tv.text = o.what + " · menghitung…" }
+            val app = act.applicationContext
+            Thread {
+                val gd = Repo.gameData(app)
+                val now = System.currentTimeMillis()
+                val fin = Repo.finishes(app, tag)
+                val lanes = if (bb) setOf(id.clashtimer.core.Lane.BB_BUILDER, id.clashtimer.core.Lane.STAR_LAB)
+                else setOf(id.clashtimer.core.Lane.BUILDER, id.clashtimer.core.Lane.LAB, id.clashtimer.core.Lane.PET)
+                for ((o, tv) in pending) {
+                    val t = runCatching {
+                        val sim = id.clashtimer.core.Planner.simulate(b.village, gd, o.ps.withPolicies(b.ps.policies), now, fin, lanes, keepSteps = 1)
+                        id.clashtimer.core.Planner.target(sim, o.ps, bb).takeIf { it != Long.MAX_VALUE }
+                    }.getOrNull()
+                    act.runOnUiThread {
+                        etaCache[etaKey(act, tag, o.name)] = t
+                        if (tv.isAttachedToWindow) tv.text = o.what + (t?.let { " ±" + Fmt.dateShort(it, zone) } ?: " · tidak tercapai")
+                    }
+                }
+            }.start()
+        }
+    }
+
+    private fun acc(act: MainActivity, tag: String) = Store.accounts(act).firstOrNull { it.tag == tag }
+
+    /** Baris pengaturan: Gold Pass, CWL, collector, builder BB, prioritas. */
+    private fun rows(act: MainActivity, tag: String, bb: Boolean, ps: PlanSettings): View {
+        val col = Ui.vbox(act)
+        fun row(title: String, auto: Boolean, value: String?, extra: View? = null, onClick: (() -> Unit)?) {
+            val r = Ui.hbox(act).apply {
+                minimumHeight = Ui.dp(act, 52)
+                setPadding(Ui.dp(act, 2), Ui.dp(act, 8), Ui.dp(act, 2), Ui.dp(act, 8))
+                if (onClick != null) {
+                    isClickable = true
+                    setOnClickListener { onClick() }
+                    Ui.ripple(this)
+                }
+            }
+            val t = Ui.hbox(act)
+            t.addView(Ui.text(act, title, Ui.BODY_M).apply { textSize = 15f; setTextColor(Ui.TEXT) })
+            if (auto) t.addView(android.widget.TextView(act).apply {
+                text = "OTOMATIS"
+                textSize = 10f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                setTextColor(Ui.FREE_TEXT)
+                background = Ui.rounded(Ui.SELECTED_BG, Ui.dp(act, 6).toFloat())
+                setPadding(Ui.dp(act, 6), Ui.dp(act, 1), Ui.dp(act, 6), Ui.dp(act, 1))
+            }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginStart = Ui.dp(act, 8) })
+            r.addView(t, Ui.weight1())
+            if (value != null) r.addView(Ui.muted(act, value).apply {
+                textSize = 13f
+                maxLines = 1
+                ellipsize = TextUtils.TruncateAt.END
+                gravity = android.view.Gravity.END
+            }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = Ui.dp(act, 8) })
+            if (extra != null) r.addView(extra)
+            if (col.childCount > 0) col.addView(View(act).apply { setBackgroundColor(Ui.LINE) },
+                LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(act, 1)))
+            col.addView(r, Ui.matchWrap())
+        }
+        row("Gold Pass", goldAuto(act, tag, ps, bb), goldLabel(ps, bb).let { if (it.endsWith("%") && !bb && !it.contains("·")) "Builder $it · Riset $it" else it } + gpEnd(act)) { pickGoldPass(act, tag) }
+        if (bb) row("Builder Builder Base", false, if (ps.bbBuilders > 0) "${ps.bbBuilders} builder" else "otomatis dari export") { pickBbBuilders(act, tag) }
+        else row("CWL", Store.cwlAuto(act, tag) != null, cwlLabel(act, tag, ps)) { pickCwl(act, tag) }
+        val sw = androidx.appcompat.widget.SwitchCompat(act).apply {
+            isChecked = !ps.skipCollectors
+            setOnCheckedChangeListener { _, on ->
+                Store.putPlan(act, "skip_collectors", !on, tag)
+                act.dataChanged()
+            }
+        }
+        row("Upgrade collector", false, null, sw) { sw.toggle() }
         val nPin = Store.pins(act, tag).size
         val nHide = Store.hides(act, tag).size
-        col.addView(tile(act, "📌 Prioritas & disembunyikan",
-            if (nPin + nHide == 0) "Tahan lama sebuah upgrade" else "$nPin didahulukan · $nHide disembunyikan") { ItemMenu.manage(act, tag) },
-            Ui.matchWrap().apply { topMargin = Ui.dp(act, 8) })
+        row("Prioritas & disembunyikan", false, if (nPin + nHide == 0) "tahan lama sebuah upgrade" else "$nPin didahulukan · $nHide disembunyikan") { ItemMenu.manage(act, tag) }
+        return col
     }
 
-    private fun tileView(act: MainActivity, label: String, value: String, onClick: () -> Unit): View {
-        val v = Ui.vbox(act).apply {
-            background = Ui.tint(Ui.GREY, Ui.dp(act, 10).toFloat(), 0x1A)
-            setPadding(Ui.dp(act, 10), Ui.dp(act, 8), Ui.dp(act, 10), Ui.dp(act, 8))
-            isClickable = true
-            setOnClickListener { onClick() }
-        }
-        v.addView(Ui.muted(act, label))
-        v.addView(Ui.text(act, "$value ▾", Ui.TITLE_S).apply {
-            textSize = 13f
-            setTextColor(Ui.primary(act))
-            maxLines = 1
-            ellipsize = TextUtils.TruncateAt.END
-        })
-        return v
+    private fun footer(act: MainActivity, box: LinearLayout, tag: String, dismiss: () -> Unit) {
+        box.addView(Ui.tonal(act, "Update dari export") { dismiss(); act.importFromClipboard() }, Ui.matchWrap().apply { topMargin = Ui.dp(act, 16) })
+        val r = Ui.hbox(act).apply { setPadding(0, Ui.dp(act, 8), 0, 0) }
+        r.addView(Ui.secondary(act, "Ganti nama") { dismiss(); VillagesUi.rename(act, tag) }, Ui.weight1())
+        r.addView(Ui.secondary(act, "Hapus desa") { dismiss(); VillagesUi.confirmDelete(act, tag) }.apply { setTextColor(Ui.IDLE) },
+            Ui.weight1().apply { marginStart = Ui.dp(act, 8) })
+        box.addView(r, Ui.matchWrap())
+        val links = Ui.hbox(act).apply { setPadding(0, Ui.dp(act, 8), 0, 0) }
+        links.addView(Ui.flat(act, "Potion & item") { dismiss(); act.openItems(tag) }.apply { isAllCaps = false; setTextColor(Ui.FREE_TEXT) }, Ui.weight1())
+        links.addView(Ui.flat(act, "Pengaturan aplikasi") { dismiss(); act.openSettings() }.apply { isAllCaps = false; setTextColor(Ui.FREE_TEXT) }, Ui.weight1())
+        box.addView(links, Ui.matchWrap())
     }
 
     private fun name(act: MainActivity, tag: String) = Store.villageName(act, tag)

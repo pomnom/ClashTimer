@@ -163,6 +163,11 @@ object Notifier {
     fun done(ctx: Context, u: Upgrade, pick: Scored? = null) {
         val id = u.id.hashCode()
         if (u.kind == Kind.REMINDER) {
+            if (u.id.contains("|session|")) {
+                // Satu notifikasi per sesi login: siapa yang bebas + saran yang dimulai.
+                post(ctx, id, KEY_DONE, "Waktunya login · ${Store.villageName(ctx, u.tag)}", u.note, openApp(ctx, u.tag, false, id))
+                return
+            }
             val where = if (u.tag.isNotBlank()) " · ${Store.villageName(ctx, u.tag)}" else ""
             post(ctx, id, KEY_DONE, u.title(), u.note + where, openApp(ctx, u.tag.ifBlank { null }, u.id.contains("|clock|"), id))
             return

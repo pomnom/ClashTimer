@@ -30,6 +30,8 @@ object ProgressView {
             return
         }
         summary(act, box, p, sim, b, zone)
+        (if (bb) b.simBB else b.simHome)?.let { needsCard(act, box, it, zone) }
+        if (bb && b.ps.bbStrategy == id.clashtimer.core.BBStrategy.SIXTH) b.simBB?.sixth?.let { sixthCard(act, box, it, zone) }
 
         val open = p.categories.filter { it.remainingSec > 0 }.sortedBy { it.pct }
         val doneCats = p.categories.filter { it.remainingSec <= 0 }
@@ -74,44 +76,148 @@ object ProgressView {
     private fun summary(act: MainActivity, box: LinearLayout, p: VillageProgress, sim: SimResult?, b: PlanBundle, zone: ZoneId) {
         val now = b.computedAt
         val hall = if (p.bb) "BH${p.hall}" else "TH${p.hall}"
-        val (card, col) = Ui.card(act, padV = 14)
-        col.addView(Ui.muted(act, "$hall menuju max", Ui.BODY_M))
-        col.addView(Ui.text(act, Ui.pct(p.pct), Ui.TITLE_L).apply { textSize = 34f })
-        col.addView(Ui.bar(act, p.pct))
+        val card = Ui.panel(act, padH = 14, padV = 14)
+        val top = Ui.hbox(act).apply { gravity = android.view.Gravity.BOTTOM }
+        top.addView(Ui.monoText(act, Ui.pct(p.pct), 40f))
+        val week = History.weekDelta(act, b.tag, p.bb)
+        top.addView(Ui.muted(act, "menuju max $hall" + (week?.let { " · +${Ui.pct(it)} minggu ini" } ?: "")).apply {
+            textSize = 14f
+            setPadding(Ui.dp(act, 10), 0, 0, Ui.dp(act, 4))
+        }, Ui.weight1())
+        card.addView(top)
+        card.addView(Ui.thinBar(act, p.pct / 100.0, Ui.FREE).apply {
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(act, 8)).apply { topMargin = Ui.dp(act, 10) }
+        })
 
         val builderLane = if (p.bb) Lane.BB_BUILDER else Lane.BUILDER
         val labLane = if (p.bb) Lane.STAR_LAB else Lane.LAB
-        val builders = Planner.laneCount(b.village, builderLane, b.ps).coerceAtLeast(1)
         val bRem = p.remaining(builderLane) * 1000
         val lRem = p.remaining(labLane) * 1000
-
-        val boxes = Ui.hbox(act).apply { setPadding(0, Ui.dp(act, 8), 0, 0) }
-        fun metric(label: String, done: Long?, remaining: Long, first: Boolean) {
-            val m = Ui.vbox(act).apply {
-                background = Ui.tint(Ui.GREY, Ui.dp(act, 8).toFloat(), 0x1A)
-                setPadding(Ui.dp(act, 10), Ui.dp(act, 8), Ui.dp(act, 10), Ui.dp(act, 8))
-            }
-            m.addView(Ui.muted(act, label))
-            val value = when {
-                remaining <= 0 -> "Sudah max ✓"
-                done != null && done > now -> "±" + monthYear(done, zone)
-                else -> Fmt.bigDur(remaining)
-            }
-            m.addView(Ui.text(act, value, Ui.TITLE_S))
-            if (remaining > 0 && done != null && done > now) m.addView(Ui.muted(act, days(done - now)))
-            boxes.addView(m, Ui.weight1().apply { if (!first) marginStart = Ui.dp(act, 8) })
-        }
-        metric(if (p.bb) "Builder BB selesai" else "Builder selesai", sim?.let { if (p.bb) it.bbBuilderDone else it.builderDone }, bRem, true)
-        metric(if (p.bb) "Star Lab selesai" else "Lab selesai", sim?.let { if (p.bb) it.starLabDone else it.labDone }, lRem, false)
-        col.addView(boxes, Ui.matchWrap())
-
-        val parts = ArrayList<String>()
-        if (bRem > 0) parts += "${days0(bRem)} hari kerja builder (÷$builders ≈ ${days0(bRem / builders)} hari)"
-        if (lRem > 0) parts += "${days0(lRem)} hari ${labLane.label.lowercase()}"
+        class Eta(val label: String, val done: Long?, val remaining: Long)
+        val etas = arrayListOf(Eta(if (p.bb) "Master Builder" else "Builder", sim?.let { if (p.bb) it.bbBuilderDone else it.builderDone }, bRem))
+        if (!p.bb && sim?.heroDone != null) etas += Eta("Hero", sim.heroDone, 1)
+        etas += Eta(if (p.bb) "Star Lab" else "Lab", sim?.let { if (p.bb) it.starLabDone else it.labDone }, lRem)
         val pRem = if (!p.bb) p.remaining(Lane.PET) * 1000 else 0
-        if (pRem > 0) parts += "${days0(pRem)} hari pet"
-        if (parts.isNotEmpty()) col.addView(Ui.muted(act, parts.joinToString(" · ")).apply { setPadding(0, Ui.dp(act, 8), 0, 0) })
-        box.addView(card)
+        if (pRem > 0 && sim?.petDone != null && etas.size < 3) etas += Eta("Pet", sim.petDone, pRem)
+        // Penentu = yang paling akhir selesai.
+        val last = etas.filter { it.remaining > 0 && it.done != null }.maxByOrNull { it.done!! }
+        val grid = Ui.hbox(act).apply { setPadding(0, Ui.dp(act, 12), 0, 0) }
+        for (e in etas) {
+            val decisive = e === last && etas.count { it.remaining > 0 } > 1
+            val tile = Ui.panel(act, padH = 10, padV = 8, color = Ui.SURFACE2, stroke = if (decisive) Ui.LAB else null, radiusDp = 12)
+            tile.addView(Ui.muted(act, e.label + if (decisive) " · penentu" else "").apply {
+                textSize = 11f
+                if (decisive) setTextColor(Ui.LAB)
+            })
+            val value = when {
+                e.remaining <= 0 -> "max ✓"
+                e.done != null && e.done > now -> "±" + Fmt.dateShort(e.done, zone)
+                else -> Fmt.bigDur(e.remaining)
+            }
+            tile.addView(Ui.monoText(act, value, 15f).apply { setPadding(0, Ui.dp(act, 3), 0, 0); if (e.remaining <= 0) setTextColor(Ui.FREE_TEXT) })
+            if (e.remaining > 0 && e.done != null && e.done > now) tile.addView(Ui.muted(act, days(e.done - now)).apply { textSize = 11f })
+            grid.addView(tile, Ui.weight1().apply { if (grid.childCount > 0) marginStart = Ui.dp(act, 8) })
+        }
+        card.addView(grid, Ui.matchWrap())
+        box.addView(card, Ui.matchWrap(12, act))
+    }
+
+    // ---------------------------------------------------------------- kebutuhan sumber daya
+
+    /** Rentang yang dipilih: 0 = 24 jam, 1 = 3 hari, 2 = 7 hari. */
+    private var needWindow = 0
+
+    private val resourceOrder = listOf("Gold", "Elixir", "Dark Elixir", "Builder Gold", "Builder Elixir")
+
+    private fun resColor(r: String): Int = when (r) {
+        "Gold", "Builder Gold" -> 0xFFE8C35A.toInt()
+        "Elixir", "Builder Elixir" -> 0xFFD47AE0.toInt()
+        "Dark Elixir" -> 0xFF8E8AA0.toInt()
+        else -> Ui.GREY
+    }
+
+    /** "Siapkan resource": total biaya upgrade yang dimulai dalam 24 jam / 3 / 7 hari. */
+    private fun needsCard(act: MainActivity, box: LinearLayout, sim: SimResult, zone: ZoneId) {
+        val needs = sim.needs
+        if (needs.isEmpty()) return
+        val now = System.currentTimeMillis()
+        val card = Ui.panel(act, padH = 14, padV = 12)
+        val head = Ui.hbox(act)
+        head.addView(Ui.text(act, "Siapkan resource", Ui.TITLE_S).apply { textSize = 15f; setTypeface(typeface, android.graphics.Typeface.BOLD); setTextColor(Ui.TEXT) })
+        head.addView(Help.button(act, Help.Topic.NEEDS))
+        card.addView(head)
+        card.addView(Ui.segmentedWide(act, listOf("24 jam", "3 hari", "7 hari"), needWindow, heightDp = 36) {
+            needWindow = it
+            act.renderBody()
+        }.apply { background = Ui.rounded(Ui.SURFACE2, Ui.dp(act, 10).toFloat()) }, Ui.matchWrap().apply { topMargin = Ui.dp(act, 8) })
+        val n = needs.getOrNull(needWindow) ?: needs.first()
+        if (n.costs.isEmpty()) {
+            card.addView(Ui.muted(act, "Tidak ada upgrade yang dimulai pada rentang ini — pekerja masih sibuk.").apply {
+                textSize = 13f
+                setPadding(0, Ui.dp(act, 10), 0, Ui.dp(act, 2))
+            })
+        } else {
+            val sorted = n.costs.entries.sortedWith(compareBy({ resourceOrder.indexOf(it.key).let { i -> if (i < 0) 99 else i } }, { -it.value }))
+            val max = sorted.maxOf { it.value }.coerceAtLeast(1)
+            for ((res, cost) in sorted) {
+                val line = Ui.hbox(act).apply { setPadding(0, Ui.dp(act, 10), 0, 0) }
+                line.addView(Ui.text(act, Fmt.resource(res), Ui.BODY_M).apply { textSize = 14f; setTextColor(Ui.TEXT) },
+                    LinearLayout.LayoutParams(Ui.dp(act, 96), LinearLayout.LayoutParams.WRAP_CONTENT))
+                line.addView(Ui.thinBar(act, cost.toDouble() / max, resColor(res)).apply {
+                    layoutParams = LinearLayout.LayoutParams(0, Ui.dp(act, 6), 1f)
+                })
+                line.addView(Ui.monoText(act, Fmt.money(cost), 14f).apply { gravity = android.view.Gravity.END },
+                    LinearLayout.LayoutParams(Ui.dp(act, 76), LinearLayout.LayoutParams.WRAP_CONTENT))
+                card.addView(line)
+            }
+            n.top.entries.maxByOrNull { it.value.cost }?.let { (res, t) ->
+                card.addView(Ui.muted(act, "Termahal: ${t.title} · ${Fmt.money(t.cost)} ${Fmt.resource(res)} · ${HomeView.short(t.start, now, zone)}").apply {
+                    textSize = 12f
+                    setPadding(0, Ui.dp(act, 10), 0, 0)
+                })
+            }
+        }
+        box.addView(card, Ui.matchWrap(12, act))
+    }
+
+    // ---------------------------------------------------------------- builder ke-6
+
+    private fun sixthCard(act: MainActivity, box: LinearLayout, six: id.clashtimer.core.SixthPlan, zone: ZoneId) {
+        val now = System.currentTimeMillis()
+        val card = Ui.panel(act, padH = 14, padV = 12)
+        val head = Ui.hbox(act)
+        head.addView(Ui.text(act, "Builder ke-6 (B.O.B)", Ui.TITLE_S).apply { textSize = 15f; setTypeface(typeface, android.graphics.Typeface.BOLD); setTextColor(Ui.TEXT) })
+        head.addView(Help.button(act, Help.Topic.SIXTH))
+        head.addView(Ui.space(act), Ui.weight1())
+        val eta = six.doneAt
+        head.addView(Ui.monoText(act, eta?.let { "±" + Fmt.dateShort(it, zone) } ?: "belum bisa", 15f).apply { setTextColor(Ui.BUSY) })
+        card.addView(head)
+        if (eta != null) {
+            val d = Math.round((eta - now) / DAY.toDouble())
+            card.addView(Ui.muted(act, if (d <= 0) "hari ini" else "±$d hari lagi · ${six.reqs.count { it.done }}/${six.reqs.size} syarat").apply { textSize = 13f })
+        } else six.blockers.forEach { card.addView(Ui.muted(act, it).apply { textSize = 13f; setTextColor(Ui.IDLE) }) }
+        for (r in six.reqs) {
+            val line = Ui.hbox(act).apply { setPadding(0, Ui.dp(act, 10), 0, 0); gravity = android.view.Gravity.TOP }
+            line.addView(android.view.View(act).apply {
+                background = if (r.done) Ui.rounded(Ui.FREE, Ui.dp(act, 9).toFloat())
+                else Ui.rounded(android.graphics.Color.TRANSPARENT, Ui.dp(act, 9).toFloat(), Ui.OUTLINE, Ui.dp(act, 2))
+            }, LinearLayout.LayoutParams(Ui.dp(act, 18), Ui.dp(act, 18)).apply { marginEnd = Ui.dp(act, 10); topMargin = Ui.dp(act, 1) })
+            val c = Ui.vbox(act)
+            c.addView(Ui.text(act, r.label, Ui.BODY_M).apply { textSize = 14f; setTextColor(if (r.done) Ui.TEXT2 else Ui.TEXT) })
+            c.addView(Ui.muted(act, r.detail).apply { textSize = 12f })
+            line.addView(c, Ui.weight1())
+            val right = when {
+                r.done -> "selesai"
+                six.eta[r.key] != null -> "±" + Fmt.dateShort(six.eta[r.key]!!, zone)
+                else -> "–"
+            }
+            line.addView(Ui.monoText(act, right, 13f, bold = false).apply {
+                setTextColor(if (r.done) Ui.FREE_TEXT else Ui.TEXT2)
+                setPadding(Ui.dp(act, 8), 0, 0, 0)
+            })
+            card.addView(line)
+        }
+        box.addView(card, Ui.matchWrap(12, act))
     }
 
     /** Tembok: progres, biaya naik satu level per level sekarang, dan total ke max. */

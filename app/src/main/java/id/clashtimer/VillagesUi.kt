@@ -119,7 +119,7 @@ object VillagesUi {
             .show()
     }
 
-    private fun confirmDelete(act: MainActivity, tag: String) {
+    fun confirmDelete(act: MainActivity, tag: String) {
         MaterialAlertDialogBuilder(act)
             .setTitle("Hapus ${Store.villageName(act, tag)}?")
             .setMessage("Semua timer, catatan item, dan notifikasi desa ini akan dihapus dari aplikasi.")

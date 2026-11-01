@@ -52,6 +52,18 @@ object History {
         }
     }
 
+    /** Kenaikan % menuju max dibanding ±7 hari lalu (null bila belum ada datanya). */
+    fun weekDelta(ctx: Context, tag: String, bb: Boolean): Double? {
+        val list = snaps(ctx, tag)
+        val today = LocalDate.now(ZoneId.systemDefault()).toEpochDay()
+        val cur = list.lastOrNull() ?: return null
+        val old = list.lastOrNull { it.day <= today - 6 } ?: return null
+        val a = if (bb) old.bb else old.home
+        val b = if (bb) cur.bb else cur.home
+        if (a < 0 || b < 0) return null
+        return (b - a).takeIf { it >= 0.5 }
+    }
+
     /** Simpan % menuju max hari ini (menimpa snapshot hari yang sama). */
     fun snapshot(ctx: Context, tag: String, home: Double, bb: Double?) {
         val day = LocalDate.now(ZoneId.systemDefault()).toEpochDay()

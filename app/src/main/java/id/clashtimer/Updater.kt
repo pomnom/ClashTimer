@@ -36,6 +36,8 @@ object Updater {
         val publishedAt: Long,
         /** "sha256:…" dari GitHub bila tersedia. */
         val digest: String?,
+        /** Catatan rilis (isi rilis GitHub), tanpa baris otomatis "Full Changelog". */
+        val notes: String = "",
     )
 
     /** Sedang memeriksa unduhan (jangan dibersihkan). */
@@ -67,8 +69,39 @@ object Updater {
         val url = p.getString("url", null) ?: return null
         if (build <= 0) return null
         return Release(build, p.getString("tag", "") ?: "", p.getString("name", "") ?: "", url, p.getLong("size", 0L),
-            p.getLong("published", 0L), p.getString("digest", null))
+            p.getLong("published", 0L), p.getString("digest", null), p.getString("notes", "") ?: "")
     }
+
+    /** Buang baris otomatis GitHub ("**Full Changelog**: …") dan baris kosong berlebih. */
+    private fun cleanNotes(body: String?): String = body.orEmpty().lines()
+        .filterNot { it.contains("Full Changelog", ignoreCase = true) }
+        .joinToString("\n").trim()
+
+    // ---------------------------------------------------------------- yang baru (catatan di dalam APK)
+
+    /** Isi assets/changelog.txt: judul ("# …") + butir ("- …"). */
+    fun bundledNotes(ctx: Context): Pair<String, List<String>>? = runCatching {
+        val lines = ctx.assets.open("changelog.txt").bufferedReader().use { it.readLines() }
+        val title = lines.firstOrNull { it.startsWith("#") }?.trimStart('#', ' ') ?: "Yang baru"
+        title to lines.filter { it.startsWith("-") }.map { it.removePrefix("-").trim() }
+    }.getOrNull()
+
+    /** Catatan "Yang baru" belum pernah ditampilkan untuk build yang terpasang. */
+    fun shouldShowNews(ctx: Context): Boolean {
+        val build = installedBuild(ctx)
+        val seen = prefs(ctx).getLong("news_seen", -1L)
+        if (seen < 0) {
+            // Pemasangan baru (belum ada desa): tidak perlu ditampilkan. Sudah ada desa = update dari build lama.
+            if (Store.accounts(ctx).isEmpty()) {
+                prefs(ctx).edit().putLong("news_seen", build).apply()
+                return false
+            }
+            return bundledNotes(ctx) != null
+        }
+        return build > seen && bundledNotes(ctx) != null
+    }
+
+    fun markNewsSeen(ctx: Context) = prefs(ctx).edit().putLong("news_seen", installedBuild(ctx)).apply()
 
     /** Rilis yang lebih baru dari yang terpasang (null = sudah terbaru / belum dicek). */
     fun available(ctx: Context): Release? = latest(ctx)?.takeIf { it.build > installedBuild(ctx) }
@@ -118,11 +151,12 @@ object Updater {
             val e = prefs(ctx).edit().putLong("checked_at", System.currentTimeMillis()).remove("error")
             val rel = if (build > 0 && apk != null) Release(
                 build, tag, o.optString("name").ifBlank { tag }, apk.getString("browser_download_url"), apk.optLong("size"),
-                published, apk.optString("digest").takeIf { it.startsWith("sha256:") },
+                published, apk.optString("digest").takeIf { it.startsWith("sha256:") }, cleanNotes(o.optString("body")),
             ) else null
             if (rel != null) {
                 e.putInt("build", rel.build).putString("tag", rel.tag).putString("name", rel.name).putString("url", rel.url)
                     .putLong("size", rel.size).putLong("published", rel.publishedAt).putString("digest", rel.digest)
+                    .putString("notes", rel.notes)
             }
             e.apply()
             rel

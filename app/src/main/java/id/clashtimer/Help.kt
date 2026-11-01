@@ -12,22 +12,23 @@ object Help {
 
     enum class Topic(val title: String, val body: String) {
         HOME(
-            "Beranda",
-            "• Kotak pekerja: B1… = builder (B1 paling cepat selesai), Lab, Pet, dan 👺 Goblin (event). Hijau = bebas.\n" +
-                "• Ketuk kotak yang bebas → pilih upgrade yang Anda mulai di game. \"Sudah dimulai\" langsung memasang timer & notifikasi tanpa import ulang.\n" +
-                "• Ketuk upgrade yang berjalan → tandai selesai (gem/book) atau batal.\n" +
-                "• Tahan lama sebuah upgrade → prioritaskan atau sembunyikan.\n" +
-                "• \"di game\" = sisa waktu seperti di game; waktu utama sudah termasuk sesi helper berikutnya.\n" +
-                "• Goblin Builder / Researcher tidak dihitung sebagai pekerja tetap.\n" +
-                "• Setelah memulai upgrade di game: tekan \"Sudah dimulai\", atau Copy export di game → 📋 Update desa.",
+            "Sekarang",
+            "• Buka game berikutnya = kapan ada pekerja yang bebas lagi menurut jadwal (di luar jam tidur). Ketuk lonceng untuk satu notifikasi per sesi login.\n" +
+                "• Bebas sekarang: satu kartu per pekerja (B1… = builder, Lab, Pet, M = Master Builder). Saran teratas = urutan tercepat menuju target strategi.\n" +
+                "• \"Sudah dimulai\" langsung memasang timer & notifikasi tanpa import ulang; salah pencet? ketuk Batalkan di pesan bawah.\n" +
+                "• \"Opsi lain\" = semua pilihan dengan filter (selesai pas bangun, hero, pertahanan, murah).\n" +
+                "• Hijau \"pas bangun\" = selesai saat Anda bisa langsung mengisinya lagi; oranye = pekerja akan menganggur.\n" +
+                "• Ketuk upgrade yang berjalan → detail, tandai selesai (gem/book), potion, prioritas, atau batal. Tahan lama → prioritaskan / sembunyikan.\n" +
+                "• Goblin Builder / Researcher (event) tidak dihitung sebagai pekerja tetap.",
         ),
         PLAN(
-            "Rencana & target",
-            "• Rencana = perkiraan bila setiap pekerja langsung diisi saran teratas saat Anda online. Jam tidur/kerja, helper, Gold Pass, event, CWL & kapasitas gudang ikut dihitung.\n" +
-                "• 🎯 Target tiap strategi: Seimbang = semua upgrade di TH sekarang selesai · Rush TH = Town Hall naik · Hero dulu = semua hero max · Builder ke-6 = B.O.B terbuka · Max BB = Builder Base selesai.\n" +
-                "• Aplikasi mencoba beberapa cara mengurutkan (rantai upgrade terpanjang dulu, upgrade terlama dulu, nilai per waktu & biaya) untuk tiap jenis pekerja dan memakai yang paling cepat mencapai target. Dihitung ulang saat data atau pengaturan berubah.\n" +
+            "Jadwal & target",
+            "• Agenda = sesi login: kapan perlu membuka game dan apa yang dimulai tiap sesi. Pekerja yang bebas berdekatan (≤ 45 menit) digabung jadi satu sesi.\n" +
+                "• Jadwal = perkiraan bila setiap pekerja langsung diisi saran teratas saat Anda online. Jam tidur/kerja, helper, Gold Pass, event, CWL & kapasitas gudang ikut dihitung.\n" +
+                "• Target tiap strategi: Seimbang = semua upgrade di TH sekarang selesai · Rush TH = Town Hall naik · Hero dulu = semua hero max · Builder ke-6 = B.O.B terbuka · Max BB = Builder Base selesai. Ganti strategi di ikon opsi.\n" +
+                "• Aplikasi mencoba beberapa cara mengurutkan (rantai upgrade terpanjang dulu, upgrade terlama dulu, nilai per waktu & biaya) untuk tiap jenis pekerja dan memakai yang paling cepat mencapai target.\n" +
                 "• Hero yang bentrok dengan CWL ditunda dan tidak dimasukkan ke antrean selama CWL.\n" +
-                "• Ketuk sebuah langkah untuk detail; bila pekerjanya bebas sekarang ada tombol \"Sudah dimulai\".",
+                "• Ketuk sebuah langkah untuk detail; lonceng = pengingat untuk sesi itu.",
         ),
         TIMELINE(
             "Timeline",
@@ -67,9 +68,9 @@ object Help {
         ),
         VILLAGES(
             "Semua desa",
-            "• Ketuk desa atau kotaknya untuk membuka (kotak Builder Base / Star Lab → Beranda Builder Base).\n" +
+            "• Ketuk desa atau kotaknya untuk membuka (kotak Builder Base / Star Lab → Sekarang di Builder Base).\n" +
                 "• Tahan lama sebuah desa → ganti nama, opsi, update, atau hapus.\n" +
-                "• Desa yang paling cepat butuh perhatian ada di atas. Isinya sama dengan widget.\n" +
+                "• Login berikutnya = kapan tiap desa perlu dibuka lagi; desa dengan pekerja bebas ada di atas. Isinya sama dengan widget.\n" +
                 "• Desa baru ditambah otomatis saat Anda meng-import export dari akun lain.",
         ),
         OPTIONS(

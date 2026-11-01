@@ -224,6 +224,7 @@ object Store {
             .remove("cwl_auto_$tag").remove("gpdet_b_$tag").remove("gpdet_r_$tag").remove("bob_$tag")
             .remove("pins_$tag").remove("hides_$tag").remove("api_stats_$tag")
             .remove("hist_$tag").remove("ulog_$tag").remove("hist_start_$tag").remove("ore_$tag").remove("opt_$tag")
+            .remove("sessrem_$tag")
         VILLAGE_KEYS.forEach { e.remove("${it}_$tag") }
         e.commit()
         if (selectedTag(ctx) == tag) prefs(ctx).edit().remove("selected_tag").apply()
@@ -630,6 +631,20 @@ object Store {
     }
 
     fun planVersion(ctx: Context) = prefs(ctx).getInt("plan_version", 0)
+
+    /** Pengingat sesi login yang dinyalakan pengguna (jam + isi notifikasi). */
+    class SessionReminder(val at: Long, val text: String)
+
+    fun sessionReminders(ctx: Context, tag: String): List<SessionReminder> = runCatching {
+        val a = JSONArray(prefs(ctx).getString("sessrem_$tag", "[]"))
+        (0 until a.length()).map { a.getJSONObject(it).let { o -> SessionReminder(o.getLong("t"), o.optString("x")) } }
+    }.getOrDefault(emptyList())
+
+    fun setSessionReminders(ctx: Context, tag: String, list: List<SessionReminder>) {
+        val a = JSONArray()
+        for (r in list) a.put(JSONObject().put("t", r.at).put("x", r.text))
+        prefs(ctx).edit().putString("sessrem_$tag", a.toString()).apply()
+    }
 
     /** Urutan tercepat terakhir (Planner.optimize) satu desa; [sig] = data & pengaturan saat dihitung. */
     class OptCache(val sig: String, val at: Long, val policies: Map<Lane, Policy>, val home: PlanTarget?, val bb: PlanTarget?)

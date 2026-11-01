@@ -5,6 +5,7 @@ import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
+import id.clashtimer.core.DAY
 import id.clashtimer.core.Fmt
 import id.clashtimer.core.Lane
 import java.time.ZoneId
@@ -21,125 +22,183 @@ object VillagesView {
         val now = System.currentTimeMillis()
         val zone = ZoneId.systemDefault()
         val ups = Store.upgrades(act)
-        val freeTotal = rows.sumOf { r -> r.cells.filter { !it.lane.bb }.sumOf { it.free } }
-        box.addView(Ui.sectionRow(act,
-            if (freeTotal > 0) "$freeTotal pekerja Home Village bebas" else "Semua pekerja Home Village sibuk", help = Help.Topic.VILLAGES))
-        val cards = rows.map { card(act, it, ups, now, zone) }
+        nextLogins(act, box, rows, ups, now, zone)
+        // Yang butuh perhatian (ada pekerja bebas) di atas.
+        val sorted = rows.sortedByDescending { r -> r.cells.filter { !it.lane.bb }.sumOf { it.free } > 0 }
+        val cards = sorted.map { card(act, it, ups, now, zone) }
         if (wide) {
             cards.chunked(2).forEach { pair ->
                 val line = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL }
-                pair.forEachIndexed { i, c -> line.addView(c, Ui.weight1().apply { if (i > 0) marginStart = Ui.dp(act, 8) }) }
-                if (pair.size == 1) line.addView(View(act), Ui.weight1().apply { marginStart = Ui.dp(act, 8) })
-                box.addView(line, Ui.matchWrap())
+                pair.forEachIndexed { i, c -> line.addView(c, Ui.weight1().apply { if (i > 0) marginStart = Ui.dp(act, 12) }) }
+                if (pair.size == 1) line.addView(Ui.space(act), Ui.weight1().apply { marginStart = Ui.dp(act, 12) })
+                box.addView(line, Ui.matchWrap(12, act))
             }
-        } else cards.forEach { box.addView(it) }
+        } else cards.forEach { box.addView(it, Ui.matchWrap(12, act)) }
 
-        val add = Ui.hbox(act).apply { setPadding(0, Ui.dp(act, 10), 0, 0) }
-        add.addView(Ui.filled(act, "+ Tambah desa dari clipboard") { act.importFromClipboard() }.apply { isAllCaps = false }, Ui.weight1())
-        add.addView(Ui.outlined(act, "Tempel") { act.showPasteDialog() }.apply { isAllCaps = false },
-            LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                marginStart = Ui.dp(act, 8)
-            })
-        box.addView(add)
+        box.addView(Ui.tonal(act, "Tambah / update desa") { ImportUi.show(act) }, Ui.matchWrap().apply { topMargin = Ui.dp(act, 4) })
+    }
+
+    /** "Login berikutnya (semua desa)": kapan tiap desa perlu dibuka, paling awal di atas. */
+    private fun nextLogins(act: MainActivity, box: LinearLayout, rows: List<Widgets.VRow>, ups: List<Upgrade>, now: Long, zone: ZoneId) {
+        class Next(val name: String, val at: Long, val who: String)
+        val list = ArrayList<Next>()
+        for (r in rows) {
+            val home = r.cells.filter { !it.lane.bb }
+            if (home.isEmpty()) continue
+            val labels = Sessions.labels(ups.filter { it.tag == r.tag }, now)
+            val free = home.filter { it.free > 0 }
+            if (free.isNotEmpty()) {
+                list += Next(r.name, now, free.joinToString(" & ") { c -> if (c.lane == Lane.BUILDER) "${c.free} builder" else laneShort(c.lane) } + " bebas")
+                continue
+            }
+            val nexts = home.mapNotNull { it.next }
+            val first = nexts.minByOrNull { it.finishAt } ?: continue
+            val sched = runCatching { Store.planSettings(act, r.tag).schedule }.getOrNull()
+            val at = sched?.nextOnline(first.finishAt) ?: first.finishAt
+            val who = nexts.filter { it.finishAt - first.finishAt <= 45 * 60_000L }.map { labels[it.id] ?: it.kind.label }.distinct()
+            list += Next(r.name, at, who.joinToString(" & "))
+        }
+        if (list.isEmpty()) return
+        val card = Ui.panel(act, padH = 14, padV = 12)
+        card.addView(Ui.muted(act, "Login berikutnya (semua desa)").apply { textSize = 13f; setPadding(0, 0, 0, Ui.dp(act, 4)) })
+        list.sortedBy { it.at }.take(4).forEachIndexed { i, n ->
+            val line = Ui.hbox(act).apply { setPadding(0, Ui.dp(act, 4), 0, Ui.dp(act, 4)) }
+            val t = Ui.monoText(act, if (n.at <= now) "kini" else HomeView.short(n.at, now, zone), 20f).apply {
+                if (i > 0) setTextColor(Ui.TEXT2)
+                if (n.at <= now) setTextColor(Ui.FREE)
+            }
+            line.addView(t, LinearLayout.LayoutParams(Ui.dp(act, 92), LinearLayout.LayoutParams.WRAP_CONTENT))
+            line.addView(Ui.text(act, "${n.name} · ${n.who}", Ui.BODY_M).apply {
+                textSize = 14f
+                setTextColor(if (i == 0) Ui.TEXT else Ui.TEXT2)
+                maxLines = 1
+                ellipsize = TextUtils.TruncateAt.END
+            }, Ui.weight1())
+            if (i == 0) line.addView(View(act).apply { background = Ui.rounded(Ui.FREE, Ui.dp(act, 4).toFloat()) },
+                LinearLayout.LayoutParams(Ui.dp(act, 8), Ui.dp(act, 8)))
+            card.addView(line)
+        }
+        box.addView(card, Ui.matchWrap(12, act))
+    }
+
+    private fun laneShort(l: Lane) = when (l) {
+        Lane.BUILDER -> "Builder"
+        Lane.LAB -> "Lab"
+        Lane.PET -> "Pet"
+        Lane.BB_BUILDER -> "Builder Base"
+        Lane.STAR_LAB -> "Star Lab"
     }
 
     private fun card(act: MainActivity, r: Widgets.VRow, ups: List<Upgrade>, now: Long, zone: ZoneId): View {
-        val (card, col) = Ui.card(act, padH = 12, padV = 12)
+        val freeHome = r.cells.filter { !it.lane.bb }.sumOf { it.free }
+        val card = Ui.panel(act, padH = 14, padV = 12, stroke = if (freeHome > 0) Ui.FREE_LINE else null)
+        card.isClickable = true
         card.setOnClickListener { act.selectVillage(r.tag, bb = false, open = MainActivity.Tab.HOME) }
         card.setOnLongClickListener { VillagesUi.options(act, r.tag); true }
+        Ui.ripple(card)
 
         val head = Ui.hbox(act)
-        head.addView(Ui.text(act, r.name, Ui.TITLE_M).apply {
+        val hc = Ui.vbox(act)
+        hc.addView(Ui.text(act, r.name, Ui.TITLE_M).apply {
+            textSize = 17f
+            setTypeface(typeface, Typeface.BOLD)
+            setTextColor(Ui.TEXT)
             maxLines = 1
             ellipsize = TextUtils.TruncateAt.END
-        }, Ui.weight1())
+        })
+        val pct = Store.lastPct(act, r.tag).takeIf { it >= 0 }?.let { "${Ui.pct(it.toDouble())} menuju max" }
         val hall = listOfNotNull(
             r.acc.th.takeIf { it > 0 }?.let { "TH$it" },
             r.acc.bh.takeIf { it > 0 }?.let { "BH$it" },
+            pct,
         ).joinToString(" · ")
-        if (hall.isNotEmpty()) head.addView(Ui.muted(act, hall, Ui.BODY_M))
-        col.addView(head)
+        if (hall.isNotEmpty()) hc.addView(Ui.muted(act, hall).apply { textSize = 12f })
+        head.addView(hc, Ui.weight1())
+        val freeAll = r.cells.sumOf { it.free }
+        head.addView(android.widget.TextView(act).apply {
+            text = if (freeAll > 0) "$freeAll bebas" else "semua sibuk"
+            textSize = 12f
+            setTypeface(typeface, Typeface.BOLD)
+            setTextColor(if (freeAll > 0) Ui.ON_FREE else Ui.TEXT2)
+            background = Ui.rounded(if (freeAll > 0) Ui.FREE else Ui.SURFACE2, Ui.dp(act, 10).toFloat())
+            setPadding(Ui.dp(act, 9), Ui.dp(act, 3), Ui.dp(act, 9), Ui.dp(act, 3))
+        })
+        card.addView(head)
 
         if (r.cells.isEmpty()) {
             val free = act.freeBuilders(r.tag, false)
-            col.addView(Ui.text(act, if (free > 0) "🔨 $free builder bebas" else "🔨 semua builder sibuk", Ui.BODY_M).apply {
-                setTextColor(if (free > 0) Ui.FREE else Ui.secondary(act))
-                setPadding(0, Ui.dp(act, 6), 0, 0)
+            card.addView(Ui.text(act, if (free > 0) "$free builder bebas" else "semua builder sibuk", Ui.BODY_M).apply {
+                setTextColor(if (free > 0) Ui.FREE_TEXT else Ui.TEXT2)
+                setPadding(0, Ui.dp(act, 8), 0, 0)
             })
         } else {
+            val goblins = ups.filter { it.tag == r.tag && it.extra && it.finishAt > now }
             val shown = r.cells.filter { it.total > 0 || it.next != null || !it.lane.bb }
             shown.chunked(2).forEachIndexed { i, pair ->
                 val line = Ui.hbox(act).apply { gravity = Gravity.TOP }
                 pair.forEachIndexed { j, c ->
-                    line.addView(tile(act, r.tag, c, now), Ui.weight1().apply { if (j > 0) marginStart = Ui.dp(act, 8) })
+                    val gob = goblins.filter { g -> Kind.of(c.lane) == g.kind }.minByOrNull { it.finishAt }
+                    line.addView(tile(act, r.tag, c, gob, now), Ui.weight1().apply { if (j > 0) marginStart = Ui.dp(act, 8) })
                 }
-                if (pair.size == 1) line.addView(View(act), Ui.weight1().apply { marginStart = Ui.dp(act, 8) })
-                col.addView(line, Ui.matchWrap().apply { topMargin = Ui.dp(act, if (i == 0) 10 else 8) })
+                if (pair.size == 1) line.addView(Ui.space(act), Ui.weight1().apply { marginStart = Ui.dp(act, 8) })
+                card.addView(line, Ui.matchWrap().apply { topMargin = Ui.dp(act, if (i == 0) 10 else 8) })
             }
         }
 
-        // Goblin Builder / Researcher (event): pekerja tambahan sementara.
-        val goblins = ups.filter { it.tag == r.tag && it.extra && it.finishAt > now }.sortedBy { it.finishAt }
-        for (g in goblins) {
-            val who = if (g.kind == Kind.LAB) "Goblin Researcher" else "Goblin Builder"
-            val line = Ui.hbox(act).apply { setPadding(0, Ui.dp(act, 8), 0, 0) }
-            line.addView(Ui.muted(act, "👺 $who · ${Widgets.shortTitle(g)}").apply {
-                maxLines = 1
-                ellipsize = TextUtils.TruncateAt.END
-            }, Ui.weight1())
-            val cd = Ui.muted(act, act.countdown(g.finishAt - now))
-            act.registerCountdown(cd, g.finishAt, clockStyle = false)
-            line.addView(cd)
-            col.addView(line)
+        val age = now - r.acc.exportedAt
+        if (r.acc.exportedAt > 0 && age > DAY) {
+            card.addView(Ui.muted(act, "export ${Fmt.dur(age)} lalu · update supaya akurat").apply {
+                textSize = 12f
+                setTextColor(Ui.IDLE)
+                setPadding(0, Ui.dp(act, 8), 0, 0)
+            })
         }
-
-        val pct = Store.lastPct(act, r.tag).takeIf { it >= 0 }?.let { "${Ui.pct(it.toDouble())} menuju max · " } ?: ""
-        col.addView(Ui.muted(act, "${pct}import ${Fmt.at(r.acc.exportedAt, zone)}").apply { setPadding(0, Ui.dp(act, 8), 0, 0) })
         return card
     }
 
-    private fun laneTitle(lane: Lane): String = when (lane) {
-        Lane.BUILDER -> "🔨 Builder"
-        Lane.LAB -> "🧪 Lab"
-        Lane.PET -> "🐾 Pet House"
-        Lane.BB_BUILDER -> "🛠️ Builder BB"
-        Lane.STAR_LAB -> "⭐ Star Lab"
-    }
-
-    /** Kotak satu jenis pekerja: "2 bebas" + saran, atau hitung mundur upgrade yang paling cepat selesai. */
-    private fun tile(act: MainActivity, tag: String, c: Widgets.Cell, now: Long): View {
+    /** Kotak satu jenis pekerja: "2 bebas" + titik builder, atau hitung mundur upgrade yang paling cepat selesai. */
+    private fun tile(act: MainActivity, tag: String, c: Widgets.Cell, goblin: Upgrade?, now: Long): View {
         val free = c.free > 0
         val next = c.next
+        val lab = c.lane == Lane.LAB || c.lane == Lane.PET || c.lane == Lane.STAR_LAB
         val v = Ui.vbox(act).apply {
-            background = Ui.tileBg(act, if (free) Ui.FREE else null)
+            background = Ui.rounded(if (free) Ui.FREE_BG else Ui.SURFACE2, Ui.dp(act, 12).toFloat())
             setPadding(Ui.dp(act, 10), Ui.dp(act, 8), Ui.dp(act, 10), Ui.dp(act, 8))
             isClickable = true
             setOnClickListener { act.selectVillage(tag, bb = c.lane.bb, open = MainActivity.Tab.HOME) }
         }
-        val top = Ui.hbox(act)
-        top.addView(Ui.muted(act, laneTitle(c.lane)).apply { maxLines = 1 }, Ui.weight1())
-        if (c.total > 1) top.addView(Ui.muted(act, "${c.busy}/${c.total}"))
-        v.addView(top)
+        v.addView(Ui.muted(act, laneShort(c.lane)).apply { textSize = 12f; maxLines = 1 })
         val main = when {
-            free -> Ui.text(act, "${c.free} bebas", Ui.TITLE_S).apply { setTextColor(Ui.FREE) }
-            next != null -> Ui.text(act, act.countdown(next.finishAt - now), Ui.TITLE_S).apply {
-                setTypeface(Typeface.MONOSPACE, Typeface.BOLD)
+            free -> Ui.text(act, "${c.free} bebas", Ui.TITLE_S).apply { setTextColor(Ui.FREE_TEXT); setTypeface(typeface, Typeface.BOLD) }
+            next != null -> Ui.monoText(act, act.countdown(next.finishAt - now), 15f).apply {
+                setTextColor(if (lab) Ui.LAB else Ui.BUSY)
                 act.registerCountdown(this, next.finishAt, clockStyle = false)
             }
-            c.total == 0 -> Ui.text(act, "—", Ui.TITLE_S).apply { setTextColor(Ui.secondary(act)) }
-            else -> Ui.text(act, "Menganggur", Ui.TITLE_S).apply { setTextColor(Ui.secondary(act)) }
+            c.total == 0 -> Ui.text(act, "—", Ui.TITLE_S).apply { setTextColor(Ui.TEXT2) }
+            else -> Ui.text(act, "Menganggur", Ui.TITLE_S).apply { setTextColor(Ui.IDLE) }
         }
-        v.addView(main.apply { maxLines = 1 })
-        val sub = when {
-            free -> c.tip?.let { "💡 $it" } ?: "siap diisi"
-            next != null -> Widgets.shortTitle(next)
-            c.total == 0 -> "belum ada"
-            else -> "tidak ada saran"
+        v.addView(main.apply { textSize = 15f; maxLines = 1; setPadding(0, Ui.dp(act, 2), 0, Ui.dp(act, 3)) })
+        if ((c.lane == Lane.BUILDER || c.lane == Lane.BB_BUILDER) && c.total > 1) {
+            // Titik per builder: kuning = sibuk, hijau = bebas.
+            val dots = Ui.hbox(act)
+            for (k in 0 until c.total) dots.addView(View(act).apply {
+                background = Ui.rounded(if (k < c.busy) Ui.BUSY else Ui.FREE, Ui.dp(act, 4).toFloat())
+            }, LinearLayout.LayoutParams(Ui.dp(act, 8), Ui.dp(act, 8)).apply { marginEnd = Ui.dp(act, 4) })
+            v.addView(dots)
+        } else {
+            val sub = when {
+                goblin != null -> "+ Goblin ${act.countdown(goblin.finishAt - now)}"
+                free -> c.tip ?: "siap diisi"
+                next != null -> Widgets.shortTitle(next)
+                c.total == 0 -> "belum ada"
+                else -> "tidak ada saran"
+            }
+            v.addView(Ui.muted(act, sub).apply {
+                textSize = 12f
+                maxLines = 1
+                ellipsize = TextUtils.TruncateAt.END
+            })
         }
-        v.addView(Ui.muted(act, sub).apply {
-            maxLines = 1
-            ellipsize = TextUtils.TruncateAt.END
-        })
         return v
     }
 }

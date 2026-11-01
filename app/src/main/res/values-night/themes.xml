@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tema gelap: palet mockup (latar #121317, kartu #1B1D23, hijau = bebas). -->
+<resources>
+    <style name="Theme.ClashTimer" parent="Theme.Material3.DayNight">
+        <item name="colorPrimary">#5AD08E</item>
+        <item name="colorOnPrimary">#0D1F15</item>
+        <item name="colorPrimaryContainer">#2B3A31</item>
+        <item name="colorOnPrimaryContainer">#7FD7A6</item>
+        <item name="colorSecondary">#F0B44C</item>
+        <item name="colorSecondaryContainer">#1F2A23</item>
+        <item name="colorOnSecondaryContainer">#7FD7A6</item>
+        <item name="android:colorBackground">#121317</item>
+        <item name="colorSurface">#121317</item>
+        <item name="colorOnSurface">#EEF0F3</item>
+        <item name="colorOnSurfaceVariant">#A7ADB8</item>
+        <item name="colorSurfaceContainerLowest">#0E0F12</item>
+        <item name="colorSurfaceContainerLow">#1B1D23</item>
+        <item name="colorSurfaceContainer">#1B1D23</item>
+        <item name="colorSurfaceContainerHigh">#1F2128</item>
+        <item name="colorSurfaceContainerHighest">#262A32</item>
+        <item name="colorOutline">#3A3F49</item>
+        <item name="colorOutlineVariant">#262A32</item>
+        <item name="android:statusBarColor">#121317</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:navigationBarColor">#17191E</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="actionBarTheme">@style/ThemeOverlay.Material3.Dark.ActionBar</item>
+    </style>
+
+    <style name="Theme.ClashTimer.NoBar" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">#5AD08E</item>
+        <item name="colorOnPrimary">#0D1F15</item>
+        <item name="colorPrimaryContainer">#2B3A31</item>
+        <item name="colorOnPrimaryContainer">#7FD7A6</item>
+        <item name="colorSecondary">#F0B44C</item>
+        <item name="colorSecondaryContainer">#1F2A23</item>
+        <item name="colorOnSecondaryContainer">#7FD7A6</item>
+        <item name="android:colorBackground">#121317</item>
+        <item name="colorSurface">#121317</item>
+        <item name="colorOnSurface">#EEF0F3</item>
+        <item name="colorOnSurfaceVariant">#A7ADB8</item>
+        <item name="colorSurfaceContainerLowest">#0E0F12</item>
+        <item name="colorSurfaceContainerLow">#1B1D23</item>
+        <item name="colorSurfaceContainer">#1B1D23</item>
+        <item name="colorSurfaceContainerHigh">#1F2128</item>
+        <item name="colorSurfaceContainerHighest">#262A32</item>
+        <item name="colorOutline">#3A3F49</item>
+        <item name="colorOutlineVariant">#262A32</item>
+        <item name="android:statusBarColor">#121317</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:navigationBarColor">#17191E</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+</resources>

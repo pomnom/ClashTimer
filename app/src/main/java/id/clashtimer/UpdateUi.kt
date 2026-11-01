@@ -16,18 +16,49 @@ object UpdateUi {
     fun offer(act: MainActivity, box: LinearLayout) {
         val r = Updater.available(act) ?: return
         if (Updater.dismissed(act) >= r.build) return
-        val (card, col) = Ui.card(act, padV = 12, tinted = true)
-        col.addView(Ui.text(act, "⬆️ Clash Timer build ${r.build} tersedia", Ui.TITLE_S))
+        val card = Ui.panel(act, padH = 14, padV = 14, color = Ui.FREE_BG, stroke = Ui.FREE_LINE)
+        card.addView(Ui.text(act, "Build ${r.build} tersedia", Ui.TITLE_S).apply {
+            textSize = 16f; setTypeface(typeface, android.graphics.Typeface.BOLD); setTextColor(Ui.TEXT)
+        })
         val date = if (r.publishedAt > 0) " · ${Fmt.at(r.publishedAt, ZoneId.systemDefault())}" else ""
-        col.addView(Ui.muted(act, "Terpasang build ${Updater.installedBuild(act)} · ${Updater.mb(r.size)}$date · diunduh di aplikasi, APK dihapus otomatis"))
-        val row = LinearLayout(act).apply { gravity = Gravity.END }
-        row.addView(Ui.flat(act, "Nanti") {
+        card.addView(Ui.muted(act, "terpasang build ${Updater.installedBuild(act)} · ${Updater.mb(r.size)}$date").apply { textSize = 13f })
+        if (r.notes.isNotBlank()) {
+            val lines = r.notes.lines().filter { it.isNotBlank() }
+            card.addView(Ui.muted(act, lines.take(3).joinToString("\n") { "• " + it.trimStart('-', '*', ' ') }).apply {
+                textSize = 13f
+                setTextColor(Ui.TEXT)
+                setPadding(0, Ui.dp(act, 8), 0, 0)
+            })
+            if (lines.size > 3) card.addView(Ui.flat(act, "Lihat semua perubahan") { notes(act, "Yang baru di build ${r.build}", lines) }.apply {
+                isAllCaps = false
+                setTextColor(Ui.FREE_TEXT)
+            })
+        }
+        val row = Ui.hbox(act).apply { setPadding(0, Ui.dp(act, 12), 0, 0) }
+        row.addView(Ui.primary(act, "Update") { start(act, r) }, Ui.weight1())
+        row.addView(Ui.secondary(act, "Nanti") {
             Updater.dismiss(act, r.build)
             act.renderBody()
-        }.apply { isAllCaps = false })
-        row.addView(Ui.filled(act, "Update") { start(act, r) }.apply { isAllCaps = false })
-        col.addView(row)
-        box.addView(card)
+        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginStart = Ui.dp(act, 8) })
+        card.addView(row)
+        box.addView(card, Ui.matchWrap(12, act))
+    }
+
+    /** Daftar perubahan dalam dialog. */
+    fun notes(act: AppCompatActivity, title: String, lines: List<String>) {
+        MaterialAlertDialogBuilder(act)
+            .setTitle(title)
+            .setMessage(lines.joinToString("\n") { "• " + it.trimStart('-', '*', ' ') })
+            .setPositiveButton("OK", null)
+            .show()
+    }
+
+    /** Sekali setelah update: "Yang baru" dari catatan di dalam APK. */
+    fun maybeShowNews(act: AppCompatActivity) {
+        if (!Updater.shouldShowNews(act)) return
+        val (title, lines) = Updater.bundledNotes(act) ?: return
+        Updater.markNewsSeen(act)
+        notes(act, "Yang baru · build ${Updater.installedBuild(act)}", listOf(title) + lines)
     }
 
     /**

@@ -170,6 +170,15 @@ object Repo {
             )
         }
 
+        // Pengingat sesi login yang dinyalakan di Sekarang / Jadwal
+        for (r in Store.sessionReminders(ctx, tag)) {
+            if (r.at < System.currentTimeMillis() - 60_000L) continue
+            list += Upgrade(
+                id = "$tag|session|${r.at}", tag = tag, kind = Kind.REMINDER, name = "Login",
+                targetLevel = 0, finishAt = r.at, helped = false, note = r.text, customTitle = "🔔 Waktunya login",
+            )
+        }
+
         // Clock Tower siap lagi (boost gratis yang dicatat di aplikasi, cooldown 22 jam)
         val clockUsed = Store.clockUsed(ctx, tag)
         if (clockUsed > 0) {
@@ -387,7 +396,7 @@ object Repo {
             fresh += Upgrade(
                 id = "goldpass|$gpEnd", tag = "", kind = Kind.REMINDER, name = "Gold Pass", targetLevel = 0,
                 finishAt = gpSoon, helped = false, customTitle = "🎫 Gold Pass berakhir besok",
-                note = "Musim berakhir ${Fmt.at(gpEnd, zone)}. Setelah itu cek lagi Builder/Research Boost tiap desa di Beranda.",
+                note = "Musim berakhir ${Fmt.at(gpEnd, zone)}. Setelah itu cek lagi Builder/Research Boost tiap desa (ikon opsi).",
             )
         }
         Store.mergeProjections(ctx, "", fresh, emptySet())
@@ -445,11 +454,33 @@ object Repo {
         return Store.upgrades(ctx).firstOrNull { it.id == st.uid }
     }
 
+    /** Batalkan "Sudah dimulai" (tombol Batalkan di pesan bawah). */
+    fun undoStart(ctx: Context, tag: String, uid: String) {
+        Store.setStarted(ctx, tag, Store.started(ctx, tag).filter { it.uid != uid })
+        Store.saveUpgrades(ctx, Store.upgrades(ctx).filter { it.id != uid })
+        reproject(ctx, tag)
+    }
+
+    /** Pengingat sesi login aktif untuk jam [at] (toleransi 1 menit). */
+    fun sessionReminderOn(ctx: Context, tag: String, at: Long): Boolean =
+        Store.sessionReminders(ctx, tag).any { kotlin.math.abs(it.at - at) < 60_000L }
+
+    /** Nyalakan / matikan pengingat sesi; yang sudah lewat dibuang. */
+    fun toggleSessionReminder(ctx: Context, tag: String, at: Long, text: String): Boolean {
+        val now = System.currentTimeMillis()
+        val list = Store.sessionReminders(ctx, tag).filter { it.at > now - 60_000L }
+        val on = list.none { kotlin.math.abs(it.at - at) < 60_000L }
+        val next = if (on) list + Store.SessionReminder(at, text) else list.filter { kotlin.math.abs(it.at - at) >= 60_000L }
+        Store.setSessionReminders(ctx, tag, next)
+        reproject(ctx, tag)
+        return on
+    }
+
     /** Id item game dari id timer ("tag|bagian|id|…"). */
     fun itemIdOf(timerId: String): Int? = timerId.split('|').getOrNull(2)?.toIntOrNull()
 
     fun finishes(ctx: Context, tag: String): Map<String, Long> =
-        Store.upgrades(ctx).filter { it.tag == tag }.associate { it.id to it.finishAt }
+        Store.upgrades(ctx).filter { it.tag == tag && it.kind != Kind.REMINDER }.associate { it.id to it.finishAt }
 
     /** Hitung saran, progres dan simulasi (berat — jalankan di background). */
     fun computePlan(ctx: Context, tag: String): PlanBundle? {

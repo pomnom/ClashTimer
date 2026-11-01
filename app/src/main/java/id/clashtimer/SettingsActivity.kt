@@ -63,8 +63,9 @@ class SettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         title = "Pengaturan"
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        Ui.init(this)
         box = Ui.vbox(this).apply { setPadding(Ui.dp(this@SettingsActivity, 16), 0, Ui.dp(this@SettingsActivity, 16), Ui.dp(this@SettingsActivity, 32)) }
-        setContentView(ScrollView(this).apply { addView(box) })
+        setContentView(ScrollView(this).apply { setBackgroundColor(Ui.BG); addView(box) })
         render()
     }
 
@@ -82,13 +83,35 @@ class SettingsActivity : AppCompatActivity() {
     /** Judul kecil di dalam satu bagian. */
     /** Judul kecil di dalam satu bagian; [help] = tombol "?" berisi penjelasannya. */
     private fun sub(title: String, subtitle: String? = null, help: Help.Topic? = null) {
-        val col = Ui.vbox(this).apply { setPadding(Ui.dp(this@SettingsActivity, 4), Ui.dp(this@SettingsActivity, 12), Ui.dp(this@SettingsActivity, 4), Ui.dp(this@SettingsActivity, 4)) }
+        val col = Ui.vbox(this).apply { setPadding(Ui.dp(this@SettingsActivity, 4), Ui.dp(this@SettingsActivity, 16), Ui.dp(this@SettingsActivity, 4), Ui.dp(this@SettingsActivity, 6)) }
         val head = Ui.hbox(this)
-        head.addView(Ui.text(this, title, Ui.TITLE_S))
+        head.addView(Ui.text(this, title.uppercase(id.clashtimer.core.Fmt.locale), Ui.BODY_S).apply {
+            textSize = 12f
+            letterSpacing = 0.06f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(Ui.TEXT2)
+        })
         if (help != null) head.addView(Help.button(this, help))
         col.addView(head)
-        if (subtitle != null) col.addView(Ui.muted(this, subtitle))
+        if (subtitle != null) col.addView(Ui.muted(this, subtitle).apply { textSize = 12f })
         box.addView(col)
+        group = null
+    }
+
+    /** Panel kelompok: baris berurutan dalam satu bagian digabung dalam satu panel bergaris pemisah. */
+    private var group: LinearLayout? = null
+
+    private fun groupPanel(): LinearLayout {
+        val g = group
+        if (g != null && box.childCount > 0 && box.getChildAt(box.childCount - 1) === g) {
+            g.addView(android.view.View(this).apply { setBackgroundColor(Ui.LINE) },
+                LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(this, 1)))
+            return g
+        }
+        val p = Ui.panel(this, padH = 14, padV = 0)
+        box.addView(p, Ui.matchWrap(8, this))
+        group = p
+        return p
     }
 
     private fun render() {
@@ -189,6 +212,12 @@ class SettingsActivity : AppCompatActivity() {
         box.addView(Ui.outlined(this, "Cek update sekarang") { UpdateUi.checkNow(this) { render() } }
             .apply { isAllCaps = false }, Ui.matchWrap())
         switchRow("Cek otomatis saat aplikasi dibuka", Updater.autoCheck(this)) { Updater.setAutoCheck(this, it) }
+        if (avail != null && avail.notes.isNotBlank()) {
+            row("Perubahan build ${avail.build}", "lihat") { UpdateUi.notes(this, "Yang baru di build ${avail.build}", avail.notes.lines().filter { it.isNotBlank() }) }
+        }
+        Updater.bundledNotes(this)?.let { (title, lines) ->
+            row("Yang baru di build $installed", title) { UpdateUi.notes(this, "Yang baru · build $installed", listOf(title) + lines) }
+        }
     }
 
     // ---------------------------------------------------------------- pindah data
@@ -385,25 +414,37 @@ class SettingsActivity : AppCompatActivity() {
     // ---------------------------------------------------------------- baris
 
     private fun row(title: String, value: String, onClick: () -> Unit) {
-        val (card, col) = Ui.card(this)
-        card.setOnClickListener { onClick() }
-        col.addView(Ui.text(this, title, Ui.TITLE_S))
-        col.addView(Ui.text(this, value, Ui.BODY_M).apply { setTextColor(Ui.primary(this@SettingsActivity)) })
-        box.addView(card)
+        val line = Ui.hbox(this).apply {
+            minimumHeight = Ui.dp(this@SettingsActivity, 52)
+            setPadding(0, Ui.dp(this@SettingsActivity, 10), 0, Ui.dp(this@SettingsActivity, 10))
+            isClickable = true
+            setOnClickListener { onClick() }
+            Ui.ripple(this)
+        }
+        line.addView(Ui.text(this, title, Ui.BODY_M).apply { textSize = 15f; setTextColor(Ui.TEXT) }, Ui.weight1())
+        line.addView(Ui.text(this, value, Ui.BODY_M).apply {
+            textSize = 13f
+            setTextColor(Ui.FREE_TEXT)
+            gravity = android.view.Gravity.END
+            maxLines = 2
+        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = Ui.dp(this@SettingsActivity, 12) })
+        groupPanel().addView(line, Ui.matchWrap())
     }
 
     private fun switchRow(title: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-        val (card, col) = Ui.card(this)
-        val line = Ui.hbox(this)
-        val label: TextView = Ui.text(this, title, Ui.TITLE_S)
+        val line = Ui.hbox(this).apply {
+            minimumHeight = Ui.dp(this@SettingsActivity, 52)
+            setPadding(0, Ui.dp(this@SettingsActivity, 6), 0, Ui.dp(this@SettingsActivity, 6))
+        }
+        val label: TextView = Ui.text(this, title, Ui.BODY_M).apply { textSize = 15f; setTextColor(Ui.TEXT) }
         line.addView(label, Ui.weight1())
         val sw = SwitchCompat(this)
         sw.isChecked = checked
         sw.setOnCheckedChangeListener { _, isChecked -> onChange(isChecked) }
         line.addView(sw)
-        card.setOnClickListener { sw.isChecked = !sw.isChecked }
-        col.addView(line)
-        box.addView(card)
+        line.isClickable = true
+        line.setOnClickListener { sw.isChecked = !sw.isChecked }
+        groupPanel().addView(line, Ui.matchWrap())
     }
 
     // ---------------------------------------------------------------- pemilih

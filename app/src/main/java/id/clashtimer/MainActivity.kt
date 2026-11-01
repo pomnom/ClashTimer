@@ -37,9 +37,9 @@ import java.util.concurrent.Executors
 class MainActivity : AppCompatActivity() {
 
     enum class Tab(val iconRes: Int, val label: String) {
+        HOME(R.drawable.ic_nav_now, "Sekarang"),
+        PLAN(R.drawable.ic_nav_schedule, "Jadwal"),
         VILLAGES(R.drawable.ic_nav_villages, "Desa"),
-        HOME(R.drawable.ic_nav_home, "Beranda"),
-        PLAN(R.drawable.ic_nav_plan, "Rencana"),
         PROGRESS(R.drawable.ic_nav_progress, "Progres"),
     }
 
@@ -93,30 +93,41 @@ class MainActivity : AppCompatActivity() {
             showBB = st.getBoolean("bb", false)
         }
 
-        val root = Ui.vbox(this)
-        header = Ui.hbox(this).apply { setPadding(dp(4), dp(6), dp(4), dp(4)) }
-        root.addView(header, Ui.matchWrap())
+        Ui.init(this)
+        wide = resources.configuration.screenWidthDp >= 720
+        val main = Ui.vbox(this).apply { setBackgroundColor(Ui.BG) }
+        header = Ui.vbox(this).apply { setPadding(dp(16), dp(8), dp(8), dp(6)) }
+        main.addView(header, Ui.matchWrap())
 
         val content = FrameLayout(this)
-        body = Ui.vbox(this).apply { setPadding(dp(12), dp(4), dp(12), dp(24)) }
+        body = Ui.vbox(this).apply { setPadding(dp(16), dp(4), dp(16), dp(24)) }
         scroll = ScrollView(this).apply { isFillViewport = true; addView(body) }
-        wide = resources.configuration.screenWidthDp >= 720
         if (wide) {
             val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
             row.addView(scroll, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
-            val right = Ui.vbox(this).apply { setPadding(dp(12), dp(4), dp(12), dp(24)) }
+            val right = Ui.vbox(this).apply { setPadding(dp(8), dp(4), dp(20), dp(24)) }
             val rightScroll = ScrollView(this).apply { isFillViewport = true; addView(right) }
-            row.addView(rightScroll, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1.1f))
+            row.addView(rightScroll, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1.15f))
             body2 = right
             scroll2 = rightScroll
             content.addView(row)
         } else content.addView(scroll)
-        root.addView(content, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+        main.addView(content, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
 
-        root.addView(Ui.divider(this))
-        nav = Ui.hbox(this).apply { setPadding(0, dp(4), 0, dp(4)) }
-        root.addView(nav, Ui.matchWrap())
-        setContentView(root)
+        if (wide) {
+            // Layar lebar: rel navigasi di kiri.
+            nav = Ui.vbox(this).apply { setBackgroundColor(Ui.NAV); setPadding(0, dp(20), 0, 0) }
+            val root = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setBackgroundColor(Ui.BG) }
+            root.addView(nav, LinearLayout.LayoutParams(dp(96), LinearLayout.LayoutParams.MATCH_PARENT))
+            root.addView(View(this).apply { setBackgroundColor(Ui.LINE) }, LinearLayout.LayoutParams(dp(1), LinearLayout.LayoutParams.MATCH_PARENT))
+            root.addView(main, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
+            setContentView(root)
+        } else {
+            main.addView(View(this).apply { setBackgroundColor(Ui.LINE) }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1)))
+            nav = Ui.hbox(this).apply { setBackgroundColor(Ui.NAV); setPadding(0, dp(6), 0, dp(6)) }
+            main.addView(nav, Ui.matchWrap())
+            setContentView(main)
+        }
 
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -176,36 +187,61 @@ class MainActivity : AppCompatActivity() {
         if (ts != 0L && ts == Store.clipSeen(this)) return
         Store.setClipSeen(this, ts)
         if (!desc.hasMimeType("text/*")) return
-        val text = runCatching { cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString() }
-            .getOrNull() ?: return
-        val peek = id.clashtimer.core.ExportReader.peek(text) ?: return
-        val acc = Store.accounts(this).firstOrNull { it.tag == peek.tag }
-        if (acc != null && peek.exportAt in 1..acc.exportedAt) return
-        if (Store.clipDismissed(this) == "${peek.tag}|${peek.exportAt}") return
-        clipOffer = ClipOffer(text, peek.tag, peek.exportAt, acc == null)
+        val o = peekClip() ?: return
+        if (Store.clipDismissed(this) == "${o.tag}|${o.exportAt}") return
+        clipOffer = o
         renderBody()
+    }
+
+    /** Export desa di clipboard yang lebih baru dari data tersimpan (atau desa baru). */
+    private fun peekClip(): ClipOffer? {
+        val cm = getSystemService(ClipboardManager::class.java) ?: return null
+        val text = runCatching { cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString() }
+            .getOrNull() ?: return null
+        val peek = id.clashtimer.core.ExportReader.peek(text) ?: return null
+        val acc = Store.accounts(this).firstOrNull { it.tag == peek.tag }
+        if (acc != null && peek.exportAt in 1..acc.exportedAt) return null
+        return ClipOffer(text, peek.tag, peek.exportAt, acc == null)
     }
 
     /** Kartu "Update dari clipboard?" di atas halaman. */
     private fun addClipOffer(box: LinearLayout) {
         val o = clipOffer ?: return
-        val (card, col) = Ui.card(this, padV = 12, tinted = true)
+        box.addView(clipView(o) { clipOffer = null })
+    }
+
+    /** Kartu clipboard untuk lembar "Tambah / update desa" (dibaca ulang dari clipboard). */
+    fun clipCard(box: LinearLayout, onDone: () -> Unit) {
+        val o = clipOffer ?: peekClip() ?: return
+        box.addView(clipView(o) { clipOffer = null; onDone() })
+    }
+
+    private fun clipView(o: ClipOffer, onDone: () -> Unit): View {
+        val card = Ui.panel(this, padH = 14, padV = 14, color = Ui.FREE_BG, stroke = Ui.FREE_LINE)
         val name = if (o.isNew) o.tag else Store.villageName(this, o.tag)
-        col.addView(Ui.text(this, if (o.isNew) "📋 Desa baru di clipboard: $name" else "📋 Export baru untuk $name", Ui.TITLE_S))
-        val age = if (o.exportAt > 0) "diekspor ${Fmt.at(o.exportAt, zone)}" else "export desa"
-        col.addView(Ui.muted(this, "$age · ketuk untuk memperbarui timer & saran"))
-        val row = LinearLayout(this).apply { gravity = Gravity.END }
-        row.addView(Ui.flat(this, "Nanti") {
-            Store.setClipDismissed(this, "${o.tag}|${o.exportAt}")
-            clipOffer = null
-            renderBody()
+        val top = Ui.hbox(this)
+        top.addView(Ui.icon(this, R.drawable.ic_import, 22, Ui.FREE_TEXT), LinearLayout.LayoutParams(dp(22), dp(22)).apply { marginEnd = dp(10) })
+        val tc = Ui.vbox(this)
+        tc.addView(Ui.text(this, if (o.isNew) "Desa baru di clipboard: $name" else "Export baru untuk $name", Ui.TITLE_S).apply {
+            textSize = 16f; setTypeface(typeface, Typeface.BOLD); setTextColor(Ui.TEXT)
         })
-        row.addView(Ui.filled(this, if (o.isNew) "Tambahkan" else "Update") {
-            clipOffer = null
+        val age = if (o.exportAt > 0) "di clipboard · diekspor ${HomeView.short(o.exportAt, System.currentTimeMillis(), zone)}" else "di clipboard"
+        tc.addView(Ui.muted(this, age).apply { textSize = 13f })
+        top.addView(tc, Ui.weight1())
+        card.addView(top)
+        val row = Ui.hbox(this).apply { setPadding(0, dp(12), 0, 0) }
+        row.addView(Ui.primary(this, if (o.isNew) "Tambahkan" else "Update") {
+            onDone()
             doImport(o.text)
-        }.apply { isAllCaps = false })
-        col.addView(row)
-        box.addView(card)
+        }, Ui.weight1())
+        row.addView(Ui.secondary(this, "Nanti") {
+            Store.setClipDismissed(this, "${o.tag}|${o.exportAt}")
+            onDone()
+            renderBody()
+        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(8) })
+        card.addView(row)
+        card.layoutParams = Ui.matchWrap(12, this)
+        return card
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -232,6 +268,7 @@ class MainActivity : AppCompatActivity() {
         handler.post(tick)
         ApiSync.maybeSync(this)
         Updater.maybeCheck(this) { renderBody() }
+        UpdateUi.maybeShowNews(this)
     }
 
     override fun onPause() {
@@ -273,48 +310,61 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Satu baris: ‹ nama desa (TH · bebas · 1/2 desa) › · Home|BB · opsi desa.
-     * Di tab Desa: judul "Semua desa" + pengaturan.
+     * Desa aktif (ketuk = ganti desa) + update & opsi; di bawahnya Home Village | Builder Base.
+     * Di tab Desa: judul "Semua desa" + tambah desa & pengaturan.
      */
     private fun renderHeader() {
         header.removeAllViews()
-        val sec = Ui.secondary(this)
+        val sec = Ui.TEXT2
         val accounts = sortedAccounts()
         val tag = currentTag()
         val acc = accounts.firstOrNull { it.tag == tag }
+        val row = Ui.hbox(this)
+        header.addView(row, Ui.matchWrap())
         if (tab == Tab.VILLAGES || acc == null) {
-            val col = Ui.vbox(this).apply { setPadding(dp(10), dp(4), 0, dp(4)) }
-            col.addView(Ui.text(this, if (acc == null) "Clash Timer" else "Semua desa", Ui.TITLE_M))
-            col.addView(Ui.muted(this, if (acc == null) "Belum ada desa" else "${accounts.size} desa · ketuk untuk membuka"))
-            header.addView(col, Ui.weight1())
-            header.addView(Ui.icon(this, R.drawable.ic_settings, 22, sec, "Pengaturan") { openSettings() })
+            val col = Ui.vbox(this).apply { setPadding(0, dp(4), 0, dp(4)) }
+            col.addView(Ui.text(this, if (acc == null) "Clash Timer" else "Semua desa", Ui.TITLE_L).apply {
+                textSize = 22f; setTypeface(typeface, Typeface.BOLD); setTextColor(Ui.TEXT)
+            })
+            col.addView(Ui.muted(this, if (acc == null) "Belum ada desa" else "${accounts.size} desa · yang butuh perhatian di atas"))
+            row.addView(col, Ui.weight1())
+            if (acc != null) row.addView(Help.button(this, Help.Topic.VILLAGES))
+            row.addView(Ui.icon(this, R.drawable.ic_add, 24, sec, "Tambah desa dari export") { ImportUi.show(this) })
+            row.addView(Ui.icon(this, R.drawable.ic_settings, 22, sec, "Pengaturan") { openSettings() })
             return
         }
         val multi = accounts.size > 1
-        if (multi) header.addView(Ui.icon(this, R.drawable.ic_chevron_left, 22, sec, "Desa sebelumnya") { cycleVillage(-1) })
         val col = Ui.vbox(this).apply {
-            setPadding(dp(if (multi) 2 else 10), dp(2), dp(4), dp(2))
+            setPadding(0, dp(2), dp(4), dp(2))
             isClickable = true
+            contentDescription = "Ganti desa"
             setOnClickListener { VillagesUi.show(this@MainActivity) }
         }
-        col.addView(Ui.text(this, Store.villageName(this, acc.tag) + " ▾", Ui.TITLE_M).apply {
+        col.addView(Ui.text(this, Store.villageName(this, acc.tag) + " ▾", Ui.TITLE_L).apply {
+            textSize = 20f
+            setTypeface(typeface, Typeface.BOLD)
+            setTextColor(Ui.TEXT)
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
         })
         val hall = if (showBB) acc.bh.takeIf { it > 0 }?.let { "BH$it" } else acc.th.takeIf { it > 0 }?.let { "TH$it" }
-        val free = freeBuilders(acc.tag, showBB)
-        val sub = android.text.SpannableStringBuilder()
-        hall?.let { sub.append(it).append(" · ") }
-        val freeText = if (free > 0) "$free bebas" else "semua sibuk"
-        sub.append(freeText)
-        if (free > 0) sub.setSpan(android.text.style.ForegroundColorSpan(Ui.FREE), sub.length - freeText.length, sub.length, 0)
-        if (multi) sub.append(" · ${accounts.indexOf(acc) + 1}/${accounts.size} desa")
-        col.addView(Ui.muted(this, sub).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END })
-        header.addView(col, Ui.weight1())
-        if (multi) header.addView(Ui.icon(this, R.drawable.ic_chevron_right, 22, sec, "Desa berikutnya") { cycleVillage(1) })
-        header.addView(Ui.segmented(this, listOf("Home", "BB"), if (showBB) 1 else 0) { selectSide(it == 1) },
-            LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(4) })
-        header.addView(Ui.icon(this, R.drawable.ic_tune, 22, sec, "Opsi desa") { VillageOptions.sheet(this, acc.tag, showBB) })
+        val sub = listOfNotNull(hall, if (multi) "desa ${accounts.indexOf(acc) + 1} dari ${accounts.size}" else null).joinToString(" · ")
+        col.addView(Ui.muted(this, sub).apply { maxLines = 1 })
+        row.addView(col, Ui.weight1())
+        val seg = sideSwitch(acc)
+        if (wide) row.addView(seg, LinearLayout.LayoutParams(dp(380), LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(8) })
+        row.addView(Ui.icon(this, R.drawable.ic_import, 22, sec, "Update desa dari export") { importFromClipboard() })
+        row.addView(Ui.icon(this, R.drawable.ic_tune, 22, sec, "Opsi desa") { VillageOptions.sheet(this, acc.tag, showBB) })
+        if (!wide) header.addView(seg, Ui.matchWrap().apply { topMargin = dp(8); marginEnd = dp(8) })
+    }
+
+    /** Home Village | Builder Base, dengan jumlah pekerja bebas di sisi lain. */
+    private fun sideSwitch(acc: Account): View {
+        val freeHome = freeBuilders(acc.tag, false)
+        val freeBB = if (acc.bh > 0) freeBuilders(acc.tag, true) else 0
+        val home = "Home Village" + if (showBB && freeHome > 0) " · $freeHome bebas" else ""
+        val bb = "Builder Base" + if (!showBB && freeBB > 0) " · $freeBB bebas" else ""
+        return Ui.segmentedWide(this, listOf(home, bb), if (showBB) 1 else 0) { selectSide(it == 1) }
     }
 
     /** Urutan desa untuk tombol ‹ ›: menurut nama. */
@@ -352,32 +402,32 @@ class MainActivity : AppCompatActivity() {
         nav.removeAllViews()
         if (wide && tab == Tab.PLAN) tab = Tab.HOME
         for (t in Tab.entries) {
-            // Layar lebar: Rencana tampil di samping Beranda.
+            // Layar lebar: Jadwal tampil di samping Sekarang.
             if (wide && t == Tab.PLAN) continue
             val selected = t == tab
-            val color = if (selected) Ui.primary(this) else Ui.secondary(this)
+            val color = if (selected) Ui.FREE_TEXT else Ui.TEXT2
             val item = Ui.vbox(this).apply {
                 gravity = Gravity.CENTER_HORIZONTAL
-                setPadding(0, dp(6), 0, dp(6))
+                setPadding(0, dp(if (wide) 10 else 4), 0, dp(if (wide) 10 else 4))
                 isClickable = true
                 contentDescription = t.label
                 setOnClickListener { selectTab(t) }
             }
             val pill = FrameLayout(this).apply {
-                if (selected) background = Ui.tint(Ui.primary(this@MainActivity), dp(14).toFloat(), 0x26)
-                setPadding(dp(18), dp(3), dp(18), dp(3))
+                if (selected) background = Ui.rounded(Ui.SELECTED_BG, dp(16).toFloat())
+                setPadding(dp(18), dp(4), dp(18), dp(4))
                 addView(Ui.icon(this@MainActivity, t.iconRes, 22, color), FrameLayout.LayoutParams(dp(22), dp(22)))
             }
             item.addView(pill, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT))
             item.addView(TextView(this).apply {
-                text = if (wide && t == Tab.HOME) "Beranda · Rencana" else t.label
-                textSize = 11f
+                text = t.label
+                textSize = 12f
                 gravity = Gravity.CENTER
                 setTextColor(color)
-                setPadding(0, dp(3), 0, 0)
+                setPadding(0, dp(4), 0, 0)
                 if (selected) setTypeface(typeface, Typeface.BOLD)
             })
-            nav.addView(item, Ui.weight1())
+            if (wide) nav.addView(item, Ui.matchWrap()) else nav.addView(item, Ui.weight1())
         }
     }
 
@@ -450,13 +500,13 @@ class MainActivity : AppCompatActivity() {
             addClipOffer(body)
             UpdateUi.offer(this, body)
             addWarnings(body)
-            body.addView(Ui.text(this,
-                "Belum ada desa.\n\nDi Clash of Clans: Settings → More Settings → paling bawah \"Export village data\" → Copy.\n\n" +
-                    "Lalu tekan tombol di bawah. Untuk desa lain, ulangi dengan akun lain — semua desa tersimpan dan tampil di tab Desa.",
-                Ui.BODY_M,
-            ).apply { setPadding(dp(4), dp(24), dp(4), dp(16)) })
-            body.addView(Ui.filled(this, "📋 Import dari Clipboard") { importFromClipboard() }, Ui.matchWrap(6, this))
-            body.addView(Ui.outlined(this, "Tempel teks export") { showPasteDialog() }, Ui.matchWrap())
+            val card = Ui.panel(this, padH = 16, padV = 16)
+            card.addView(Ui.text(this, "Belum ada desa", Ui.TITLE_M).apply { textSize = 20f; setTypeface(typeface, Typeface.BOLD); setTextColor(Ui.TEXT) })
+            card.addView(Ui.muted(this, "Di Clash of Clans: Settings → More Settings → paling bawah \"Export village data\" → Copy, lalu kembali ke sini. " +
+                "Untuk desa lain, ulangi dengan akun lain — semua desa tampil di tab Desa.").apply { textSize = 14f; setPadding(0, dp(6), 0, dp(14)) })
+            card.addView(Ui.primary(this, "Tambah desa") { ImportUi.show(this) }, Ui.matchWrap(8, this))
+            card.addView(Ui.secondary(this, "Tempel dari clipboard") { importFromClipboard() }, Ui.matchWrap())
+            body.addView(card, Ui.matchWrap().apply { topMargin = dp(12) })
             return
         }
         val b = planFor(tag)
@@ -514,6 +564,7 @@ class MainActivity : AppCompatActivity() {
                     planCache[tag] = bundle
                     planError = null
                     failedTag = null
+                    onDataChanged?.invoke() // lembar opsi: tanggal target strategi
                 } else {
                     planError = r.exceptionOrNull()?.let { it.message ?: it.javaClass.simpleName }
                         ?: "data export tidak bisa dibaca, coba import ulang"
@@ -532,6 +583,7 @@ class MainActivity : AppCompatActivity() {
     fun dataChanged() {
         planCache.clear()
         villageRowsVersion = -1
+        onDataChanged?.invoke()
         planError = null
         failedTag = null
         renderAll()
@@ -640,9 +692,26 @@ class MainActivity : AppCompatActivity() {
     fun startPick(tag: String, pick: Scored) {
         val u = Repo.startUpgrade(this, tag, pick)
         dataChanged()
-        val msg = if (u != null) "Timer dipasang: ${u.title()} selesai ${Fmt.at(u.finishAt, zone)}" else "Timer dipasang"
-        Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+        val msg = if (u != null) "${pick.c.shortTitle} dimulai · selesai ${Fmt.at(u.finishAt, zone)}" else "Timer dipasang"
+        snack(msg, if (u != null) "Batalkan" else null) {
+            if (u != null) {
+                Repo.undoStart(this, tag, u.id)
+                dataChanged()
+            }
+        }
     }
+
+    /** Pesan singkat di bawah layar dengan tombol opsional (mis. Batalkan). */
+    fun snack(text: String, action: String? = null, onAction: (() -> Unit)? = null) {
+        val root = findViewById<View>(android.R.id.content) ?: return
+        val sb = com.google.android.material.snackbar.Snackbar.make(root, text, com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
+        if (action != null && onAction != null) sb.setAction(action) { onAction() }
+        if (!wide) runCatching { sb.setAnchorView(nav) }
+        sb.show()
+    }
+
+    /** Dipanggil setelah data berubah (lembar opsi memakainya untuk menyegarkan isinya). */
+    var onDataChanged: (() -> Unit)? = null
 
     fun timerOptions(u: Upgrade) {
         val hasExport = Store.exportText(this, u.tag) != null
@@ -663,32 +732,29 @@ class MainActivity : AppCompatActivity() {
                 .setNegativeButton("Batal", null).show()
             return
         }
-        val options = arrayOf<CharSequence>(
-            "✅ Sudah selesai (dipercepat gem/book/potion)",
-            "✖️ Upgrade dibatalkan / salah catat",
-        )
-        MaterialAlertDialogBuilder(this)
-            .setTitle(u.title())
-            .setItems(options) { _, which ->
-                val now = System.currentTimeMillis()
-                if (hasExport) {
-                    if (which == 0) Store.setDone(this, u.tag, Store.done(this, u.tag) + (u.id to now))
-                    else Store.setCancelled(this, u.tag, Store.cancelled(this, u.tag) + (u.id to now))
-                    Repo.reproject(this, u.tag)
-                } else {
-                    // Data versi lama (tanpa teks export): ubah timer langsung.
-                    val list = Store.upgrades(this)
-                    val updated = if (which == 0) list.map {
-                        if (it.id == u.id) it.copy(finishAt = now).also { c -> c.doneNotified = true; c.earlyNotified = true } else it
-                    } else list.filter { it.id != u.id }
-                    Store.saveUpgrades(this, updated)
-                    AlarmScheduler.schedule(this)
-                }
-                dataChanged()
-            }
-            .setNegativeButton("Tutup", null)
-            .show()
+        DetailSheet.show(this, u)
     }
+
+    /** Tandai upgrade [u] selesai (true) atau batal (false). */
+    fun markUpgrade(u: Upgrade, finished: Boolean) {
+        val hasExport = Store.exportText(this, u.tag) != null
+        val now = System.currentTimeMillis()
+        if (hasExport) {
+            if (finished) Store.setDone(this, u.tag, Store.done(this, u.tag) + (u.id to now))
+            else Store.setCancelled(this, u.tag, Store.cancelled(this, u.tag) + (u.id to now))
+            Repo.reproject(this, u.tag)
+        } else {
+            // Data versi lama (tanpa teks export): ubah timer langsung.
+            val list = Store.upgrades(this)
+            val updated = if (finished) list.map {
+                if (it.id == u.id) it.copy(finishAt = now).also { c -> c.doneNotified = true; c.earlyNotified = true } else it
+            } else list.filter { it.id != u.id }
+            Store.saveUpgrades(this, updated)
+            AlarmScheduler.schedule(this)
+        }
+        dataChanged()
+    }
+
 
     // ---------------------------------------------------------------- peringatan
 

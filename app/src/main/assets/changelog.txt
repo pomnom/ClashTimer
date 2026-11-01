@@ -1,0 +1,12 @@
+# Tampilan baru
+- Tab baru: Sekarang · Jadwal · Desa · Progres, warna gelap yang lebih tenang.
+- "Buka game berikutnya": jam login berikutnya + lonceng pengingat satu notifikasi per sesi.
+- Bebas sekarang: satu kartu per pekerja dengan ikon, label B1/Lab, dan tanda "pas bangun" / "menganggur".
+- "Sudah dimulai" sekarang bisa dibatalkan dari pesan di bawah layar.
+- Opsi lain: daftar pilihan dengan filter (pas bangun, hero, pertahanan, murah).
+- Jadwal: agenda sesi login per hari dengan jam tidur; Timeline menampilkan detail batang yang diketuk.
+- Desa: login berikutnya untuk semua desa, status tiap desa, peringatan export lama.
+- Progres: tanggal per pekerja (penentu ditandai), kebutuhan resource, checklist B.O.B.
+- Opsi desa: strategi menampilkan tanggal targetnya masing-masing.
+- Detail upgrade dalam lembar bawah: progres, sisa, waktu di game, potion, prioritas.
+- Changelog tampil di kartu update dan sekali setelah update.
