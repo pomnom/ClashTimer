@@ -56,7 +56,7 @@ object Scenarios {
         if (v.homeBuilders < 6) {
             val six = Village(
                 v.tag, v.exportAt, v.insts, v.walls, v.bbWalls, v.helpers, v.timers, v.unknown,
-                v.homeBuilders + 1, v.bbBuildersAuto, v.hasHome, v.hasBB, v.equipment, v.crafted, v.clock,
+                v.homeBuilders + 1, v.bbBuildersAuto, v.hasHome, v.hasBB, v.equipment, v.crafted, v.clock, v.potions,
             )
             rows += run("Dengan builder ke-6", "B.O.B terbuka sekarang (${v.homeBuilders + 1} builder)", ps, six)
         }

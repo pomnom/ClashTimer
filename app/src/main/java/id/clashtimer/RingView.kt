@@ -6,7 +6,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.view.View
 
-/** Cincin progres kecil dengan angka persen di tengah (seperti ClashClock). */
+/** Cincin progres kecil dengan angka persen di tengah. */
 class RingView(ctx: Context, private val sizeDp: Int = 40) : View(ctx) {
     var pct: Int = 0
         set(value) { field = value.coerceIn(0, 100); invalidate() }

@@ -14,11 +14,16 @@ class Inst(
     var geared: Boolean,
     /** Sedang di-gear-up oleh Master Builder dari Builder Base. */
     var gearing: Boolean = false,
+    /**
+     * Dikerjakan Goblin Builder / Goblin Researcher ("extra" di export; pekerja event yang dibayar gem),
+     * bukan builder/lab biasa: tidak mengurangi pekerja tetap dan tidak membebaskan pekerja tetap saat selesai.
+     */
+    var extra: Boolean = false,
 ) {
     /** Pekerja yang dipakai: gear-up dikerjakan builder Builder Base. */
     val lane: Lane get() = if (gearing) Lane.BB_BUILDER else item.lane
 
-    fun copy() = Inst(uid, item, level, upgrading, remaining, helped, geared, gearing)
+    fun copy() = Inst(uid, item, level, upgrading, remaining, helped, geared, gearing, extra)
 
     /** Selesaikan pekerjaan yang sedang berjalan. */
     fun complete() {
@@ -28,6 +33,7 @@ class Inst(
         } else level += 1
         upgrading = false
         remaining = 0
+        extra = false
     }
 }
 
@@ -67,7 +73,15 @@ class RunningTimer(
     val helped: Boolean,
     /** Gear-up pertahanan Home Village oleh Master Builder. */
     val gear: Boolean = false,
+    /** Dikerjakan Goblin Builder / Goblin Researcher (lihat [Inst.extra]). */
+    val extra: Boolean = false,
 )
+
+/**
+ * Boost yang sedang berjalan saat export ("boosts"): sisa detik Builder Potion (builder_boost),
+ * Research Potion (lab_boost), Pet Potion (pet_boost). 0 = tidak aktif.
+ */
+class ExportPotions(val builderSec: Long, val labSec: Long, val petSec: Long)
 
 class Village(
     val tag: String,
@@ -93,6 +107,8 @@ class Village(
      * Null bila export tidak memuat bagian ini. Cooldown 22 jam dihitung sejak boost selesai.
      */
     val clock: ClockState? = null,
+    /** Potion yang sedang aktif menurut export; null bila export tidak memuat bagian "boosts". */
+    val potions: ExportPotions? = null,
 ) {
     fun level(id: Int): Int = insts.filter { it.item.id == id }.maxOfOrNull { it.level } ?: 0
     fun isUpgrading(id: Int): Boolean = insts.any { it.item.id == id && it.upgrading }
@@ -110,7 +126,7 @@ class Village(
 
     fun copy(): Village = Village(
         tag, exportAt, insts.map { it.copy() }.toMutableList(), walls.toMutableMap(), bbWalls.toMutableMap(),
-        helpers, timers, unknown, homeBuilders, bbBuildersAuto, hasHome, hasBB, equipment, crafted, clock,
+        helpers, timers, unknown, homeBuilders, bbBuildersAuto, hasHome, hasBB, equipment, crafted, clock, potions,
     )
 
     /** Tandai upgrade yang dimulai lewat aplikasi (tanpa import ulang). */
@@ -256,6 +272,7 @@ object ExportReader {
                 val cnt = e["cnt"].int(1).coerceIn(0, 2000)
                 val timer = e["timer"].long()
                 val helped = e["helper_recurrent"].bool()
+                val extra = e["extra"].bool()
                 val geared = e["gear_up"].bool()
                 val item = gd.item(dataId)?.takeIf { cat != null && it.cat.bb == cat.bb }
 
@@ -301,8 +318,8 @@ object ExportReader {
                     timerCounter[dataId] = n
                     val uid = "$tag|$section|$dataId|$n"
                     val lane = item?.lane ?: laneOfSection(section)
-                    timers += RunningTimer(uid, dataId, gd.name(dataId), lane, item?.cat, lvl, timer, helped)
-                    if (item != null) insts += Inst(uid, item, lvl, true, timer, helped, geared)
+                    timers += RunningTimer(uid, dataId, gd.name(dataId), lane, item?.cat, lvl, timer, helped, extra = extra)
+                    if (item != null) insts += Inst(uid, item, lvl, true, timer, helped, geared, extra = extra)
                     else unknown++
                 } else if (item != null) {
                     repeat(cnt) { k -> insts += Inst("$section|$dataId|$index|$k", item, lvl, false, 0, false, geared) }
@@ -334,10 +351,12 @@ object ExportReader {
         }
 
         // Clock Tower: "boosts": {"clocktower_boost": sisa detik boost aktif, "clocktower_cooldown": sisa detik sampai siap}
+        // Bagian "boosts" memuat boost yang sedang aktif saja; kunci yang tidak ada = tidak aktif / siap.
         val boosts = root["boosts"].obj()
-        val clock = if (boosts != null && (boosts["clocktower_boost"] != null || boosts["clocktower_cooldown"] != null)) {
-            ClockState(boosts["clocktower_boost"].long().coerceAtLeast(0), boosts["clocktower_cooldown"].long().coerceAtLeast(0))
-        } else null
+        val clock = boosts?.let { ClockState(it["clocktower_boost"].long().coerceAtLeast(0), it["clocktower_cooldown"].long().coerceAtLeast(0)) }
+        val potions = boosts?.let {
+            ExportPotions(it["builder_boost"].long().coerceAtLeast(0), it["lab_boost"].long().coerceAtLeast(0), it["pet_boost"].long().coerceAtLeast(0))
+        }
 
         return Village(
             tag, exportAt, insts, walls, bbWalls, helpers, timers, unknown,
@@ -347,6 +366,7 @@ object ExportReader {
             equipment = equipment,
             crafted = crafted,
             clock = clock,
+            potions = potions,
         )
     }
 }

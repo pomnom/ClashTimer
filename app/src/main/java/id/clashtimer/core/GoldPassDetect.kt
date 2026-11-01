@@ -44,7 +44,11 @@ object GoldPassDetect {
      * [started] = upgrade yang ditandai "Sudah dimulai" sebelum export baru.
      * Kembalian: paling banyak satu bukti per jenis boost (yang upgradenya paling akhir dimulai).
      */
-    fun detect(gd: GameData, prev: Village?, cur: Village, started: List<Started>, events: List<GameEvent>): List<GpEvidence> {
+    fun detect(
+        gd: GameData, prev: Village?, cur: Village, started: List<Started>, events: List<GameEvent>,
+        /** Pekerja yang dipercepat potion/snack sejak export sebelumnya (timernya tidak bisa jadi bukti). */
+        boosted: Set<Lane> = emptySet(),
+    ): List<GpEvidence> {
         val exportAt = cur.exportAt
         val before = prev?.takeIf { it.tag == cur.tag && it.exportAt < exportAt }
         val prevCount = HashMap<String, Int>()
@@ -77,6 +81,7 @@ object GoldPassDetect {
         for ((t, w) in windows) {
             val base = gd.item(t.dataId)?.lv(t.fromLevel + 1)?.time ?: continue
             if (base < MIN_BASE_SEC) continue
+            if (t.lane in boosted) continue
             if (helperBusy(cur, t.lane, w.first)) continue
             // Event yang memotong waktu harus sama di seluruh rentang mulai.
             val ev = Events.at(events, t.lane, w.first)?.timePct ?: 0

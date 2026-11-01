@@ -115,7 +115,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         sub("🎉 Event", "Hammer Jam, Builder Base Bonanza, dll.")
-        box.addView(Ui.muted(this, "Supercell tidak menyediakan jadwal event yang bisa dibaca aplikasi (ClashClock pun mengisinya manual). " +
+        box.addView(Ui.muted(this, "Supercell tidak menyediakan jadwal event yang bisa dibaca aplikasi. " +
             "Saat event muncul di game, aktifkan di sini dan cocokkan tanggalnya — saran, rencana dan timer langsung memakai potongannya.").apply {
             setPadding(Ui.dp(this@SettingsActivity, 4), 0, Ui.dp(this@SettingsActivity, 4), Ui.dp(this@SettingsActivity, 6))
         })

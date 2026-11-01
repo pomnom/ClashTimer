@@ -17,7 +17,7 @@ import id.clashtimer.core.Strategy
 import java.time.Instant
 import java.time.ZoneId
 
-/** Tab "Rencana": antrean upgrade per pekerja, seperti ClashClock. */
+/** Tab "Rencana": antrean upgrade per pekerja. */
 object PlanView {
 
     fun render(act: MainActivity, box: LinearLayout, b: PlanBundle, bb: Boolean) {

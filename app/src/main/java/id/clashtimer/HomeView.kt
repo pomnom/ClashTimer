@@ -64,7 +64,10 @@ object HomeView {
         val finished = ups.filter { it.kind == builderKind && it.finishAt <= now }.sortedByDescending { it.finishAt }
         val total = b?.let { Planner.laneCount(it.village, builderLane, it.ps) }
             ?: (if (bb) maxOf(1, running.size) else acc.builders)
-        val free = (total - running.size).coerceAtLeast(0)
+        // Goblin Builder (event, dibayar gem) tidak dihitung sebagai builder tetap.
+        val regular = running.count { !it.extra }
+        val extraN = running.size - regular
+        val free = (total - regular).coerceAtLeast(0)
         val slots = b?.slots?.filter { it.lane == builderLane }.orEmpty()
         val nowSlot = slots.firstOrNull { it.freeAt <= now }
         val nextSlot = slots.firstOrNull { it.freeAt > now }
@@ -80,7 +83,7 @@ object HomeView {
             })
             suggestionStrip(act, hcol, tag, nowSlot, nowSlot?.ranked?.firstOrNull(), canStart = true, b, hasExport)
         } else if (running.isNotEmpty()) {
-            val first = running.first()
+            val first = running.firstOrNull { !it.extra } ?: running.first()
             hcol.addView(Ui.muted(act, "$workers berikutnya bebas dalam", Ui.BODY_M))
             val big = Ui.text(act, act.clock(first.finishAt - now), Ui.TITLE_L).apply {
                 textSize = 32f
@@ -100,7 +103,7 @@ object HomeView {
         VillageOptions.card(act, box, tag, bb, Store.planSettings(act, tag))
 
         // --- builder
-        box.addView(Ui.sectionRow(act, workers, "${running.size} dari $total sibuk"))
+        box.addView(Ui.sectionRow(act, workers, "$regular dari $total sibuk" + if (extraN > 0) " + $extraN Goblin" else ""))
         val (bc, bcol) = Ui.card(act, padH = 0, padV = 0)
         var rows = 0
         fun add(v: View) {
@@ -125,7 +128,8 @@ object HomeView {
             val r = ups.filter { it.kind == kind && it.finishAt > now }.sortedBy { it.finishAt }
             val exists = b?.let { Planner.laneCount(it.village, lane, it.ps) > 0 } ?: r.isNotEmpty()
             if (!exists && r.isEmpty()) continue
-            box.addView(Ui.sectionRow(act, lane.label, if (r.isEmpty()) "kosong" else "${r.size} dari 1 sibuk"))
+            val rx = r.count { it.extra }
+            box.addView(Ui.sectionRow(act, lane.label, if (r.isEmpty()) "kosong" else "${r.size - rx} dari 1 sibuk" + if (rx > 0) " + $rx Goblin" else ""))
             val (lc, lcol) = Ui.card(act, padH = 0, padV = 0)
             if (r.isNotEmpty()) {
                 r.forEachIndexed { i, u ->
@@ -373,6 +377,7 @@ object HomeView {
             pill(if (level != null) "$name +${level}j/hari" else "dibantu $name", if (u.kind == Kind.LAB) Ui.VIOLET else Ui.GREEN)
         }
         if (gear && !done) pill("Master Builder", Ui.GOLD)
+        if (u.extra && !done) pill(if (u.kind == Kind.BUILDER) "👺 Goblin Builder" else "👺 Goblin Researcher", Ui.GREY)
         if (u.note.contains("⚡") && !done) pill("⚡ dipercepat", Ui.GOLD)
         if (u.note.contains("🎉") && !done) pill("🎉 event", Ui.VIOLET)
         if (!done && u.note.contains("dimulai di aplikasi", ignoreCase = true)) pill("dimulai di aplikasi", Ui.GREY)

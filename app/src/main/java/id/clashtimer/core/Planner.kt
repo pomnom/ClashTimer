@@ -554,7 +554,8 @@ object Planner {
             if (total <= 0) continue
             val running = v.insts.filter { it.upgrading && it.lane == lane }.map { it to finishOf(v, it, finishes) }
             val unknownBusy = v.timers.count { t -> t.lane == lane && t.cat == null && (v.exportAt + t.remaining * 1000) > now }
-            val stillRunning = running.filter { it.second > now }.sortedBy { it.second }
+            // Goblin Builder / Goblin Researcher ("extra") tidak memakai/membebaskan pekerja tetap.
+            val stillRunning = running.filter { it.second > now && !it.first.extra }.sortedBy { it.second }
             val freeNow = (total - stillRunning.size - unknownBusy).coerceAtLeast(0)
 
             if (freeNow > 0) {
@@ -600,11 +601,24 @@ object Planner {
         for (lane in Lane.entries) {
             if (lane !in lanesWanted) continue
             val n = laneCount(v, lane, ps)
-            val busy = v.insts.filter { it.upgrading && it.lane == lane }
+            val all = v.insts.filter { it.upgrading && it.lane == lane }
+            val busy = all.filter { !it.extra }
             val count = maxOf(n, busy.size)
-            if (count == 0) continue
+            if (count == 0 && all.isEmpty()) continue
             val laneObjs = (0 until count).map { SimLane(lane, it + 1, now) }
             lanes += laneObjs
+            // Goblin (event, dibayar gem): pekerjaannya tetap selesai walau event berakhir, tetapi tidak diberi
+            // pekerjaan baru karena event & pemakaiannya tidak bisa diketahui.
+            all.filter { it.extra }.forEachIndexed { k, inst ->
+                val f = maxOf(finishOf(v, inst, finishes), now)
+                val l = SimLane(lane, count + k + 1, f, retired = true, lastFinish = f)
+                lanes += l
+                runs += SimRun(inst, f, l)
+                running += PlannedStep(
+                    lane, l.index, runTitle(inst), now, f, 0, if (lane == Lane.LAB) "👺 Goblin Researcher (event)" else "👺 Goblin Builder (event)", (f - now) / 1000, inst.item,
+                    inst.level, inst.level + 1, false, false, running = true,
+                )
+            }
             // B1 = pekerja yang paling cepat bebas
             busy.sortedBy { finishOf(v, it, finishes) }.forEachIndexed { idx, inst ->
                 val f = maxOf(finishOf(v, inst, finishes), now)

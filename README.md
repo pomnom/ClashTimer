@@ -19,7 +19,7 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
   kartu **Clock Tower** (catat boost gratis / Clock Tower Potion → timer BB dihitung 10×),
   ringkasan jalur builder ke-6
 
-**📅 Rencana** (antrean seperti ClashClock)
+**📅 Rencana** (antrean upgrade per pekerja)
 - Cara memilih (Seimbang): nilai upgrade dibagi √(lama × biaya), dikurangi bila builder menganggur saat
   tidur. **Hero yang menganggur selalu didahulukan** saat ada builder bebas (kecuali bentrok CWL), dan
   biaya Dark Elixir disetarakan (1 DE ≈ 100 Gold/Elixir) supaya hero DE tidak dianggap murah
@@ -83,10 +83,14 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
 
 **🔎 Terdeteksi otomatis (tanpa pengaturan)**
 - Dari export: jumlah builder (termasuk B.O.B), builder Builder Base, helper & cooldown-nya, level
-  Clock Tower, gear-up, Pet House / Star Lab, semua timer berjalan. **Clock Tower**: boost yang sedang
-  berjalan dan kapan boost gratis siap lagi dibaca langsung dari export (menggantikan catatan manual;
-  boost berikutnya tidak diasumsikan dipakai). B.O.B sudah terbuka → strategi
-  Builder Base otomatis Max.
+  Clock Tower, gear-up, Pet House / Star Lab, semua timer berjalan. **Boost yang sedang aktif** dibaca
+  langsung dari export dan menggantikan catatan manual: Builder Potion (builder_boost), Research Potion
+  (lab_boost), Pet Potion (pet_boost), Clock Tower (sisa boost & kapan siap lagi). Export hanya memberi
+  sisa detik — bila Anda mencatat Builder Bite / Study Soup, jenis itu yang dipakai. Boost berikutnya tidak
+  diasumsikan dipakai. **Goblin Builder / Goblin Researcher**
+  (event, dibayar gem; "extra" di export) ditampilkan terpisah: tidak dihitung sebagai builder/lab tetap,
+  upgrade-nya tetap jalan sampai selesai walau event berakhir, dan di rencana tidak diberi upgrade baru.
+  B.O.B sudah terbuka → strategi Builder Base otomatis Max.
 - **Gold Pass** dari lama timer: export & API tidak memuat status Gold Pass, jadi saat import aplikasi
   membandingkan upgrade yang ditandai **Sudah dimulai** atau yang baru dimulai sejak import sebelumnya
   dengan durasi aslinya (0 / 10 / 15 / 20 %, termasuk potongan event). Builder Boost & Research Boost
@@ -96,8 +100,8 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
   tidak** (roster CWL clan, war preference, tidak di clan) beserta jadwal aslinya, awal & akhir musim
   Gold Pass, dan upgrade hero / lab / pet / Star Lab / TH / BH yang di game sudah naik level (book, gem,
   potion) langsung ditandai selesai.
-- Tidak tersedia di export maupun API: jadwal event (Hammer Jam), potion/book yang dipakai — tetap dicatat
-  manual.
+- Tidak tersedia di export maupun API: jadwal event (Hammer Jam), book/hammer, dan potion yang dipakai
+  setelah export — dicatat manual atau cukup export ulang.
 
 **🔑 API resmi Clash of Clans** — Pengaturan → API resmi
 - Buat key di developer.clashofclans.com → My Account → Create New Key, IP address

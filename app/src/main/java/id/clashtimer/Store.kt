@@ -63,6 +63,8 @@ data class Upgrade(
      * terjadi). Dipakai untuk menampilkan waktu yang terlihat di game sekarang.
      */
     val helperSteps: List<Pair<Long, Long>> = emptyList(),
+    /** Dikerjakan Goblin Builder / Goblin Researcher (event), bukan builder/lab tetap. */
+    val extra: Boolean = false,
 ) {
     fun title(): String = when {
         customTitle.isNotBlank() -> customTitle
@@ -83,6 +85,7 @@ data class Upgrade(
         .put("early", earlyNotified).put("done", doneNotified)
         .put("base", baseFinishAt).put("note", note).put("title", customTitle)
         .apply {
+            if (extra) put("x", true)
             if (helperSteps.isNotEmpty()) {
                 put("hs", JSONArray().apply { helperSteps.forEach { (s, f) -> put(JSONArray().put(s).put(f)) } })
             }
@@ -109,6 +112,7 @@ data class Upgrade(
                 note = o.optString("note", ""),
                 customTitle = o.optString("title", ""),
                 helperSteps = steps,
+                extra = o.optBoolean("x"),
             )
         }
     }

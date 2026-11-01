@@ -2,6 +2,7 @@ package id.clashtimer
 
 import android.content.Context
 import id.clashtimer.core.BBStrategy
+import id.clashtimer.core.Boost
 import id.clashtimer.core.BoostKind
 import id.clashtimer.core.Boosts
 import id.clashtimer.core.Events
@@ -131,7 +132,7 @@ object Repo {
             list += Upgrade(
                 id = t.uid, tag = tag, kind = Kind.of(t.lane), name = t.name,
                 targetLevel = t.fromLevel + 1, finishAt = finish, helped = t.helped,
-                baseFinishAt = p.baseFinishAt, note = notes.joinToString("\n"), helperSteps = steps,
+                baseFinishAt = p.baseFinishAt, note = notes.joinToString("\n"), helperSteps = steps, extra = t.extra,
             )
         }
 
@@ -208,7 +209,15 @@ object Repo {
         val tag = v.tag
         // Gold Pass dari lama timer: upgrade yang ditandai "Sudah dimulai" atau baru muncul sejak export sebelumnya.
         val prev = Store.exportText(ctx, tag)?.let { runCatching { ExportReader.read(it, gd, now) }.getOrNull() }
-        val gold = runCatching { GoldPassDetect.detect(gd, prev, v, Store.started(ctx, tag), Store.events(ctx)) }.getOrDefault(emptyList())
+        // Potion yang aktif saat export atau dicatat sejak export sebelumnya membuat timer tidak bisa jadi bukti Gold Pass.
+        val boosted = HashSet<Lane>()
+        v.potions?.let {
+            if (it.builderSec > 0) boosted += Lane.BUILDER
+            if (it.labSec > 0) boosted += Lane.LAB
+            if (it.petSec > 0) boosted += Lane.PET
+        }
+        Store.boosts(ctx, tag).filter { it.end > (prev?.exportAt ?: 0L) }.forEach { boosted += it.kind.lanes }
+        val gold = runCatching { GoldPassDetect.detect(gd, prev, v, Store.started(ctx, tag), Store.events(ctx), boosted) }.getOrDefault(emptyList())
         applyGold(ctx, tag, gold)
         Store.setBobDone(ctx, tag, Sixth.done(v))
         // Riwayat: catat upgrade yang berjalan (perkiraan mulai & selesai).
@@ -218,7 +227,7 @@ object Repo {
         Store.setDone(ctx, tag, emptyMap())
         Store.setCancelled(ctx, tag, emptyMap())
         Store.setBumps(ctx, tag, emptyList())
-        Store.setBoosts(ctx, tag, clockFromExport(ctx, tag, v, Boosts.afterImport(Store.boosts(ctx, tag), v.exportAt)))
+        Store.setBoosts(ctx, tag, boostsFromExport(ctx, tag, v, Boosts.afterImport(Store.boosts(ctx, tag), v.exportAt)))
         // Upgrade yang ditandai dimulai sebelum export sudah tercakup di export.
         Store.setStarted(ctx, tag, Store.started(ctx, tag).filter { it.start > v.exportAt })
         val ups = buildTimers(ctx, v)
@@ -230,15 +239,32 @@ object Repo {
     }
 
     /**
-     * Clock Tower menurut export menggantikan catatan manual: boost yang sedang berjalan (sisa detiknya)
-     * dan kapan boost gratis siap lagi. Boost yang sudah lewat tidak berpengaruh (timer export sudah
-     * memperhitungkannya). Tidak ada asumsi boost berikutnya pasti dipakai.
+     * Boost yang sedang berjalan menurut export menggantikan catatan manual: Clock Tower (sisa boost &
+     * kapan siap lagi), Builder Potion (builder_boost), Research Potion (lab_boost), Pet Potion (pet_boost).
+     * Boost yang sudah lewat tidak berpengaruh (timer export sudah memperhitungkannya), dan boost yang
+     * dicatat setelah waktu export tetap dipakai. Tidak ada asumsi boost berikutnya pasti dipakai.
+     * Export hanya memberi sisa detik, bukan jenisnya: Builder Bite / Study Soup dipakai bila itu yang
+     * dicatat, selain itu dianggap potion.
      */
-    private fun clockFromExport(ctx: Context, tag: String, v: Village, boosts: List<id.clashtimer.core.Boost>): List<id.clashtimer.core.Boost> {
-        val c = v.clock ?: return boosts
-        val kept = boosts.filter { it.kind.group != "clock" }
-        Store.setClockUsed(ctx, tag, if (c.cooldownSec > 0) v.exportAt + c.cooldownSec * 1000 - id.clashtimer.core.ClockTower.COOLDOWN else 0L)
-        return if (c.boostSec > 0) kept + id.clashtimer.core.Boost(BoostKind.CLOCK_TOWER, v.exportAt, v.exportAt + c.boostSec * 1000) else kept
+    private fun boostsFromExport(ctx: Context, tag: String, v: Village, boosts: List<Boost>): List<Boost> {
+        val at = v.exportAt
+        var list = boosts
+        fun replace(kinds: Set<BoostKind>, sec: Long, default: BoostKind) {
+            val active = list.filter { it.kind in kinds && it.start <= at }
+            val kind = active.firstOrNull { it.kind == default }?.kind ?: active.firstOrNull()?.kind ?: default
+            list = list - active.toSet()
+            if (sec > 0) list = list + Boost(kind, at, at + sec * 1000)
+        }
+        v.clock?.let { c ->
+            replace(setOf(BoostKind.CLOCK_TOWER, BoostKind.CLOCK_TOWER_POTION), c.boostSec, BoostKind.CLOCK_TOWER)
+            Store.setClockUsed(ctx, tag, if (c.cooldownSec > 0) at + c.cooldownSec * 1000 - id.clashtimer.core.ClockTower.COOLDOWN else 0L)
+        }
+        v.potions?.let { p ->
+            replace(setOf(BoostKind.BUILDER_POTION, BoostKind.BUILDER_BITE), p.builderSec, BoostKind.BUILDER_POTION)
+            replace(setOf(BoostKind.RESEARCH_POTION, BoostKind.STUDY_SOUP), p.labSec, BoostKind.RESEARCH_POTION)
+            replace(setOf(BoostKind.PET_POTION), p.petSec, BoostKind.PET_POTION)
+        }
+        return list
     }
 
     /**
