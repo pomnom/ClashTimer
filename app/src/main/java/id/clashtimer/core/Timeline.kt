@@ -26,7 +26,7 @@ enum class BoostKind(
     val speedLabel: String get() = "${(extra + 1).toInt()}×"
 }
 
-/** Clock Tower Builder Base: 10× selama 12 + 2×level menit, cooldown 22 jam (data Supercell). */
+/** Clock Tower Builder Base: 10× selama 12 + 2×level menit, cooldown 22 jam sejak boost selesai (data Supercell, cocok dengan export). */
 object ClockTower {
     const val COOLDOWN = 22 * HOUR
     fun boostMinutes(level: Int): Int = if (level <= 0) 0 else 12 + 2 * level

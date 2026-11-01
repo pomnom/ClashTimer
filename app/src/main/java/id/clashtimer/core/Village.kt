@@ -36,6 +36,9 @@ class HelperState(val id: Int, val level: Int, val cooldown: Long)
 /** Satu pertahanan rakitan: id pertahanan + (id modul, level). */
 class CraftedState(val defenseId: Int, val modules: List<Pair<Int, Int>>)
 
+/** Clock Tower saat export: sisa boost aktif & sisa cooldown (detik; cooldown sudah termasuk sisa boost). */
+class ClockState(val boostSec: Long, val cooldownSec: Long)
+
 /** Upgrade yang ditandai "sudah dimulai" di aplikasi setelah export terakhir. */
 data class Started(
     val uid: String,
@@ -85,6 +88,11 @@ class Village(
     val equipment: Map<Int, Int> = emptyMap(),
     /** Pertahanan rakitan Crafting Station dan level modulnya. */
     val crafted: List<CraftedState> = emptyList(),
+    /**
+     * Clock Tower menurut export ("boosts"): sisa boost yang sedang berjalan & sisa cooldown (detik).
+     * Null bila export tidak memuat bagian ini. Cooldown 22 jam dihitung sejak boost selesai.
+     */
+    val clock: ClockState? = null,
 ) {
     fun level(id: Int): Int = insts.filter { it.item.id == id }.maxOfOrNull { it.level } ?: 0
     fun isUpgrading(id: Int): Boolean = insts.any { it.item.id == id && it.upgrading }
@@ -102,7 +110,7 @@ class Village(
 
     fun copy(): Village = Village(
         tag, exportAt, insts.map { it.copy() }.toMutableList(), walls.toMutableMap(), bbWalls.toMutableMap(),
-        helpers, timers, unknown, homeBuilders, bbBuildersAuto, hasHome, hasBB, equipment, crafted,
+        helpers, timers, unknown, homeBuilders, bbBuildersAuto, hasHome, hasBB, equipment, crafted, clock,
     )
 
     /** Tandai upgrade yang dimulai lewat aplikasi (tanpa import ulang). */
@@ -325,6 +333,12 @@ object ExportReader {
             if (e["data"] != null) equipment[e["data"].int()] = e["lvl"].int(1)
         }
 
+        // Clock Tower: "boosts": {"clocktower_boost": sisa detik boost aktif, "clocktower_cooldown": sisa detik sampai siap}
+        val boosts = root["boosts"].obj()
+        val clock = if (boosts != null && (boosts["clocktower_boost"] != null || boosts["clocktower_cooldown"] != null)) {
+            ClockState(boosts["clocktower_boost"].long().coerceAtLeast(0), boosts["clocktower_cooldown"].long().coerceAtLeast(0))
+        } else null
+
         return Village(
             tag, exportAt, insts, walls, bbWalls, helpers, timers, unknown,
             homeBuilders.coerceAtMost(6), bbAuto,
@@ -332,6 +346,7 @@ object ExportReader {
             hasBB = root["buildings2"].arr()?.isNotEmpty() == true,
             equipment = equipment,
             crafted = crafted,
+            clock = clock,
         )
     }
 }

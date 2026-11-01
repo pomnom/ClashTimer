@@ -20,6 +20,11 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
   ringkasan jalur builder ke-6
 
 **📅 Rencana** (antrean seperti ClashClock)
+- Cara memilih (Seimbang): nilai upgrade dibagi √(lama × biaya), dikurangi bila builder menganggur saat
+  tidur. **Hero yang menganggur selalu didahulukan** saat ada builder bebas (kecuali bentrok CWL), dan
+  biaya Dark Elixir disetarakan (1 DE ≈ 100 Gold/Elixir) supaya hero DE tidak dianggap murah
+- Builder Base: upgrade yang biayanya melebihi **kapasitas gudang** (Builder Hall + Gold/Elixir Storage)
+  ditunda dan storage-nya dinaikkan dulu (juga untuk troop Star Lab); kapasitas tampil di Rencana BB
 - Pilih strategi langsung di atas: Seimbang / Rush TH / Hero dulu, dan untuk Builder Base:
   **Builder ke-6** / Max
 - Antrean per pekerja (B1–B6, M1–M3, Lab, Pet, Star Lab): sedang berjalan, hari ini, besok,
@@ -65,7 +70,7 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
 **🔔 Notifikasi interaktif**
 - "Upgrade selesai" menampilkan saran berikutnya untuk pekerja itu + tombol **Sudah dimulai**
   (timer langsung dipasang tanpa membuka aplikasi)
-- Pengingat **Clock Tower siap lagi** (22 jam setelah boost gratis dicatat), **event dimulai** &
+- Pengingat **Clock Tower siap lagi** (22 jam setelah boost gratis selesai), **event dimulai** &
   **berakhir besok**, dan **Gold Pass berakhir besok** (bila API diisi)
 
 **📋 Update cepat**
@@ -78,7 +83,9 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
 
 **🔎 Terdeteksi otomatis (tanpa pengaturan)**
 - Dari export: jumlah builder (termasuk B.O.B), builder Builder Base, helper & cooldown-nya, level
-  Clock Tower, gear-up, Pet House / Star Lab, semua timer berjalan. B.O.B sudah terbuka → strategi
+  Clock Tower, gear-up, Pet House / Star Lab, semua timer berjalan. **Clock Tower**: boost yang sedang
+  berjalan dan kapan boost gratis siap lagi dibaca langsung dari export (menggantikan catatan manual;
+  boost berikutnya tidak diasumsikan dipakai). B.O.B sudah terbuka → strategi
   Builder Base otomatis Max.
 - **Gold Pass** dari lama timer: export & API tidak memuat status Gold Pass, jadi saat import aplikasi
   membandingkan upgrade yang ditandai **Sudah dimulai** atau yang baru dimulai sejak import sebelumnya
@@ -146,9 +153,14 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
 
 ## Cara update dari HP (repo yang memakai ClashTimer.zip)
 1. Buka repository di browser → **Add file → Upload files**.
-2. Upload `ClashTimer.zip` yang baru (nama sama, menimpa yang lama) → **Commit changes**.
-3. Tunggu tab **Actions** selesai, lalu unduh APK dari **Releases** dan install di atas
-   versi lama (data tetap aman karena kunci tanda tangan sama).
+2. Upload `ClashTimer.zip` yang baru → **Commit changes**.
+3. GitHub Actions otomatis mengekstrak zip ke repo (README, kode & resource ikut terbarui; file yang
+   sudah tidak ada di zip ikut terhapus), menghapus zip-nya, lalu membuat APK.
+4. Tunggu tab **Actions** selesai, lalu unduh APK dari **Releases** dan install di atas versi lama
+   (data tetap aman karena kunci tanda tangan sama).
+- Folder `.github/workflows` tidak ikut diperbarui dari zip (token Actions tidak boleh mengubah file
+  workflow) — bila workflow berubah, salin manual dari `.github/workflows/build-apk.yml`.
+- Mengedit file langsung di GitHub (tanpa zip) juga langsung dibuatkan APK dari kode di repo.
 
 ## Cara pakai
 1. Di game: Settings → More Settings → paling bawah **Export village data** → Copy.
@@ -162,7 +174,7 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
 - Timer = sisa waktu *saat export*. Potion/book/Clock Tower yang dipakai setelah export bisa
   dicatat; import ulang selalu menjadi sumber kebenaran.
 - Perhitungan helper berulang adalah perkiraan (1 jam kerja, cooldown 23 jam, +level jam kerja).
-- Clock Tower: 10× selama 12 + 2×level menit, cooldown 22 jam (data Supercell); tidak
+- Clock Tower: 10× selama 12 + 2×level menit, cooldown 22 jam sejak boost selesai (data Supercell); tidak
   mempercepat gear-up.
 - Data game (durasi, biaya, syarat) dari ClashKingAssets via coc-rush-helper, Oktober 2026.
 - Ikon diunduh saat dipakai dari **ClashKing Assets** (https://assets.clashk.ing) — terima kasih!

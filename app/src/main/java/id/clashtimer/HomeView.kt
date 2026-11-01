@@ -241,6 +241,7 @@ object HomeView {
                 pickPills(act, pick)?.let { tc.addView(it, Ui.matchWrap().apply { topMargin = Ui.dp(act, 3) }) }
                 line.addView(tc, Ui.weight1())
                 wrap.addView(line)
+                pick.reason?.let { wrap.addView(Ui.muted(act, it)) }
                 if (slot.cwlSkipped.isNotEmpty()) {
                     wrap.addView(Ui.muted(act, "⚔️ Ditunda karena CWL: " + slot.cwlSkipped.joinToString(", ") { it.item.name }))
                 }
@@ -490,7 +491,7 @@ object HomeView {
         val boosts = Store.boosts(act, tag)
         val active = Boosts.merged(boosts).firstOrNull { it.kind.group == "clock" && it.start <= now && it.end > now }
         val lastFree = Store.clockUsed(act, tag).takeIf { it > 0 }
-            ?: boosts.filter { it.kind == BoostKind.CLOCK_TOWER }.maxOfOrNull { it.start }
+            ?: boosts.filter { it.kind == BoostKind.CLOCK_TOWER }.maxOfOrNull { it.end }
         val readyAt = lastFree?.let { it + ClockTower.COOLDOWN }?.takeIf { it > now }
         val potions = Store.items(act, tag)[MagicItem.CLOCK_TOWER_POTION] ?: 0
 

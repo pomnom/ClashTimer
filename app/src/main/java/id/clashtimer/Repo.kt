@@ -2,6 +2,7 @@ package id.clashtimer
 
 import android.content.Context
 import id.clashtimer.core.BBStrategy
+import id.clashtimer.core.BoostKind
 import id.clashtimer.core.Boosts
 import id.clashtimer.core.Events
 import id.clashtimer.core.Scored
@@ -217,7 +218,7 @@ object Repo {
         Store.setDone(ctx, tag, emptyMap())
         Store.setCancelled(ctx, tag, emptyMap())
         Store.setBumps(ctx, tag, emptyList())
-        Store.setBoosts(ctx, tag, Boosts.afterImport(Store.boosts(ctx, tag), v.exportAt))
+        Store.setBoosts(ctx, tag, clockFromExport(ctx, tag, v, Boosts.afterImport(Store.boosts(ctx, tag), v.exportAt)))
         // Upgrade yang ditandai dimulai sebelum export sudah tercakup di export.
         Store.setStarted(ctx, tag, Store.started(ctx, tag).filter { it.start > v.exportAt })
         val ups = buildTimers(ctx, v)
@@ -226,6 +227,18 @@ object Repo {
         AlarmReceiver.processDue(ctx)
         val running = ups.filter { it.kind != Kind.HELPER && it.finishAt > now }
         return ImportSummary(tag, running.size, running.minByOrNull { it.finishAt }, v.exportAt, v.unknown, ups.count { it.helped }, gold)
+    }
+
+    /**
+     * Clock Tower menurut export menggantikan catatan manual: boost yang sedang berjalan (sisa detiknya)
+     * dan kapan boost gratis siap lagi. Boost yang sudah lewat tidak berpengaruh (timer export sudah
+     * memperhitungkannya). Tidak ada asumsi boost berikutnya pasti dipakai.
+     */
+    private fun clockFromExport(ctx: Context, tag: String, v: Village, boosts: List<id.clashtimer.core.Boost>): List<id.clashtimer.core.Boost> {
+        val c = v.clock ?: return boosts
+        val kept = boosts.filter { it.kind.group != "clock" }
+        Store.setClockUsed(ctx, tag, if (c.cooldownSec > 0) v.exportAt + c.cooldownSec * 1000 - id.clashtimer.core.ClockTower.COOLDOWN else 0L)
+        return if (c.boostSec > 0) kept + id.clashtimer.core.Boost(BoostKind.CLOCK_TOWER, v.exportAt, v.exportAt + c.boostSec * 1000) else kept
     }
 
     /**

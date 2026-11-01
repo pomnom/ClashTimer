@@ -34,6 +34,7 @@ object PlanView {
             return
         }
         if (bb) sim.sixth?.let { sixthCard(act, box, it, now, zone) }
+        if (bb) capacityLine(act, box, b)
         needsCard(act, box, sim, now, zone)
 
         val running = sim.running.filter { it.lane.bb == bb }.sortedBy { it.finish }
@@ -178,6 +179,23 @@ object PlanView {
 
     private val resourceOrder = listOf("Gold", "Elixir", "Dark Elixir", "Builder Gold", "Builder Elixir")
 
+    /** Kapasitas gudang Builder Base (Builder Hall + storage) — upgrade di atasnya menunggu storage dinaikkan. */
+    private fun capacityLine(act: MainActivity, box: LinearLayout, b: PlanBundle) {
+        val v = b.village
+        val gold = id.clashtimer.core.Capacity.of(v, id.clashtimer.core.Capacity.GOLD) ?: return
+        val elixir = id.clashtimer.core.Capacity.of(v, id.clashtimer.core.Capacity.ELIXIR) ?: return
+        val over = b.simBB?.steps.orEmpty().firstOrNull { s ->
+            val res = s.item?.resource ?: return@firstOrNull false
+            val cap = id.clashtimer.core.Capacity.of(v, res) ?: return@firstOrNull false
+            s.cost > cap
+        }
+        val text = StringBuilder("📦 Gudang: ${Fmt.money(gold)} Gold BB · ${Fmt.money(elixir)} Elixir BB")
+        if (over != null) {
+            text.append(" — ${over.title} butuh ${Fmt.money(over.cost)} ${Fmt.resource(over.item?.resource ?: "")}, storage dinaikkan dulu")
+        }
+        box.addView(Ui.muted(act, text.toString()).apply { setPadding(Ui.dp(act, 4), Ui.dp(act, 6), Ui.dp(act, 4), Ui.dp(act, 2)) })
+    }
+
     private fun needsCard(act: MainActivity, box: LinearLayout, sim: id.clashtimer.core.SimResult, now: Long, zone: ZoneId) {
         val needs = sim.needs
         if (needs.isEmpty()) return
@@ -307,7 +325,7 @@ object PlanView {
         col.addView(Ui.muted(act, sub))
         val warn = listOfNotNull(
             if (!s.running && s.idle > 30 * 60_000L) "💤 nganggur ${Fmt.dur(s.idle)} setelah selesai" else null,
-            s.note?.let { "⚔️ $it" },
+            s.note,
             s.event?.let { "🎉 $it" },
         )
         if (warn.isNotEmpty()) col.addView(Ui.text(act, warn.joinToString(" · "), Ui.BODY_S).apply {
@@ -341,7 +359,7 @@ object PlanView {
             if (s.cost > 0) msg.append("\nBiaya: ${Fmt.money(s.cost)} ${Fmt.resource(s.item?.resource ?: "")}")
             if (s.idle > 30 * 60_000L) msg.append("\n\n💤 Selesai saat Anda offline; pekerja menganggur ±${Fmt.dur(s.idle)}.")
             s.event?.let { msg.append("\n\n🎉 Dimulai saat $it — waktu & biaya sudah dipotong.") }
-            s.note?.let { msg.append("\n\n⚔️ $it") }
+            s.note?.let { msg.append("\n\n$it") }
             if (s.tier > 0) msg.append("\n\n🏗️ Langkah menuju builder ke-6.")
             if (s.gear) msg.append("\n\nGear-up memakai Master Builder dari Builder Base dan bekerja di Home Village.")
         }

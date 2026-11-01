@@ -160,8 +160,8 @@ object ItemsUi {
                 val at = now - offsets[w] * 60_000L
                 val before = Repo.finishes(act, tag)
                 Store.setBoosts(act, tag, Boosts.add(Store.boosts(act, tag), kind, at, duration))
-                // Boost gratis Clock Tower: catat untuk cooldown 22 jam + pengingat "siap lagi"
-                if (kind == BoostKind.CLOCK_TOWER) Store.setClockUsed(act, tag, at)
+                // Boost gratis Clock Tower: cooldown 22 jam dihitung sejak boost selesai (+ pengingat "siap lagi")
+                if (kind == BoostKind.CLOCK_TOWER) Store.setClockUsed(act, tag, at + duration)
                 if (mi != null) consume(act, tag, mi)
                 Repo.reproject(act, tag)
                 val after = Store.upgrades(act).filter { it.tag == tag }

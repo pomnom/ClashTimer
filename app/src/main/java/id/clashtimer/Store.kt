@@ -372,6 +372,7 @@ object Store {
     // ---------------------------------------------------------------- Clock Tower
 
     /** Kapan boost gratis Clock Tower terakhir dipakai (0 = tidak diketahui). */
+    /** Waktu boost gratis Clock Tower terakhir selesai (cooldown 22 jam dimulai dari sini); 0 = siap. */
     fun clockUsed(ctx: Context, tag: String): Long = prefs(ctx).getLong("clock_used_$tag", 0L)
     fun setClockUsed(ctx: Context, tag: String, t: Long) = prefs(ctx).edit().putLong("clock_used_$tag", t).commit()
 
