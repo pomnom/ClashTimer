@@ -262,7 +262,13 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Aplikasi sudah dibuka: yang masuk diam-diam saat jam istirahat sudah terlihat, tidak perlu diringkas lagi.
+        Store.clearQuietPending(this)
         AlarmReceiver.processDue(this) // jaga-jaga kalau ada alarm yang terlewat
+        if (Store.quietPending(this).isNotEmpty()) {
+            Store.clearQuietPending(this)
+            AlarmScheduler.schedule(this)
+        }
         renderAll()
         handler.removeCallbacks(tick)
         handler.post(tick)

@@ -140,6 +140,20 @@ class SettingsActivity : AppCompatActivity() {
             val days = DayOfWeek.entries.filter { it in s.work.days }.joinToString(", ") { dayName(it) }
             row("Hari kerja", days.ifBlank { "tidak ada" }) { pickDays() }
         }
+        if (s.sleep.enabled || s.work.enabled) {
+            sub("🔕 Senyap saat jam istirahat", "Alarm & notifikasi tidak berbunyi; tetap masuk ke panel tanpa suara & getar", Help.Topic.NOTIFY)
+            if (s.sleep.enabled) switchRow("Senyap saat jam tidur", Store.quietSleep(this)) {
+                Store.setQuietSleep(this, it); AlarmScheduler.schedule(this); render()
+            }
+            if (s.work.enabled) switchRow("Senyap saat jam kerja / sekolah", Store.quietWork(this)) {
+                Store.setQuietWork(this, it); AlarmScheduler.schedule(this); render()
+            }
+            if ((s.sleep.enabled && Store.quietSleep(this)) || (s.work.enabled && Store.quietWork(this))) {
+                switchRow("Ringkasan saat jam istirahat selesai", Store.quietSummary(this)) {
+                    Store.setQuietSummary(this, it); AlarmScheduler.schedule(this)
+                }
+            }
+        }
 
         sub("🎉 Event", "Hammer Jam, Builder Base Bonanza, dll.", Help.Topic.EVENTS)
         EventsUi.renderList(this, box) { render() }

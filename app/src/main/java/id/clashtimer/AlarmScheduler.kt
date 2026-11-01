@@ -40,6 +40,14 @@ object AlarmScheduler {
                 next = minOf(next ?: Long.MAX_VALUE, u.finishAt - earlyMs)
             }
         }
+        // Ringkasan notifikasi yang masuk diam-diam: dikirim saat jam istirahat selesai.
+        val now = System.currentTimeMillis()
+        if (Store.quietPending(ctx).isNotEmpty()) {
+            val end = Notifier.quietEnd(ctx) ?: if (Notifier.isQuiet(ctx)) now + 6 * 3_600_000L else now
+            next = minOf(next ?: Long.MAX_VALUE, end)
+        }
+        // Alarm keras masih berbunyi: hentikan begitu jam istirahat mulai.
+        if (Notifier.hasRinging(ctx)) Notifier.quietStart(ctx)?.let { next = minOf(next ?: Long.MAX_VALUE, it) }
         return next
     }
 

@@ -185,12 +185,19 @@ object Attacks {
         val launch = ctx.packageManager.getLaunchIntentForPackage(COC_PACKAGE)
             ?: Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         val pi = PendingIntent.getActivity(ctx, c.id.hashCode(), launch, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        val n = NotificationCompat.Builder(ctx, CHANNEL)
+        // Jam istirahat: masuk tanpa suara, diringkas saat jam istirahat selesai.
+        val quiet = Notifier.isQuiet(ctx)
+        if (quiet) {
+            Notifier.createChannels(ctx)
+            Store.addQuietPending(ctx, title)
+        }
+        val n = NotificationCompat.Builder(ctx, if (quiet) Notifier.QUIET_CHANNEL else CHANNEL)
             .setSmallIcon(R.drawable.ic_notif)
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText("$body Ketuk untuk membuka Clash of Clans."))
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setPriority(if (quiet) NotificationCompat.PRIORITY_LOW else NotificationCompat.PRIORITY_HIGH)
+            .setSilent(quiet)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
             .setContentIntent(pi)
@@ -199,6 +206,7 @@ object Attacks {
             NotificationManagerCompat.from(ctx).notify(c.id.hashCode(), n)
         } catch (_: SecurityException) {
         }
+        if (quiet) AlarmScheduler.schedule(ctx)
     }
 }
 

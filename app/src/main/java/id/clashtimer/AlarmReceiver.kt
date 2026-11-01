@@ -18,7 +18,10 @@ class AlarmReceiver : BroadcastReceiver() {
         fun processDue(ctx: Context, done: (() -> Unit)? = null) {
             Repo.migrate(ctx)
             Notifier.createChannels(ctx)
+            Notifier.flushQuiet(ctx)
             val now = System.currentTimeMillis()
+            val quiet = Notifier.isQuiet(ctx, now)
+            if (quiet) Notifier.hushRinging(ctx)
             val slack = 2_000L // toleransi kalau alarm berbunyi sepersekian detik lebih awal
             val earlyMin = Store.earlyMinutes(ctx)
             val earlyMs = earlyMin * 60_000L
@@ -50,7 +53,8 @@ class AlarmReceiver : BroadcastReceiver() {
                     now + slack >= u.finishAt - earlyMs
                 ) {
                     val left = ((u.finishAt - now + 59_999) / 60_000).toInt().coerceAtLeast(1)
-                    Notifier.early(ctx, u, left)
+                    // Jam istirahat: pengingat "sebentar lagi" dilewati (yang selesai tetap masuk tanpa suara).
+                    if (!quiet) Notifier.early(ctx, u, left)
                     u.earlyNotified = true
                     changed = true
                 }

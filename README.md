@@ -14,6 +14,12 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
 - Changelog: kartu update menampilkan catatan rilis GitHub (bila ada), dan "Yang baru" tampil sekali
   setelah update (juga di Pengaturan → Update aplikasi)
 
+**🔕 Senyap saat jam istirahat** (Pengaturan → Jam istirahat)
+- Upgrade yang selesai di jam tidur masuk ke panel **tanpa suara, getar, maupun alarm**; pengingat
+  "sebentar lagi" dilewati. Alarm keras yang masih berbunyi dihentikan begitu jam tidur mulai
+- Bisa juga untuk jam kerja / sekolah. Saat jam istirahat selesai: satu ringkasan bersuara (bisa dimatikan,
+  dan tidak dikirim bila aplikasi sudah dibuka). Tes nada tetap berbunyi
+
 **⏱️ Sekarang**
 - **Buka game berikutnya**: jam login berikutnya, hitung mundur, pekerja yang bebas ("B3 & Lab bebas"),
   sesi sesudahnya & jam tidur. Lonceng = **satu pengingat per sesi login** (bukan per upgrade)

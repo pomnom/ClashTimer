@@ -1,4 +1,5 @@
-# Tampilan baru
+# Tampilan baru & jam istirahat senyap
+- Jam istirahat: alarm & notifikasi tidak berbunyi saat jam tidur (bisa juga jam kerja); ringkasan saat bangun.
 - Tab baru: Sekarang · Jadwal · Desa · Progres, warna gelap yang lebih tenang.
 - "Buka game berikutnya": jam login berikutnya + lonceng pengingat satu notifikasi per sesi.
 - Bebas sekarang: satu kartu per pekerja dengan ikon, label B1/Lab, dan tanda "pas bangun" / "menganggur".

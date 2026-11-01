@@ -103,7 +103,9 @@ object Help {
         ),
         NOTIFY(
             "Notifikasi",
-            "• Mode alarm kuat memakai alarm sistem sehingga tidak ditunda saat HP tidur; efeknya ada ikon jam kecil di status bar.\n" +
+            "• Senyap saat jam istirahat: upgrade yang selesai di jam tidur (dan jam kerja bila dipilih) masuk ke panel tanpa suara, getar, atau alarm; pengingat \"sebentar lagi\" dilewati. Saat jam istirahat selesai ada satu ringkasan bersuara (bisa dimatikan).\n" +
+                "• Tes nada tetap berbunyi walau sedang jam istirahat.\n" +
+                "• Mode alarm kuat memakai alarm sistem sehingga tidak ditunda saat HP tidur; efeknya ada ikon jam kecil di status bar.\n" +
                 "• Alarm keras berbunyi berulang dengan volume alarm sampai notifikasi dibuka, diusap, atau ditekan Matikan.",
         ),
         WIDGET(

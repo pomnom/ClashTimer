@@ -365,6 +365,27 @@ object Store {
     fun strongAlarm(ctx: Context) = prefs(ctx).getBoolean("strong_alarm", true)
     fun setStrongAlarm(ctx: Context, v: Boolean) = prefs(ctx).edit().putBoolean("strong_alarm", v).apply()
 
+    /** Jam istirahat: notifikasi masuk tanpa suara & getar (jam tidur aktif bawaan, jam kerja tidak). */
+    fun quietSleep(ctx: Context) = prefs(ctx).getBoolean("quiet_sleep", true)
+    fun setQuietSleep(ctx: Context, v: Boolean) = prefs(ctx).edit().putBoolean("quiet_sleep", v).apply()
+    fun quietWork(ctx: Context) = prefs(ctx).getBoolean("quiet_work", false)
+    fun setQuietWork(ctx: Context, v: Boolean) = prefs(ctx).edit().putBoolean("quiet_work", v).apply()
+    /** Satu notifikasi bersuara saat jam istirahat selesai, berisi yang masuk diam-diam. */
+    fun quietSummary(ctx: Context) = prefs(ctx).getBoolean("quiet_summary", true)
+    fun setQuietSummary(ctx: Context, v: Boolean) = prefs(ctx).edit().putBoolean("quiet_summary", v).apply()
+
+    fun quietPending(ctx: Context): List<String> = runCatching {
+        val a = JSONArray(prefs(ctx).getString("quiet_pending", "[]"))
+        (0 until a.length()).map { a.getString(it) }
+    }.getOrDefault(emptyList())
+
+    fun addQuietPending(ctx: Context, line: String) {
+        val list = (quietPending(ctx) + line).takeLast(20)
+        prefs(ctx).edit().putString("quiet_pending", JSONArray(list).toString()).apply()
+    }
+
+    fun clearQuietPending(ctx: Context) = prefs(ctx).edit().remove("quiet_pending").apply()
+
     fun notifyHelpers(ctx: Context) = prefs(ctx).getBoolean("notify_helpers", true)
     fun setNotifyHelpers(ctx: Context, v: Boolean) = prefs(ctx).edit().putBoolean("notify_helpers", v).apply()
 

@@ -34,6 +34,108 @@ object Notifier {
     const val KEY_EARLY = "early"
     /** Konfirmasi tanpa suara (mis. timer dipasang dari notifikasi). */
     private const val INFO_CHANNEL = "info_v1"
+    /** Notifikasi yang masuk saat jam istirahat: tanpa suara, getar, maupun pop-up. */
+    const val QUIET_CHANNEL = "quiet_v1"
+
+    // ---------------------------------------------------------------- jam istirahat
+
+    /** [t] jatuh di jam istirahat yang dibuat senyap (jam tidur, dan jam kerja bila dipilih). */
+    fun isQuiet(ctx: Context, t: Long = System.currentTimeMillis()): Boolean {
+        val sleepOn = Store.quietSleep(ctx)
+        val workOn = Store.quietWork(ctx)
+        if (!sleepOn && !workOn) return false
+        return quietAt(Store.planSettings(ctx, null).schedule, t, sleepOn, workOn)
+    }
+
+    private fun quietAt(s: id.clashtimer.core.OfflineSchedule, t: Long, sleepOn: Boolean, workOn: Boolean): Boolean {
+        if (!s.isOffline(t)) return false
+        val sleep = id.clashtimer.core.Logins.inSleep(s, t)
+        return (sleep && sleepOn) || (!sleep && workOn)
+    }
+
+    /** Kapan jam istirahat yang senyap berakhir (null = sekarang tidak senyap). */
+    fun quietEnd(ctx: Context, t: Long = System.currentTimeMillis()): Long? {
+        val sleepOn = Store.quietSleep(ctx)
+        val workOn = Store.quietWork(ctx)
+        if (!sleepOn && !workOn) return null
+        val s = Store.planSettings(ctx, null).schedule
+        if (!quietAt(s, t, sleepOn, workOn)) return null
+        var x = (t / 60_000L + 1) * 60_000L
+        repeat(36 * 60) {
+            if (!quietAt(s, x, sleepOn, workOn)) return x
+            x += 60_000L
+        }
+        return null
+    }
+
+    /** Awal jam istirahat senyap berikutnya setelah [t] (dalam 3 hari), atau null. */
+    fun quietStart(ctx: Context, t: Long = System.currentTimeMillis()): Long? {
+        val sleepOn = Store.quietSleep(ctx)
+        val workOn = Store.quietWork(ctx)
+        if (!sleepOn && !workOn) return null
+        val s = Store.planSettings(ctx, null).schedule
+        var x = t
+        repeat(6) {
+            val st = s.nextOfflineStart(x) ?: return null
+            if (quietAt(s, st, sleepOn, workOn)) return st
+            x = st
+        }
+        return null
+    }
+
+    /** Ada notifikasi "Alarm keras" yang masih berbunyi berulang. */
+    fun hasRinging(ctx: Context): Boolean = ringing(ctx).isNotEmpty()
+
+    private fun ringing(ctx: Context): List<android.service.notification.StatusBarNotification> {
+        val nm = ctx.getSystemService(NotificationManager::class.java) ?: return emptyList()
+        return runCatching { nm.activeNotifications.filter { it.notification.flags and Notification.FLAG_INSISTENT != 0 } }
+            .getOrDefault(emptyList())
+    }
+
+    /** Jam istirahat mulai: alarm keras yang masih berbunyi dihentikan, isinya tetap di panel tanpa suara. */
+    fun hushRinging(ctx: Context) {
+        val list = ringing(ctx)
+        if (list.isEmpty()) return
+        createChannels(ctx)
+        val nmc = NotificationManagerCompat.from(ctx)
+        for (sbn in list) {
+            val n = sbn.notification
+            val ex = n.extras
+            val title = ex.getCharSequence(Notification.EXTRA_TITLE) ?: "Clash Timer"
+            val text = ex.getCharSequence(Notification.EXTRA_BIG_TEXT) ?: ex.getCharSequence(Notification.EXTRA_TEXT) ?: ""
+            val b = NotificationCompat.Builder(ctx, QUIET_CHANNEL)
+                .setSmallIcon(R.drawable.ic_notif)
+                .setContentTitle(title)
+                .setContentText(text)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setSilent(true)
+                .setAutoCancel(true)
+                .setContentIntent(n.contentIntent)
+                .setWhen(n.`when`)
+            try {
+                nmc.cancel(sbn.tag, sbn.id) // menghentikan bunyi berulang
+                nmc.notify(sbn.tag, sbn.id, b.build())
+            } catch (_: SecurityException) {
+            }
+        }
+    }
+
+    /**
+     * Jam istirahat selesai: satu notifikasi bersuara berisi yang masuk diam-diam. Dipanggil dari
+     * AlarmReceiver; tidak melakukan apa-apa bila masih jam istirahat atau tidak ada yang tertunda.
+     */
+    fun flushQuiet(ctx: Context) {
+        val pending = Store.quietPending(ctx)
+        if (pending.isEmpty() || isQuiet(ctx)) return
+        Store.clearQuietPending(ctx)
+        if (!Store.quietSummary(ctx)) return
+        val body = pending.takeLast(6).joinToString("\n") + if (pending.size > 6) "\n… dan ${pending.size - 6} lagi" else ""
+        val i = Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            .setAction("id.clashtimer.OPEN_VILLAGES").putExtra(Widgets.EXTRA_TAB, "VILLAGES")
+        val pi = PendingIntent.getActivity(ctx, 7337, i, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        post(ctx, 7337, KEY_DONE, "Selama jam istirahat · ${pending.size} notifikasi", body, pi, allowQuiet = false)
+    }
 
     fun channelId(ctx: Context, key: String): String = "${key}_v${Store.channelVersion(ctx, key)}"
 
@@ -58,10 +160,17 @@ object Notifier {
         val nm = ctx.getSystemService(NotificationManager::class.java)
         val wanted = listOf(KEY_DONE, KEY_EARLY).associateWith { channelId(ctx, it) }
         for (ch in nm.notificationChannels) {
-            if (ch.id !in wanted.values && ch.id != INFO_CHANNEL && ch.id != Attacks.CHANNEL) nm.deleteNotificationChannel(ch.id)
+            if (ch.id !in wanted.values && ch.id != INFO_CHANNEL && ch.id != QUIET_CHANNEL && ch.id != Attacks.CHANNEL) nm.deleteNotificationChannel(ch.id)
         }
         for ((key, id) in wanted) {
             if (nm.getNotificationChannel(id) == null) nm.createNotificationChannel(buildChannel(ctx, key, id))
+        }
+        if (nm.getNotificationChannel(QUIET_CHANNEL) == null) {
+            nm.createNotificationChannel(NotificationChannel(QUIET_CHANNEL, "Saat jam istirahat (senyap)", NotificationManager.IMPORTANCE_LOW).apply {
+                description = "Upgrade yang selesai saat jam tidur: masuk ke panel tanpa suara & getar"
+                setSound(null, null)
+                enableVibration(false)
+            })
         }
         if (nm.getNotificationChannel(INFO_CHANNEL) == null) {
             nm.createNotificationChannel(NotificationChannel(INFO_CHANNEL, "Konfirmasi (tanpa suara)", NotificationManager.IMPORTANCE_LOW).apply {
@@ -238,16 +347,37 @@ object Notifier {
             ToneMode.SILENT -> "Mode senyap: notifikasi hanya muncul di panel."
             else -> "Kalau ini muncul, notifikasi sudah berfungsi."
         }
-        post(ctx, 4242 + key.length, key, "🔔 Tes: ${mode.label}", body)
+        post(ctx, 4242 + key.length, key, "🔔 Tes: ${mode.label}", body, allowQuiet = false)
     }
 
     private fun post(
         ctx: Context, id: Int, key: String, title: String, body: String,
         content: PendingIntent = openApp(ctx),
         actions: List<Pair<String, PendingIntent>> = emptyList(),
+        allowQuiet: Boolean = true,
     ) {
         if (!canNotify(ctx)) return
         createChannels(ctx)
+        if (allowQuiet && isQuiet(ctx)) {
+            // Jam istirahat: masuk ke panel tanpa bunyi; diringkas sekali saat jam istirahat selesai.
+            val n = NotificationCompat.Builder(ctx, QUIET_CHANNEL)
+                .setSmallIcon(R.drawable.ic_notif)
+                .setContentTitle(title)
+                .setContentText(body)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setSilent(true)
+                .setAutoCancel(true)
+                .setContentIntent(content)
+                .setWhen(System.currentTimeMillis())
+            for ((label, pi) in actions) n.addAction(R.drawable.ic_notif, label, pi)
+            Store.addQuietPending(ctx, title)
+            try {
+                NotificationManagerCompat.from(ctx).notify(id, n.build())
+            } catch (_: SecurityException) {
+            }
+            return
+        }
         val mode = Store.toneMode(ctx, key)
         val b = NotificationCompat.Builder(ctx, channelId(ctx, key))
             .setSmallIcon(R.drawable.ic_notif)
