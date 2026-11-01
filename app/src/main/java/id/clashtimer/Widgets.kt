@@ -125,7 +125,7 @@ object Widgets {
 
     // ---------------------------------------------------------------- data
 
-    private class Snap(
+    internal class Snap(
         val tag: String,
         val v: Village?,
         val ups: List<Upgrade>,
@@ -135,7 +135,7 @@ object Widgets {
     )
 
     /** Satu baris widget: desa + status tiap kolom. */
-    private class VRow(val tag: String, val name: String, val acc: Account, val cells: List<Cell>)
+    internal class VRow(val tag: String, val name: String, val acc: Account, val cells: List<Cell>)
 
     private fun snapshot(ctx: Context, gd: GameData, tag: String, all: List<Upgrade>, now: Long): Snap {
         val ups = all.filter { it.tag == tag }
@@ -149,7 +149,7 @@ object Widgets {
     }
 
     /** Semua desa, yang paling cepat punya pekerja bebas di atas. */
-    private fun rows(ctx: Context, now: Long): List<VRow> {
+    internal fun rows(ctx: Context, now: Long): List<VRow> {
         val gd = Repo.gameData(ctx)
         val all = Store.upgrades(ctx)
         return Store.accounts(ctx).map { acc ->
@@ -266,7 +266,7 @@ object Widgets {
     private val TABLET = Metrics(72, 128, 30)
 
     /** Status satu jenis pekerja di satu desa. */
-    private class Cell(
+    internal class Cell(
         val lane: Lane,
         /** Jumlah pekerja (0 = belum ada, mis. Star Lab belum dibangun). */
         val total: Int,
@@ -302,7 +302,7 @@ object Widgets {
         return Cell(lane, total, free, next, pick?.c?.title)
     }
 
-    private fun laneName(lane: Lane): String = when (lane) {
+    internal fun laneName(lane: Lane): String = when (lane) {
         Lane.BUILDER -> "Builder"
         Lane.LAB -> "Lab"
         Lane.PET -> "Pet House"
@@ -311,7 +311,7 @@ object Widgets {
     }
 
     /** "Hidden Tesla → 8", "Cannon · Gear-up" (untuk baris kecil di tablet). */
-    private fun shortTitle(u: Upgrade): String = when {
+    internal fun shortTitle(u: Upgrade): String = when {
         u.customTitle.isNotBlank() -> u.customTitle
         u.targetLevel > 0 -> keep("${u.name} → ${u.targetLevel}")
         else -> u.name

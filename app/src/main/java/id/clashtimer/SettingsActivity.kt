@@ -93,7 +93,7 @@ class SettingsActivity : AppCompatActivity() {
         val s = ps.schedule
 
         box.addView(Ui.section(this, "🌐 Untuk semua desa", "Jam istirahat, API, event, ikon, nada & notifikasi"))
-        note("Gold Pass (dari lama timer) dan CWL (dari API) terdeteksi otomatis per desa; strategi saran & opsi collector dipilih di Beranda → kartu \"Opsi desa ini\".")
+        note("Gold Pass (dari lama timer) dan CWL (dari API) terdeteksi otomatis per desa; strategi saran & opsi collector dipilih lewat ikon opsi desa di bagian atas layar utama.")
 
         apiSection()
         backupSection()

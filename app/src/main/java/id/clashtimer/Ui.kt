@@ -169,4 +169,67 @@ object Ui {
         }
 
     fun pct(p: Double): String = String.format(java.util.Locale.ROOT, "%.0f%%", p.coerceIn(0.0, 100.0))
+
+    /** Warna status yang dipakai di semua layar: bebas, sedang upgrade, lab, akan menganggur. */
+    const val FREE = GREEN
+    const val BUSY = GOLD
+    const val LAB = VIOLET
+    const val IDLE = 0xFFD84315.toInt()
+
+    /** Ikon vektor kecil yang diwarnai (opsional bisa ditekan). */
+    fun icon(ctx: Context, res: Int, sizeDp: Int, color: Int, desc: String? = null, onClick: (() -> Unit)? = null): android.widget.ImageView =
+        android.widget.ImageView(ctx).apply {
+            setImageResource(res)
+            imageTintList = ColorStateList.valueOf(color)
+            contentDescription = desc
+            val pad = if (onClick != null) dp(ctx, 8) else 0
+            setPadding(pad, pad, pad, pad)
+            layoutParams = LinearLayout.LayoutParams(dp(ctx, sizeDp) + 2 * pad, dp(ctx, sizeDp) + 2 * pad)
+            if (onClick != null) {
+                isClickable = true
+                setOnClickListener { onClick() }
+                val tv = android.util.TypedValue()
+                if (ctx.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, tv, true)) setBackgroundResource(tv.resourceId)
+            }
+        }
+
+    /** Tombol pilihan kecil berdampingan, mis. Home | BB. */
+    fun segmented(ctx: Context, labels: List<String>, selected: Int, onSelect: (Int) -> Unit): LinearLayout {
+        val box = hbox(ctx).apply { background = outline(ctx, dp(ctx, 8).toFloat()) }
+        labels.forEachIndexed { i, l ->
+            val on = i == selected
+            box.addView(TextView(ctx).apply {
+                text = l
+                textSize = 12f
+                gravity = Gravity.CENTER
+                setPadding(dp(ctx, 10), dp(ctx, 5), dp(ctx, 10), dp(ctx, 5))
+                setTextColor(if (on) FREE else secondary(ctx))
+                if (on) {
+                    background = tint(FREE, dp(ctx, 8).toFloat(), 0x2E)
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                }
+                setOnClickListener { if (!on) onSelect(i) }
+            })
+        }
+        return box
+    }
+
+    /** Latar kotak status (grid pekerja, Semua desa). */
+    fun tileBg(ctx: Context, color: Int? = null): android.graphics.drawable.GradientDrawable =
+        if (color != null) tint(color, dp(ctx, 10).toFloat(), 0x22) else tint(GREY, dp(ctx, 10).toFloat(), 0x14)
+
+    /** Bar progres tipis berwarna. */
+    fun thinBar(ctx: Context, frac: Double, color: Int): View {
+        val track = android.widget.FrameLayout(ctx).apply {
+            background = tint(GREY, dp(ctx, 2).toFloat(), 0x33)
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 4)).apply { topMargin = dp(ctx, 6) }
+        }
+        val fill = View(ctx).apply { background = tint(color, dp(ctx, 2).toFloat(), 0xFF) }
+        track.addView(fill, android.widget.FrameLayout.LayoutParams(0, android.widget.FrameLayout.LayoutParams.MATCH_PARENT))
+        track.addOnLayoutChangeListener { v, l, _, r, _, _, _, _, _ ->
+            val w = ((r - l) * frac.coerceIn(0.0, 1.0)).toInt()
+            if (fill.layoutParams.width != w) { fill.layoutParams.width = w; v.post { fill.requestLayout() } }
+        }
+        return track
+    }
 }

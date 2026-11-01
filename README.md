@@ -4,10 +4,20 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
 **Export village data**, dengan notifikasi tepat waktu (alarm sistem Android).
 
 ## Fitur
+**🧭 Tampilan**
+- Navigasi bawah: **Desa · Beranda · Rencana · Progres**. Header satu baris: ‹ nama desa › (TH, jumlah
+  builder bebas, "1/2 desa"), pilihan **Home | BB**, dan ikon **opsi desa**
+- **Desa** (layar awal bila punya lebih dari satu desa): kartu tiap desa dengan kotak Builder, Lab,
+  Builder Base & Star Lab — "2 bebas" + saran, atau hitung mundur upgrade yang paling cepat selesai —
+  plus Goblin Builder/Researcher. Ketuk untuk membuka, tahan untuk ganti nama / hapus
+- Warna tetap di semua layar: hijau = bebas, emas = builder sibuk, ungu = lab, merah = menganggur
+
 **🏠 Beranda**
 - Hitung mundur besar "builder berikutnya bebas" + satu saran upgrade (dengan ikon)
-- Builder, Laboratory, Pet House (dan Builder Base) dengan cincin progres + ikon, waktu selesai,
-  label helper/potion/event
+- **Kotak pekerja**: B1…B6, Lab, Pet (atau M1…M3 & Star Lab di Builder Base) dan Goblin, masing-masing
+  dengan hitung mundur, nama upgrade & bar progres; ketuk kotak bebas untuk memilih upgrade
+- **Detail timer** (bisa dilipat): Builder, Laboratory, Pet House dengan cincin progres + ikon, waktu
+  selesai, label helper/potion/event
 - **Sudah dimulai**: setelah memulai upgrade di game, ketuk tombol ini → timer & notifikasi
   langsung dipasang tanpa import ulang. **Lihat opsi** untuk memilih upgrade lain
 - Ketuk sebuah upgrade → tandai selesai (gem/book) atau batal
@@ -29,6 +39,9 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
   **Builder ke-6** / Max
 - Antrean per pekerja (B1–B6, M1–M3, Lab, Pet, Star Lab): sedang berjalan, hari ini, besok,
   minggu ini, nanti — ketuk untuk detail atau "Sudah dimulai"
+- **Timeline** (pilihan Daftar | Timeline, diingat): satu baris per pekerja untuk 24 jam atau 3 hari —
+  batang penuh = berjalan, transparan = rencana, garis merah = menganggur, abu-abu = jam tidur/offline,
+  garis vertikal = sekarang. Ketuk batang untuk detail
 - **Builder ke-6 (B.O.B)**: checklist 6 syarat (BH9 + B.O.B Control, 3 gear-up, troop Lv18,
   pertahanan Lv9, BM + BC = 45) dengan perkiraan tanggal tiap syarat dan tanggal B.O.B terbuka
 - Jam tidur/kerja, sesi helper, hero yang ditunda karena CWL, potongan event
@@ -108,11 +121,12 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
   **45.79.218.79** (proxy RoyaleAPI), salin Token, tempel di aplikasi
 - Key hanya disimpan di HP; permintaan lewat cocproxy.royaleapi.dev
 
-**⚙️ Opsi per desa — langsung di Beranda**
-- Kartu **Opsi desa ini**: strategi saran & collector dipilih sendiri; Gold Pass, CWL dan strategi
+**⚙️ Opsi per desa** (ikon opsi di header, atau baris ringkas "💡 Seimbang · 🎫 20% · ⚔️ CWL" di Beranda)
+- Lembar **Opsi desa**: strategi saran & collector dipilih sendiri; Gold Pass, CWL dan strategi
   Builder Base (setelah B.O.B) bertanda **otomatis** dengan penjelasan saat diketuk. Semua disimpan
   **per desa**.
-- Chip di tab Rencana membuka pilihan yang sama.
+- Chip di tab Rencana membuka pilihan yang sama. Lembar ini juga berisi Update desa, Potion & item,
+  Ganti nama, dan Pengaturan aplikasi.
 - Jam tidur/kerja, event, ikon, nada & notifikasi (⚙️ Pengaturan) berlaku untuk semua desa.
 
 **⚔️ Pengingat serangan** (butuh API key)
@@ -122,7 +136,7 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
 
 **📌 Prioritaskan / sembunyikan** — tahan lama upgrade di Beranda, Rencana, atau Progres
 - Prioritaskan: didahulukan di saran, rencana, widget & notifikasi. Sembunyikan: hilang dari saran &
-  rencana tetapi tetap dihitung di progres. Kelola di kartu **Opsi desa ini**.
+  rencana tetapi tetap dihitung di progres. Kelola di lembar **Opsi desa**.
 
 **📈 Riwayat & statistik** (tab Progres)
 - Grafik % menuju max per minggu, jam builder menganggur per minggu (Home / Builder Base) dan upgrade
@@ -169,7 +183,7 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
 ## Cara pakai
 1. Di game: Settings → More Settings → paling bawah **Export village data** → Copy.
 2. Buka Clash Timer → **📋 Update desa** (atau Import dari Clipboard).
-3. Pilih strategi saran & collector di kartu **Opsi desa ini** (Beranda); Gold Pass & CWL terisi
+3. Pilih strategi saran & collector di lembar **Opsi desa** (ikon opsi di header); Gold Pass & CWL terisi
    sendiri. Jam tidur/kerja, event, nada, dan API key ada di ⚙️ **Pengaturan**.
 4. Setelah memulai upgrade di game, tekan **Sudah dimulai** pada saran — atau import ulang
    (sekaligus membuat Gold Pass terdeteksi).

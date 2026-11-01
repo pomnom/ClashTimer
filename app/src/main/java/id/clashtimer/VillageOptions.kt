@@ -11,7 +11,7 @@ import id.clashtimer.core.PlanSettings
 import id.clashtimer.core.Strategy
 
 /**
- * Opsi per desa di Beranda: strategi saran, Gold Pass, CWL, collector, builder Builder Base.
+ * Opsi per desa (lembar dari ikon opsi di atas): strategi saran, Gold Pass, CWL, collector, builder Builder Base.
  * Semua disimpan untuk desa [tag] saja.
  */
 object VillageOptions {
@@ -65,11 +65,61 @@ object VillageOptions {
         } else "Lewati hero · ${ps.cwl.days} hari"
     }
 
-    /** Kartu "Opsi desa ini" (2 × 2 kotak). */
-    fun card(act: MainActivity, box: LinearLayout, tag: String, bb: Boolean, ps: PlanSettings) {
-        box.addView(Ui.sectionRow(act, "Opsi desa ini", "ketuk untuk mengubah"))
-        val (card, col) = Ui.card(act, padH = 10, padV = 10)
+    /** Ringkasan satu baris di Beranda: "💡 Seimbang · 🎫 20% · ⚔️ CWL" → buka lembar opsi. */
+    fun summary(act: MainActivity, tag: String, bb: Boolean, ps: PlanSettings): String {
+        val parts = ArrayList<String>()
+        if (bb) {
+            parts += "💡 " + if (Store.bobDone(act, tag)) "Max" else ps.bbStrategy.label
+            if (ps.gold.builderPct > 0) parts += "🎫 ${ps.gold.builderPct}%"
+        } else {
+            parts += "💡 " + shortStrategy(ps.strategy)
+            parts += "🎫 " + goldLabel(ps, false)
+            parts += if (ps.cwl.enabled) "⚔️ CWL" else "⚔️ tanpa CWL"
+        }
+        if (ps.skipCollectors) parts += "⛏️ tanpa collector"
+        val nPin = Store.pins(act, tag).size
+        if (nPin > 0) parts += "📌 $nPin"
+        return parts.joinToString(" · ")
+    }
+
+    /** Lembar bawah "Opsi desa": strategi, Gold Pass, CWL, collector + tindakan desa. */
+    fun sheet(act: MainActivity, tag: String, bb: Boolean) {
+        val dialog = com.google.android.material.bottomsheet.BottomSheetDialog(act)
+        val col = Ui.vbox(act).apply { setPadding(Ui.dp(act, 16), Ui.dp(act, 8), Ui.dp(act, 16), Ui.dp(act, 20)) }
+        col.addView(View(act).apply {
+            background = Ui.tint(Ui.GREY, Ui.dp(act, 2).toFloat(), 0x66)
+        }, LinearLayout.LayoutParams(Ui.dp(act, 32), Ui.dp(act, 4)).apply {
+            gravity = android.view.Gravity.CENTER_HORIZONTAL
+            bottomMargin = Ui.dp(act, 12)
+        })
+        col.addView(Ui.text(act, "Opsi ${name(act, tag)}", Ui.TITLE_M))
+        col.addView(Ui.muted(act, (if (bb) "Builder Base" else "Home Village") + " · hanya untuk desa ini · ketuk untuk mengubah").apply {
+            setPadding(0, 0, 0, Ui.dp(act, 10))
+        })
+        fill(act, col, tag, bb, Store.planSettings(act, tag)) { dialog.dismiss() }
+        col.addView(Ui.divider(act).apply { (layoutParams as LinearLayout.LayoutParams).topMargin = Ui.dp(act, 14) })
+        fun action(label: String, run: () -> Unit) {
+            col.addView(Ui.flat(act, label) { dialog.dismiss(); run() }.apply {
+                isAllCaps = false
+                gravity = android.view.Gravity.START or android.view.Gravity.CENTER_VERTICAL
+            }, Ui.matchWrap())
+        }
+        action("📋 Update desa dari clipboard") { act.importFromClipboard() }
+        action("⚡ Potion & item") { act.openItems(tag) }
+        action("✏️ Ganti nama desa") { VillagesUi.rename(act, tag) }
+        action("⚙️ Pengaturan aplikasi") { act.openSettings() }
+        dialog.setContentView(android.widget.ScrollView(act).apply { addView(col) })
+        runCatching {
+            dialog.behavior.skipCollapsed = true
+            dialog.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+        }
+        dialog.show()
+    }
+
+    /** Kotak-kotak opsi (2 × 2) + prioritas; [onPick] dipanggil sebelum pemilih dibuka. */
+    private fun fill(act: MainActivity, col: LinearLayout, tag: String, bb: Boolean, ps: PlanSettings, onPick: () -> Unit) {
         val tiles = ArrayList<View>()
+        fun tile(act: MainActivity, label: String, value: String, onClick: () -> Unit) = tileView(act, label, value) { onPick(); onClick() }
         val auto = " · otomatis"
         val gpLabel = "🎫 Gold Pass" + if (goldAuto(act, tag, ps, bb)) auto else ""
         if (bb) {
@@ -98,10 +148,9 @@ object VillageOptions {
         val api = if (Store.apiKey(act).isNotBlank()) "CWL & upgrade yang selesai lebih cepat (API)" else "CWL bila API key diisi di Pengaturan"
         col.addView(Ui.muted(act, "🔎 Otomatis: jumlah builder, helper, B.O.B & gear-up (export), Gold Pass (dari lama timer saat import), $api. " +
             "Strategi & collector sesuai pilihan Anda.").apply { setPadding(Ui.dp(act, 2), Ui.dp(act, 8), Ui.dp(act, 2), 0) })
-        box.addView(card)
     }
 
-    private fun tile(act: MainActivity, label: String, value: String, onClick: () -> Unit): View {
+    private fun tileView(act: MainActivity, label: String, value: String, onClick: () -> Unit): View {
         val v = Ui.vbox(act).apply {
             background = Ui.tint(Ui.GREY, Ui.dp(act, 10).toFloat(), 0x1A)
             setPadding(Ui.dp(act, 10), Ui.dp(act, 8), Ui.dp(act, 10), Ui.dp(act, 8))

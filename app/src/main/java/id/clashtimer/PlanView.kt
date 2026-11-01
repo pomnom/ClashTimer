@@ -33,9 +33,20 @@ object PlanView {
             box.addView(Ui.muted(act, "Belum ada data untuk rencana ini.", Ui.BODY_M).apply { setPadding(Ui.dp(act, 4), Ui.dp(act, 16), 0, 0) })
             return
         }
+        val mode = pref(act, "plan_mode")
+        modeRow(act, box, mode)
+        if (mode == 1) timeline(act, box, b, sim, bb, now, zone)
         if (bb) sim.sixth?.let { sixthCard(act, box, it, now, zone) }
         if (bb) capacityLine(act, box, b)
         needsCard(act, box, sim, now, zone)
+        if (mode == 1) {
+            box.addView(Ui.muted(act,
+                "Garis waktu = perkiraan bila setiap pekerja langsung diisi saran teratas saat Anda online. " +
+                    "Dihitung ${Fmt.time(b.computedAt, zone)}. Ketuk batang untuk detail.").apply {
+                setPadding(Ui.dp(act, 4), Ui.dp(act, 10), Ui.dp(act, 4), 0)
+            })
+            return
+        }
 
         val running = sim.running.filter { it.lane.bb == bb }.sortedBy { it.finish }
         val steps = sim.steps.filter { it.lane.bb == bb }
@@ -94,6 +105,74 @@ object PlanView {
             col.addView(v)
         }
         box.addView(card)
+    }
+
+    // ---------------------------------------------------------------- daftar / garis waktu
+
+    private fun pref(act: MainActivity, key: String) =
+        act.getSharedPreferences("ui", android.content.Context.MODE_PRIVATE).getInt(key, 0)
+
+    private fun setPref(act: MainActivity, key: String, v: Int) =
+        act.getSharedPreferences("ui", android.content.Context.MODE_PRIVATE).edit().putInt(key, v).apply()
+
+    private fun modeRow(act: MainActivity, box: LinearLayout, mode: Int) {
+        val row = Ui.hbox(act).apply { setPadding(0, Ui.dp(act, 10), 0, Ui.dp(act, 2)) }
+        row.addView(Ui.segmented(act, listOf("Daftar", "Timeline"), mode) {
+            setPref(act, "plan_mode", it)
+            act.renderBody()
+        })
+        row.addView(View(act), Ui.weight1())
+        if (mode == 1) {
+            row.addView(Ui.segmented(act, listOf("24 jam", "3 hari"), pref(act, "tl_range")) {
+                setPref(act, "tl_range", it)
+                act.renderBody()
+            })
+        }
+        box.addView(row, Ui.matchWrap())
+    }
+
+    private fun timeline(
+        act: MainActivity, box: LinearLayout, b: PlanBundle, sim: id.clashtimer.core.SimResult, bb: Boolean, now: Long, zone: ZoneId,
+    ) {
+        val long = pref(act, "tl_range") == 1
+        val from = now - if (long) 2 * 3_600_000L else 30 * 60_000L
+        val to = from + if (long) 3 * DAY else DAY
+        val (card, col) = Ui.card(act, padH = 6, padV = 10)
+        val tv = TimelineView(act)
+        TimelineView.build(tv, sim.running, sim.steps, bb, from, to, now)
+        tv.offline = runCatching { b.ps.schedule.windowsBetween(from, to) }.getOrDefault(emptyList())
+        tv.zone = zone
+        tv.onTap = { s -> details(act, b, s, now, zone) }
+        if (tv.rows.isEmpty()) {
+            col.addView(Ui.muted(act, "Tidak ada pekerja untuk ditampilkan.", Ui.BODY_M).apply { setPadding(Ui.dp(act, 8), Ui.dp(act, 8), 0, Ui.dp(act, 8)) })
+        } else col.addView(tv, Ui.matchWrap())
+        col.addView(legend(act), Ui.matchWrap().apply { topMargin = Ui.dp(act, 6) })
+        box.addView(card, Ui.matchWrap(6, act).apply { topMargin = Ui.dp(act, 6) })
+        val idle = tv.bars.filter { it.idle }.sumOf { (minOf(it.end, to) - maxOf(it.start, now)).coerceAtLeast(0) }
+        if (idle > 30 * 60_000L) {
+            box.addView(Ui.muted(act, "💤 Pekerja menganggur ±${Fmt.dur(idle)} dalam ${if (long) "3 hari" else "24 jam"} ini (garis merah) — biasanya karena jam tidur/offline.").apply {
+                setPadding(Ui.dp(act, 4), 0, Ui.dp(act, 4), Ui.dp(act, 4))
+            })
+        }
+    }
+
+    private fun legend(act: MainActivity): View {
+        val row = Ui.hbox(act).apply { setPadding(Ui.dp(act, 6), 0, Ui.dp(act, 6), 0) }
+        fun item(label: String, color: Int, alpha: Int, h: Int = 8) {
+            row.addView(View(act).apply { background = Ui.tint(color, Ui.dp(act, 2).toFloat(), alpha) },
+                LinearLayout.LayoutParams(Ui.dp(act, 14), Ui.dp(act, h)).apply { marginEnd = Ui.dp(act, 4) })
+            row.addView(Ui.muted(act, label).apply { textSize = 11f },
+                LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = Ui.dp(act, 12) })
+        }
+        item("berjalan", Ui.BUSY, 0xFF)
+        item("rencana", Ui.BUSY, 0x55)
+        item("lab", Ui.LAB, 0xFF)
+        item("menganggur", Ui.IDLE, 0xCC, 4)
+        item("offline", Ui.GREY, 0x40, 12)
+        return HorizontalScrollView(act).apply {
+            isHorizontalScrollBarEnabled = false
+            addView(row)
+        }
     }
 
     // ---------------------------------------------------------------- strategi

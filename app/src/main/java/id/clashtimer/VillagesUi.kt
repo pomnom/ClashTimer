@@ -74,17 +74,17 @@ object VillagesUi {
             .show()
     }
 
-    private fun options(act: MainActivity, tag: String) {
+    fun options(act: MainActivity, tag: String) {
         val name = Store.villageName(act, tag)
         val opts = arrayOf<CharSequence>(
-            "✏️ Ganti nama", "⚙️ Opsi desa (Gold Pass, CWL, saran) di Beranda", "📋 Update dari clipboard", "🗑️ Hapus desa",
+            "✏️ Ganti nama", "⚙️ Opsi desa (strategi, Gold Pass, CWL)", "📋 Update dari clipboard", "🗑️ Hapus desa",
         )
         MaterialAlertDialogBuilder(act)
             .setTitle(name)
             .setItems(opts) { _, w ->
                 when (w) {
                     0 -> rename(act, tag)
-                    1 -> { act.selectVillage(tag); act.openTab(MainActivity.Tab.HOME) }
+                    1 -> { act.selectVillage(tag); VillageOptions.sheet(act, tag, act.showBB) }
                     2 -> { act.selectVillage(tag); act.importFromClipboard() }
                     else -> confirmDelete(act, tag)
                 }

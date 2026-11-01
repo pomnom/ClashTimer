@@ -99,52 +99,74 @@ object HomeView {
         }
         box.addView(hc)
 
-        // --- opsi desa ini (strategi, Gold Pass, CWL, collector)
-        VillageOptions.card(act, box, tag, bb, Store.planSettings(act, tag))
+        // --- opsi desa ini (ringkas; lembar lengkap dari ikon opsi di atas)
+        optionsRow(act, box, tag, bb)
 
-        // --- builder
-        box.addView(Ui.sectionRow(act, workers, "$regular dari $total sibuk" + if (extraN > 0) " + $extraN Goblin" else ""))
-        val (bc, bcol) = Ui.card(act, padH = 0, padV = 0)
-        var rows = 0
-        fun add(v: View) {
-            if (rows++ > 0) bcol.addView(Ui.divider(act))
-            bcol.addView(v)
-        }
-        for (u in finished.take(3)) add(timerRow(act, u, now, zone, gd, b, Ui.GREEN))
-        for (u in running) add(timerRow(act, u, now, zone, gd, b, Ui.GREEN))
-        if (free > 1 && nowSlot != null) {
-            for (k in 1 until free) {
-                val pick = nowSlot.ranked.getOrNull(k) ?: break
-                add(freeRow(act, tag, nowSlot, pick, "$workers bebas"))
+        // --- semua pekerja sekilas
+        val gobN = if (bb) 0 else ups.count { it.extra && it.finishAt > now }
+        box.addView(Ui.sectionRow(act, "Pekerja", "$regular dari $total $workers sibuk" + if (gobN > 0) " + $gobN Goblin" else ""))
+        workerGrid(act, box, tag, bb, b, ups, gd, now, total, nowSlot)
+
+        // --- baru selesai: perlu ditandai
+        if (finished.isNotEmpty()) {
+            box.addView(Ui.sectionRow(act, "Baru selesai", "ketuk untuk menandai"))
+            val (fc, fcol) = Ui.card(act, padH = 0, padV = 0)
+            finished.take(3).forEachIndexed { i, u ->
+                if (i > 0) fcol.addView(Ui.divider(act))
+                fcol.addView(timerRow(act, u, now, zone, gd, b, Ui.GREEN))
             }
+            box.addView(fc)
         }
-        if (rows == 0) bcol.addView(Ui.muted(act, "Belum ada upgrade.", Ui.BODY_M).apply { setPadding(Ui.dp(act, 14), Ui.dp(act, 12), 0, Ui.dp(act, 12)) })
-        box.addView(bc)
 
-        // --- lab, pet, star lab
-        val labLanes = if (bb) listOf(Lane.STAR_LAB) else listOf(Lane.LAB, Lane.PET)
-        for (lane in labLanes) {
-            val kind = Kind.of(lane)
-            val r = ups.filter { it.kind == kind && it.finishAt > now }.sortedBy { it.finishAt }
-            val exists = b?.let { Planner.laneCount(it.village, lane, it.ps) > 0 } ?: r.isNotEmpty()
-            if (!exists && r.isEmpty()) continue
-            val rx = r.count { it.extra }
-            box.addView(Ui.sectionRow(act, lane.label, if (r.isEmpty()) "kosong" else "${r.size - rx} dari 1 sibuk" + if (rx > 0) " + $rx Goblin" else ""))
-            val (lc, lcol) = Ui.card(act, padH = 0, padV = 0)
-            if (r.isNotEmpty()) {
-                r.forEachIndexed { i, u ->
-                    if (i > 0) lcol.addView(Ui.divider(act))
-                    lcol.addView(timerRow(act, u, now, zone, gd, b, Ui.VIOLET))
+        // --- detail semua timer (bisa dilipat)
+        val detail = showDetail(act)
+        box.addView(Ui.flat(act, if (detail) "Sembunyikan detail timer ▴" else "Tampilkan detail timer ▾") {
+            setShowDetail(act, !detail)
+            act.renderBody()
+        }.apply { isAllCaps = false }, Ui.matchWrap().apply { topMargin = Ui.dp(act, 4) })
+        if (detail) {
+            box.addView(Ui.sectionRow(act, workers, "$regular dari $total sibuk" + if (extraN > 0) " + $extraN Goblin" else ""))
+            val (bc, bcol) = Ui.card(act, padH = 0, padV = 0)
+            var rows = 0
+            fun add(v: View) {
+                if (rows++ > 0) bcol.addView(Ui.divider(act))
+                bcol.addView(v)
+            }
+            for (u in running) add(timerRow(act, u, now, zone, gd, b, Ui.GREEN))
+            if (free > 1 && nowSlot != null) {
+                for (k in 1 until free) {
+                    val pick = nowSlot.ranked.getOrNull(k) ?: break
+                    add(freeRow(act, tag, nowSlot, pick, "$workers bebas"))
                 }
-            } else {
-                val slot = b?.slots?.firstOrNull { it.lane == lane && it.freeAt <= now }
-                val pick = slot?.ranked?.firstOrNull()
-                if (slot != null && pick != null) lcol.addView(freeRow(act, tag, slot, pick, "${lane.label} kosong"))
-                else lcol.addView(Ui.muted(act, if (b == null) "Menghitung saran…" else "Tidak ada riset yang tersedia.", Ui.BODY_M).apply {
-                    setPadding(Ui.dp(act, 14), Ui.dp(act, 12), 0, Ui.dp(act, 12))
-                })
             }
-            box.addView(lc)
+            if (rows == 0) bcol.addView(Ui.muted(act, "Belum ada upgrade yang berjalan.", Ui.BODY_M).apply { setPadding(Ui.dp(act, 14), Ui.dp(act, 12), 0, Ui.dp(act, 12)) })
+            box.addView(bc)
+
+            // --- lab, pet, star lab
+            val labLanes = if (bb) listOf(Lane.STAR_LAB) else listOf(Lane.LAB, Lane.PET)
+            for (lane in labLanes) {
+                val kind = Kind.of(lane)
+                val r = ups.filter { it.kind == kind && it.finishAt > now }.sortedBy { it.finishAt }
+                val exists = b?.let { Planner.laneCount(it.village, lane, it.ps) > 0 } ?: r.isNotEmpty()
+                if (!exists && r.isEmpty()) continue
+                val rx = r.count { it.extra }
+                box.addView(Ui.sectionRow(act, lane.label, if (r.isEmpty()) "kosong" else "${r.size - rx} dari 1 sibuk" + if (rx > 0) " + $rx Goblin" else ""))
+                val (lc, lcol) = Ui.card(act, padH = 0, padV = 0)
+                if (r.isNotEmpty()) {
+                    r.forEachIndexed { i, u ->
+                        if (i > 0) lcol.addView(Ui.divider(act))
+                        lcol.addView(timerRow(act, u, now, zone, gd, b, Ui.VIOLET))
+                    }
+                } else {
+                    val slot = b?.slots?.firstOrNull { it.lane == lane && it.freeAt <= now }
+                    val pick = slot?.ranked?.firstOrNull()
+                    if (slot != null && pick != null) lcol.addView(freeRow(act, tag, slot, pick, "${lane.label} kosong"))
+                    else lcol.addView(Ui.muted(act, if (b == null) "Menghitung saran…" else "Tidak ada riset yang tersedia.", Ui.BODY_M).apply {
+                        setPadding(Ui.dp(act, 14), Ui.dp(act, 12), 0, Ui.dp(act, 12))
+                    })
+                }
+                box.addView(lc)
+            }
         }
 
         needsMini(act, box, if (bb) b?.simBB else b?.simHome)
@@ -205,6 +227,148 @@ object HomeView {
 
     private fun wrap(): LinearLayout.LayoutParams =
         LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+
+    // ---------------------------------------------------------------- opsi & kotak pekerja
+
+    private fun showDetail(act: MainActivity) =
+        act.getSharedPreferences("ui", android.content.Context.MODE_PRIVATE).getBoolean("home_detail", false)
+
+    private fun setShowDetail(act: MainActivity, on: Boolean) =
+        act.getSharedPreferences("ui", android.content.Context.MODE_PRIVATE).edit().putBoolean("home_detail", on).apply()
+
+    /** "⚙ 💡 Seimbang · 🎫 20% · ⚔️ CWL  ›" → lembar opsi desa. */
+    private fun optionsRow(act: MainActivity, box: LinearLayout, tag: String, bb: Boolean) {
+        val row = Ui.hbox(act).apply {
+            background = Ui.tileBg(act)
+            setPadding(Ui.dp(act, 10), Ui.dp(act, 8), Ui.dp(act, 12), Ui.dp(act, 8))
+            isClickable = true
+            setOnClickListener { VillageOptions.sheet(act, tag, bb) }
+        }
+        row.addView(Ui.icon(act, R.drawable.ic_tune, 16, Ui.secondary(act)))
+        row.addView(Ui.text(act, VillageOptions.summary(act, tag, bb, Store.planSettings(act, tag)), Ui.BODY_S).apply {
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            setPadding(Ui.dp(act, 8), 0, Ui.dp(act, 8), 0)
+        }, Ui.weight1())
+        row.addView(Ui.muted(act, "Opsi ›"))
+        box.addView(row, Ui.matchWrap().apply { topMargin = Ui.dp(act, 2) })
+    }
+
+    /** Kotak pekerja (2–3 kolom): B1…Bn, Lab, Pet, Goblin — atau Master Builder & Star Lab di Builder Base. */
+    private fun workerGrid(
+        act: MainActivity, box: LinearLayout, tag: String, bb: Boolean, b: PlanBundle?, ups: List<Upgrade>,
+        gd: GameData, now: Long, total: Int, nowSlot: LaneSlot?,
+    ) {
+        val tiles = ArrayList<View>()
+        val kind = if (bb) Kind.BB_BUILDER else Kind.BUILDER
+        val prefix = if (bb) "M" else "B"
+        // Nomor sama dengan Rencana: B1 = yang paling cepat selesai, pekerja bebas di belakang.
+        val busy = ups.filter { it.kind == kind && it.finishAt > now && !it.extra }.sortedBy { it.finishAt }
+        busy.forEachIndexed { i, u ->
+            tiles += busyTile(act, "$prefix${i + 1}", u, gd, now, if (u.id.contains("|gear|")) Ui.GOLD else Ui.BUSY)
+        }
+        val free = (total - busy.size).coerceAtLeast(0)
+        for (k in 0 until free) {
+            tiles += freeTile(act, tag, "$prefix${busy.size + k + 1}", nowSlot, nowSlot?.ranked?.getOrNull(k), b != null)
+        }
+        val labLanes = if (bb) listOf(Lane.STAR_LAB) else listOf(Lane.LAB, Lane.PET)
+        for (lane in labLanes) {
+            val lk = Kind.of(lane)
+            val r = ups.filter { it.kind == lk && it.finishAt > now && !it.extra }.sortedBy { it.finishAt }
+            val exists = b?.let { Planner.laneCount(it.village, lane, it.ps) > 0 } ?: r.isNotEmpty()
+            if (!exists && r.isEmpty()) continue
+            val label = when (lane) { Lane.PET -> "Pet"; Lane.STAR_LAB -> "Star Lab"; else -> "Lab" }
+            if (r.isNotEmpty()) r.forEach { tiles += busyTile(act, label, it, gd, now, Ui.LAB) }
+            else {
+                val slot = b?.slots?.firstOrNull { it.lane == lane && it.freeAt <= now }
+                tiles += freeTile(act, tag, label, slot, slot?.ranked?.firstOrNull(), b != null)
+            }
+        }
+        if (!bb) {
+            for (g in ups.filter { it.extra && it.finishAt > now }.sortedBy { it.finishAt }) {
+                tiles += busyTile(act, if (g.kind == Kind.LAB) "👺 Goblin Lab" else "👺 Goblin", g, gd, now, Ui.GREY)
+            }
+        }
+        if (tiles.isEmpty()) return
+        val cols = if (act.resources.configuration.screenWidthDp in 600 until 720) 3 else 2
+        tiles.chunked(cols).forEachIndexed { i, chunk ->
+            val line = Ui.hbox(act).apply { gravity = Gravity.TOP }
+            for (j in 0 until cols) {
+                val t = chunk.getOrNull(j) ?: View(act)
+                line.addView(t, Ui.weight1().apply { if (j > 0) marginStart = Ui.dp(act, 8) })
+            }
+            box.addView(line, Ui.matchWrap().apply { if (i > 0) topMargin = Ui.dp(act, 8) })
+        }
+    }
+
+    /** Bagian upgrade yang sudah berjalan (0..1), atau null bila durasi aslinya tidak diketahui. */
+    private fun progress(u: Upgrade, gd: GameData, now: Long): Double? {
+        val itemId = Repo.itemIdOf(u.id)
+        val gear = u.id.contains("|gear|")
+        val total = if (gear) Sixth.rules.firstOrNull { it.homeId == itemId }?.durationSec ?: 0L
+        else itemId?.let { gd.item(it) }?.lv(u.targetLevel)?.time ?: 0L
+        if (total <= 0) return null
+        val rem = (u.finishAt - now) / 1000.0
+        return (1 - rem / total).coerceIn(0.02, 0.99)
+    }
+
+    private fun tileBox(act: MainActivity, color: Int?, onClick: () -> Unit): LinearLayout = Ui.vbox(act).apply {
+        background = Ui.tileBg(act, color)
+        setPadding(Ui.dp(act, 10), Ui.dp(act, 8), Ui.dp(act, 10), Ui.dp(act, 10))
+        isClickable = true
+        setOnClickListener { onClick() }
+    }
+
+    private fun busyTile(act: MainActivity, label: String, u: Upgrade, gd: GameData, now: Long, color: Int): View {
+        val v = tileBox(act, null) { act.timerOptions(u) }
+        ItemMenu.attach(act, v, u.tag, Repo.itemIdOf(u.id))
+        val top = Ui.hbox(act)
+        top.addView(Ui.text(act, label, Ui.BODY_S).apply {
+            setTextColor(color)
+            setTypeface(typeface, Typeface.BOLD)
+            maxLines = 1
+        }, Ui.weight1())
+        val cd = Ui.text(act, act.countdown(u.finishAt - now), Ui.BODY_M).apply {
+            setTypeface(Typeface.MONOSPACE, Typeface.BOLD)
+            maxLines = 1
+        }
+        act.registerCountdown(cd, u.finishAt, clockStyle = false)
+        top.addView(cd)
+        v.addView(top)
+        v.addView(Ui.muted(act, Widgets.shortTitle(u) + if (u.helped) " · 🧑‍🔧" else "").apply {
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            setPadding(0, Ui.dp(act, 2), 0, 0)
+        })
+        v.addView(Ui.thinBar(act, progress(u, gd, now) ?: 0.0, color))
+        return v
+    }
+
+    private fun freeTile(act: MainActivity, tag: String, label: String, slot: LaneSlot?, pick: Scored?, ready: Boolean): View {
+        val v = tileBox(act, Ui.FREE) { if (slot != null && pick != null) Options.show(act, tag, slot, true) }
+        val top = Ui.hbox(act)
+        top.addView(Ui.text(act, label, Ui.BODY_S).apply {
+            setTextColor(Ui.FREE)
+            setTypeface(typeface, Typeface.BOLD)
+        }, Ui.weight1())
+        top.addView(Ui.text(act, "Bebas", Ui.BODY_M).apply {
+            setTextColor(Ui.FREE)
+            setTypeface(typeface, Typeface.BOLD)
+        })
+        v.addView(top)
+        val tip = when {
+            pick != null -> "💡 ${pick.c.title}"
+            !ready -> "menghitung saran…"
+            else -> "tidak ada saran"
+        }
+        v.addView(Ui.muted(act, tip).apply {
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            setPadding(0, Ui.dp(act, 2), 0, 0)
+        })
+        v.addView(Ui.thinBar(act, 0.0, Ui.FREE))
+        return v
+    }
 
     // ---------------------------------------------------------------- saran
 
