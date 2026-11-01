@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Pratinjau tablet (sw600dp) di daftar widget, dengan dua baris contoh.
-     Widget yang terpasang memakai widget_all (tanpa data contoh). -->
+<!-- Pratinjau widget di daftar widget launcher (data contoh). Dibuat oleh widget_gen.py dari widget_all.xml. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/a_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_bg"
@@ -19,7 +17,6 @@
         android:orientation="horizontal">
 
         <TextView
-            android:id="@+id/a_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -31,17 +28,16 @@
             android:textStyle="bold" />
 
         <TextView
-            android:id="@+id/a_summary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
             android:maxLines="1"
-            android:text="1 bebas"
             android:textColor="@color/widget_green"
-            android:textSize="15sp" />
+            android:textSize="15sp"
+            android:text="1 bebas" />
 
+        <!-- Jam terakhir diperbarui; ketuk untuk memperbarui -->
         <TextView
-            android:id="@+id/a_refresh"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
@@ -56,7 +52,6 @@
 
     <!-- Judul kolom -->
     <LinearLayout
-        android:id="@+id/a_cols"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="14dp"
@@ -125,18 +120,29 @@
             android:textColor="@color/widget_text2" />
     </LinearLayout>
 
+    <!-- Pesan (memuat / belum ada desa); disembunyikan saat baris desa tampil -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:ellipsize="end"
+        android:maxLines="3"
+        android:text="⏳ Memuat… Bila tidak berubah, buka Clash Timer sekali."
+        android:textColor="@color/widget_text2"
+        android:textSize="15sp"
+        android:visibility="gone" />
+
     <LinearLayout
-        android:id="@+id/a_rows"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
         android:orientation="vertical">
 
-        <!-- Baris contoh 1 (pratinjau) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
+            android:minHeight="56dp"
             android:orientation="vertical">
 
             <FrameLayout
@@ -149,69 +155,192 @@
                 android:layout_height="0dp"
                 android:layout_weight="1"
                 android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp">
 
-                <TextView
+                <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1.2"
-                    android:maxLines="1"
-                    android:text="Desa 1"
-                    android:textColor="@color/widget_text"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
+                    android:orientation="vertical"
+                    android:paddingEnd="10dp">
 
-                <TextView
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="Desa 1"
+                        android:textColor="@color/widget_text"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="TH11 · BH8"
+                        android:textColor="@color/widget_text2"
+                        android:textSize="14sp" />
+                </LinearLayout>
+
+                <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
                     android:layout_weight="1"
-                    android:fontFamily="monospace"
-                    android:maxLines="1"
-                    android:text="1.40.32"
-                    android:textColor="@color/widget_text"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
+                    android:background="@drawable/widget_tile"
+                    android:orientation="vertical"
+                    android:paddingStart="8dp"
+                    android:paddingTop="6dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="6dp">
 
-                <TextView
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="28dp">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:fontFamily="monospace"
+                            android:gravity="center_vertical"
+                            android:maxLines="1"
+                            android:text="6.47.52"
+                            android:textColor="@color/widget_builder"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
+                    </FrameLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="2"
+                        android:text="Archer Tower → 14"
+                        android:textColor="@color/widget_text2"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
                     android:layout_weight="1"
-                    android:fontFamily="monospace"
-                    android:maxLines="1"
-                    android:text="20.32.22"
-                    android:textColor="@color/widget_text"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
+                    android:background="@drawable/widget_tile"
+                    android:orientation="vertical"
+                    android:paddingStart="8dp"
+                    android:paddingTop="6dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="6dp">
 
-                <TextView
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="28dp">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:fontFamily="monospace"
+                            android:gravity="center_vertical"
+                            android:maxLines="1"
+                            android:text="1h 1j"
+                            android:textColor="@color/widget_lab"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
+                    </FrameLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="2"
+                        android:text="Lightning → 9"
+                        android:textColor="@color/widget_text2"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
                     android:layout_weight="1"
-                    android:fontFamily="monospace"
-                    android:maxLines="1"
-                    android:text="bebas"
-                    android:textColor="@color/widget_green"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
+                    android:background="@drawable/widget_tile_free"
+                    android:orientation="vertical"
+                    android:paddingStart="8dp"
+                    android:paddingTop="6dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="6dp">
 
-                <TextView
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="28dp">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:fontFamily="monospace"
+                            android:gravity="center_vertical"
+                            android:maxLines="1"
+                            android:text="bebas"
+                            android:textColor="@color/widget_green"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
+                    </FrameLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="2"
+                        android:text="💡 Crusher → 8"
+                        android:textColor="@color/widget_accent"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
                     android:layout_weight="1"
-                    android:fontFamily="monospace"
-                    android:maxLines="1"
-                    android:text="2h 4j"
-                    android:textColor="@color/widget_text"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
+                    android:background="@drawable/widget_tile"
+                    android:orientation="vertical"
+                    android:paddingStart="8dp"
+                    android:paddingTop="6dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="6dp">
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="28dp">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:fontFamily="monospace"
+                            android:gravity="center_vertical"
+                            android:maxLines="1"
+                            android:text="2h 9j"
+                            android:textColor="@color/widget_lab"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
+                    </FrameLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="2"
+                        android:text="Night Witch → 15"
+                        android:textColor="@color/widget_text2"
+                        android:textSize="13sp" />
+                </LinearLayout>
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Baris contoh 2 (pratinjau) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
+            android:minHeight="56dp"
             android:orientation="vertical">
 
             <FrameLayout
@@ -224,79 +353,200 @@
                 android:layout_height="0dp"
                 android:layout_weight="1"
                 android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp">
 
-                <TextView
+                <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1.2"
-                    android:maxLines="1"
-                    android:text="Desa 2"
-                    android:textColor="@color/widget_text"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
+                    android:orientation="vertical"
+                    android:paddingEnd="10dp">
 
-                <TextView
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="Desa 2"
+                        android:textColor="@color/widget_text"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="TH13 · BH6 · 👺1"
+                        android:textColor="@color/widget_text2"
+                        android:textSize="14sp" />
+                </LinearLayout>
+
+                <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
                     android:layout_weight="1"
-                    android:fontFamily="monospace"
-                    android:maxLines="1"
-                    android:text="1h 21j"
-                    android:textColor="@color/widget_text"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
+                    android:background="@drawable/widget_tile"
+                    android:orientation="vertical"
+                    android:paddingStart="8dp"
+                    android:paddingTop="6dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="6dp">
 
-                <TextView
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="28dp">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:fontFamily="monospace"
+                            android:gravity="center_vertical"
+                            android:maxLines="1"
+                            android:text="3h 4j"
+                            android:textColor="@color/widget_builder"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
+                    </FrameLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="2"
+                        android:text="X-Bow → 9"
+                        android:textColor="@color/widget_text2"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
                     android:layout_weight="1"
-                    android:fontFamily="monospace"
-                    android:maxLines="1"
-                    android:text="2h 9j"
-                    android:textColor="@color/widget_text"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
+                    android:background="@drawable/widget_tile"
+                    android:orientation="vertical"
+                    android:paddingStart="8dp"
+                    android:paddingTop="6dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="6dp">
 
-                <TextView
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="28dp">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:fontFamily="monospace"
+                            android:gravity="center_vertical"
+                            android:maxLines="1"
+                            android:text="11.20.05"
+                            android:textColor="@color/widget_lab"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
+                    </FrameLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="2"
+                        android:text="Dragon → 8"
+                        android:textColor="@color/widget_text2"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
                     android:layout_weight="1"
-                    android:fontFamily="monospace"
-                    android:maxLines="1"
-                    android:text="5.14.28"
-                    android:textColor="@color/widget_text"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
+                    android:background="@drawable/widget_tile"
+                    android:orientation="vertical"
+                    android:paddingStart="8dp"
+                    android:paddingTop="6dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="6dp">
 
-                <TextView
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="28dp">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:fontFamily="monospace"
+                            android:gravity="center_vertical"
+                            android:maxLines="1"
+                            android:text="19.42.10"
+                            android:textColor="@color/widget_builder"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
+                    </FrameLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="2"
+                        android:text="Roaster → 3"
+                        android:textColor="@color/widget_text2"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
                     android:layout_weight="1"
-                    android:fontFamily="monospace"
-                    android:maxLines="1"
-                    android:text="13.47.37"
-                    android:textColor="@color/widget_text"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
+                    android:background="@drawable/widget_tile"
+                    android:orientation="vertical"
+                    android:paddingStart="8dp"
+                    android:paddingTop="6dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="6dp">
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="28dp">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:fontFamily="monospace"
+                            android:gravity="center_vertical"
+                            android:maxLines="1"
+                            android:text="5h 2j"
+                            android:textColor="@color/widget_lab"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
+                    </FrameLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="2"
+                        android:text="Baby Dragon → 12"
+                        android:textColor="@color/widget_text2"
+                        android:textSize="13sp" />
+                </LinearLayout>
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>
 
     <FrameLayout
-        android:id="@+id/a_footer_line"
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="@color/widget_divider" />
 
     <TextView
-        android:id="@+id/a_footer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
         android:ellipsize="end"
         android:maxLines="1"
-        android:text="⏱️ Berikutnya: Desa 1 · Hidden Tesla → Lv 8, 11:34"
-        android:textColor="@color/widget_text2"
-        android:textSize="15sp" />
+        android:textColor="@color/widget_accent"
+        android:textSize="15sp"
+        android:text="💡 Desa 1 · Builder BB: Crusher → 8" />
 </LinearLayout>

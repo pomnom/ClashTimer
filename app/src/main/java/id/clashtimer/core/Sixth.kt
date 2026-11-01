@@ -2,8 +2,8 @@ package id.clashtimer.core
 
 /** Strategi untuk Builder Base. */
 enum class BBStrategy(val label: String, val desc: String) {
-    SIXTH("Builder ke-6", "Langkah tercepat menuju B.O.B (builder ke-6): hero, Builder Hall 9, gear-up, troop Lv18 & pertahanan Lv9"),
-    MAX("Max", "Maksimalkan semua bangunan & hero di Builder Hall saat ini"),
+    SIXTH("Builder ke-6", "Target: B.O.B (builder ke-6) secepatnya — hero, Builder Hall 9, gear-up, troop Lv18 & pertahanan Lv9"),
+    MAX("Max", "Target: semua bangunan, hero & troop Builder Base di Builder Hall sekarang selesai secepatnya"),
 }
 
 /** Hasil simulasi jalur builder ke-6. */
@@ -185,9 +185,9 @@ object Sixth {
         if (!isDone(st, "heroes") && heroTotal(v, planned = true) < 45) {
             all.filter { it.item.cat == Cat.BB_HERO }.forEach { add(it, T_HERO) }
         }
-        // Builder Hall 9. Bangunan baru harus dipasang dulu sebelum Builder Hall bisa naik.
+        // Builder Hall 9. Bangunan & jebakan baru harus dipasang dulu sebelum Builder Hall bisa naik.
         if (bh < 9 && control(v) == 0) {
-            all.filter { it.isNew && it.item.cat == Cat.BB_BUILDING && it.item.id != GameData.BOB_CONTROL }
+            all.filter { it.isNew && (it.item.cat == Cat.BB_BUILDING || it.item.cat == Cat.BB_TRAP) && it.item.id != GameData.BOB_CONTROL }
                 .forEach { add(it, T_PLACE) }
             all.firstOrNull { it.item.id == GameData.BUILDER_HALL }?.let { add(it, T_HALL) }
         }

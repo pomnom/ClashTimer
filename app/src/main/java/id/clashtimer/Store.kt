@@ -12,6 +12,8 @@ import id.clashtimer.core.Lane
 import id.clashtimer.core.MagicItem
 import id.clashtimer.core.OfflineSchedule
 import id.clashtimer.core.PlanSettings
+import id.clashtimer.core.PlanTarget
+import id.clashtimer.core.Policy
 import id.clashtimer.core.Started
 import id.clashtimer.core.Strategy
 import org.json.JSONArray
@@ -221,7 +223,7 @@ object Store {
             .remove("clock_used_$tag").remove("api_player_$tag").remove("cwl_s_$tag").remove("cwl_e_$tag")
             .remove("cwl_auto_$tag").remove("gpdet_b_$tag").remove("gpdet_r_$tag").remove("bob_$tag")
             .remove("pins_$tag").remove("hides_$tag").remove("api_stats_$tag")
-            .remove("hist_$tag").remove("ulog_$tag").remove("hist_start_$tag").remove("ore_$tag")
+            .remove("hist_$tag").remove("ulog_$tag").remove("hist_start_$tag").remove("ore_$tag").remove("opt_$tag")
         VILLAGE_KEYS.forEach { e.remove("${it}_$tag") }
         e.commit()
         if (selectedTag(ctx) == tag) prefs(ctx).edit().remove("selected_tag").apply()
@@ -629,6 +631,46 @@ object Store {
 
     fun planVersion(ctx: Context) = prefs(ctx).getInt("plan_version", 0)
 
+    /** Urutan tercepat terakhir (Planner.optimize) satu desa; [sig] = data & pengaturan saat dihitung. */
+    class OptCache(val sig: String, val at: Long, val policies: Map<Lane, Policy>, val home: PlanTarget?, val bb: PlanTarget?)
+
+    private fun policiesJson(m: Map<Lane, Policy>) = JSONObject().apply { for ((k, v) in m) put(k.name, v.name) }
+
+    private fun policiesOf(o: JSONObject?): Map<Lane, Policy> {
+        if (o == null) return emptyMap()
+        val out = HashMap<Lane, Policy>()
+        for (k in o.keys()) {
+            val lane = runCatching { Lane.valueOf(k) }.getOrNull() ?: continue
+            out[lane] = runCatching { Policy.valueOf(o.getString(k)) }.getOrNull() ?: continue
+        }
+        return out
+    }
+
+    private fun targetJson(t: PlanTarget) = JSONObject().apply {
+        put("t", t.target ?: 0L)
+        put("l", t.legacy ?: 0L)
+        put("n", t.tried)
+        put("p", policiesJson(t.policies))
+    }
+
+    private fun targetOf(o: JSONObject?): PlanTarget? = o?.let {
+        PlanTarget(it.optLong("t").takeIf { x -> x > 0 }, it.optLong("l").takeIf { x -> x > 0 }, it.optInt("n"), policiesOf(it.optJSONObject("p")))
+    }
+
+    fun optCache(ctx: Context, tag: String): OptCache? = runCatching {
+        val o = JSONObject(prefs(ctx).getString("opt_$tag", null) ?: return null)
+        OptCache(o.getString("sig"), o.getLong("at"), policiesOf(o.optJSONObject("pol")), targetOf(o.optJSONObject("home")), targetOf(o.optJSONObject("bb")))
+    }.getOrNull()
+
+    /** Disimpan tanpa menaikkan versi rencana (hanya hasil hitungan). */
+    fun setOptCache(ctx: Context, tag: String, c: OptCache) {
+        val o = JSONObject()
+            .put("sig", c.sig).put("at", c.at).put("pol", policiesJson(c.policies))
+        c.home?.let { o.put("home", targetJson(it)) }
+        c.bb?.let { o.put("bb", targetJson(it)) }
+        prefs(ctx).edit().putString("opt_$tag", o.toString()).apply()
+    }
+
     fun selectedTag(ctx: Context): String? = prefs(ctx).getString("selected_tag", null)
     fun setSelectedTag(ctx: Context, tag: String) = prefs(ctx).edit().putString("selected_tag", tag).apply()
 
@@ -658,6 +700,7 @@ object Store {
             OfflineSchedule(sleep, work, ZoneId.systemDefault()), cwl, gold, strategy, getInt(ctx, "bb_builders", 0, tag),
             bbStrategy, getBool(ctx, "skip_collectors", false, tag), events(ctx),
             if (tag != null) pins(ctx, tag) else emptySet(), if (tag != null) hides(ctx, tag) else emptySet(),
+            if (tag != null) optCache(ctx, tag)?.policies ?: emptyMap() else emptyMap(),
         )
     }
 }

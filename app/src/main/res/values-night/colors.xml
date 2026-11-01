@@ -6,4 +6,8 @@
     <color name="widget_green">#81C784</color>
     <color name="widget_accent">#E8A84E</color>
     <color name="widget_divider">#26FFFFFF</color>
+    <color name="widget_builder">#E8A84E</color>
+    <color name="widget_lab">#ADA7F2</color>
+    <color name="widget_tile">#1AFFFFFF</color>
+    <color name="widget_tile_free">#3381C784</color>
 </resources>

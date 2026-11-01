@@ -9,4 +9,9 @@
     <color name="widget_green">#2E7D32</color>
     <color name="widget_accent">#9A5F0E</color>
     <color name="widget_divider">#26888780</color>
+    <!-- Sama dengan aplikasi: emas = builder, ungu = lab, latar kotak (bebas = hijau) -->
+    <color name="widget_builder">#A8650F</color>
+    <color name="widget_lab">#5F57C2</color>
+    <color name="widget_tile">#14888780</color>
+    <color name="widget_tile_free">#262E7D32</color>
 </resources>

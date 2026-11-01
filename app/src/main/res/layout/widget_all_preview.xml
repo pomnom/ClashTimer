@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Pratinjau widget "Semua desa" di daftar widget (android:previewLayout), dengan dua baris contoh.
-     Widget yang terpasang memakai widget_all (tanpa data contoh). -->
+<!-- Pratinjau widget di daftar widget launcher (data contoh). Dibuat oleh widget_gen.py dari widget_all.xml. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/a_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_bg"
@@ -19,7 +17,6 @@
         android:orientation="horizontal">
 
         <TextView
-            android:id="@+id/a_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -31,17 +28,16 @@
             android:textStyle="bold" />
 
         <TextView
-            android:id="@+id/a_summary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:maxLines="1"
-            android:text="1 bebas"
             android:textColor="@color/widget_green"
-            android:textSize="12sp" />
+            android:textSize="12sp"
+            android:text="1 bebas" />
 
+        <!-- Jam terakhir diperbarui; ketuk untuk memperbarui -->
         <TextView
-            android:id="@+id/a_refresh"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="4dp"
@@ -56,7 +52,6 @@
 
     <!-- Judul kolom -->
     <LinearLayout
-        android:id="@+id/a_cols"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
@@ -122,13 +117,23 @@
             android:textColor="@color/widget_text2" />
     </LinearLayout>
 
+    <!-- Pesan (memuat / belum ada desa); disembunyikan saat baris desa tampil -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:ellipsize="end"
+        android:maxLines="3"
+        android:text="⏳ Memuat… Bila tidak berubah, buka Clash Timer sekali."
+        android:textColor="@color/widget_text2"
+        android:textSize="12sp"
+        android:visibility="gone" />
+
     <LinearLayout
-        android:id="@+id/a_rows"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- Baris contoh 1 (pratinjau) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -151,11 +156,13 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1.25"
-                    android:orientation="vertical">
+                    android:orientation="vertical"
+                    android:paddingEnd="4dp">
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:ellipsize="end"
                         android:maxLines="1"
                         android:text="Desa 1"
                         android:textColor="@color/widget_text"
@@ -165,59 +172,95 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:ellipsize="end"
                         android:maxLines="1"
                         android:text="TH11 · BH8"
                         android:textColor="@color/widget_text2"
                         android:textSize="11sp" />
                 </LinearLayout>
 
-                <TextView
+                <FrameLayout
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="3dp"
                     android:layout_weight="1"
-                    android:fontFamily="monospace"
-                    android:maxLines="1"
-                    android:text="6.47.52"
-                    android:textColor="@color/widget_text"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
+                    android:background="@drawable/widget_tile"
+                    android:paddingStart="5dp"
+                    android:paddingEnd="3dp">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:fontFamily="monospace"
+                        android:gravity="center_vertical"
+                        android:maxLines="1"
+                        android:text="6.47.52"
+                        android:textColor="@color/widget_builder"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </FrameLayout>
 
-                <TextView
+                <FrameLayout
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="3dp"
                     android:layout_weight="1"
-                    android:fontFamily="monospace"
-                    android:maxLines="1"
-                    android:text="1h 1j"
-                    android:textColor="@color/widget_text"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
+                    android:background="@drawable/widget_tile"
+                    android:paddingStart="5dp"
+                    android:paddingEnd="3dp">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:fontFamily="monospace"
+                        android:gravity="center_vertical"
+                        android:maxLines="1"
+                        android:text="1h 1j"
+                        android:textColor="@color/widget_lab"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </FrameLayout>
 
-                <TextView
+                <FrameLayout
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="3dp"
                     android:layout_weight="1"
-                    android:fontFamily="monospace"
-                    android:maxLines="1"
-                    android:text="bebas"
-                    android:textColor="@color/widget_green"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
+                    android:background="@drawable/widget_tile_free"
+                    android:paddingStart="5dp"
+                    android:paddingEnd="3dp">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:fontFamily="monospace"
+                        android:gravity="center_vertical"
+                        android:maxLines="1"
+                        android:text="bebas"
+                        android:textColor="@color/widget_green"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </FrameLayout>
 
-                <TextView
+                <FrameLayout
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="3dp"
                     android:layout_weight="1"
-                    android:fontFamily="monospace"
-                    android:maxLines="1"
-                    android:text="2h 9j"
-                    android:textColor="@color/widget_text"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
+                    android:background="@drawable/widget_tile"
+                    android:paddingStart="5dp"
+                    android:paddingEnd="3dp">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:fontFamily="monospace"
+                        android:gravity="center_vertical"
+                        android:maxLines="1"
+                        android:text="2h 9j"
+                        android:textColor="@color/widget_lab"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </FrameLayout>
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Baris contoh 2 (pratinjau) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -240,11 +283,13 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1.25"
-                    android:orientation="vertical">
+                    android:orientation="vertical"
+                    android:paddingEnd="4dp">
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:ellipsize="end"
                         android:maxLines="1"
                         android:text="Desa 2"
                         android:textColor="@color/widget_text"
@@ -254,73 +299,108 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:ellipsize="end"
                         android:maxLines="1"
-                        android:text="TH13 · BH6"
+                        android:text="TH13 · BH6 · 👺1"
                         android:textColor="@color/widget_text2"
                         android:textSize="11sp" />
                 </LinearLayout>
 
-                <TextView
+                <FrameLayout
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="3dp"
                     android:layout_weight="1"
-                    android:fontFamily="monospace"
-                    android:maxLines="1"
-                    android:text="2h 2j"
-                    android:textColor="@color/widget_text"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
+                    android:background="@drawable/widget_tile"
+                    android:paddingStart="5dp"
+                    android:paddingEnd="3dp">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:fontFamily="monospace"
+                        android:gravity="center_vertical"
+                        android:maxLines="1"
+                        android:text="3h 4j"
+                        android:textColor="@color/widget_builder"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </FrameLayout>
 
-                <TextView
+                <FrameLayout
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="3dp"
                     android:layout_weight="1"
-                    android:fontFamily="monospace"
-                    android:maxLines="1"
-                    android:text="2h 14j"
-                    android:textColor="@color/widget_text"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
+                    android:background="@drawable/widget_tile"
+                    android:paddingStart="5dp"
+                    android:paddingEnd="3dp">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:fontFamily="monospace"
+                        android:gravity="center_vertical"
+                        android:maxLines="1"
+                        android:text="11.20.05"
+                        android:textColor="@color/widget_lab"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </FrameLayout>
 
-                <TextView
+                <FrameLayout
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="3dp"
                     android:layout_weight="1"
-                    android:fontFamily="monospace"
-                    android:maxLines="1"
-                    android:text="10.21.52"
-                    android:textColor="@color/widget_text"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
+                    android:background="@drawable/widget_tile"
+                    android:paddingStart="5dp"
+                    android:paddingEnd="3dp">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:fontFamily="monospace"
+                        android:gravity="center_vertical"
+                        android:maxLines="1"
+                        android:text="19.42.10"
+                        android:textColor="@color/widget_builder"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </FrameLayout>
 
-                <TextView
+                <FrameLayout
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="3dp"
                     android:layout_weight="1"
-                    android:fontFamily="monospace"
-                    android:maxLines="1"
-                    android:text="–"
-                    android:textColor="@color/widget_text2"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
+                    android:background="@drawable/widget_tile"
+                    android:paddingStart="5dp"
+                    android:paddingEnd="3dp">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:fontFamily="monospace"
+                        android:gravity="center_vertical"
+                        android:maxLines="1"
+                        android:text="5h 2j"
+                        android:textColor="@color/widget_lab"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </FrameLayout>
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>
 
     <FrameLayout
-        android:id="@+id/a_footer_line"
         android:layout_width="match_parent"
         android:layout_height="0.5dp"
         android:background="@color/widget_divider" />
 
     <TextView
-        android:id="@+id/a_footer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="5dp"
         android:ellipsize="end"
         android:maxLines="1"
-        android:text="⏱️ Berikutnya: Desa 1 · Hidden Tesla → Lv 8, 11:34"
-        android:textColor="@color/widget_text2"
-        android:textSize="12sp" />
+        android:textColor="@color/widget_accent"
+        android:textSize="12sp"
+        android:text="💡 Desa 1 · Builder BB: Crusher → 8" />
 </LinearLayout>

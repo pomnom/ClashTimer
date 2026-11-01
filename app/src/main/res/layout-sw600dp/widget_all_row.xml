@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Tablet (sw600dp): baris besar. Tiap kolom = waktu + nama upgrade di bawahnya (ar_s1..ar_s4).
-     Baris berbagi tinggi widget secara merata (layout_weight), isinya di tengah. -->
+<!-- Tablet (sw600dp): baris besar. Tiap kotak = waktu + nama upgrade di bawahnya (ar_s1..ar_s4).
+     Baris berbagi tinggi widget secara merata (layout_weight), isinya di tengah. Dibuat oleh widget_gen.py. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/ar_row"
     android:layout_width="match_parent"
@@ -45,7 +45,6 @@
                 android:id="@+id/ar_hall"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:text="TH13 · BH6"
@@ -54,16 +53,21 @@
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/ar_b1"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
             android:layout_weight="1"
+            android:background="@drawable/widget_tile"
             android:orientation="vertical"
-            android:paddingEnd="10dp">
+            android:paddingStart="8dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="6dp"
+            android:paddingBottom="6dp">
 
             <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="28dp">
-
                 <Chronometer
                     android:id="@+id/ar_c1"
                     android:layout_width="match_parent"
@@ -106,16 +110,21 @@
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/ar_b2"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
             android:layout_weight="1"
+            android:background="@drawable/widget_tile"
             android:orientation="vertical"
-            android:paddingEnd="10dp">
+            android:paddingStart="8dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="6dp"
+            android:paddingBottom="6dp">
 
             <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="28dp">
-
                 <Chronometer
                     android:id="@+id/ar_c2"
                     android:layout_width="match_parent"
@@ -158,16 +167,21 @@
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/ar_b3"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
             android:layout_weight="1"
+            android:background="@drawable/widget_tile"
             android:orientation="vertical"
-            android:paddingEnd="10dp">
+            android:paddingStart="8dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="6dp"
+            android:paddingBottom="6dp">
 
             <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="28dp">
-
                 <Chronometer
                     android:id="@+id/ar_c3"
                     android:layout_width="match_parent"
@@ -210,15 +224,21 @@
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/ar_b4"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
             android:layout_weight="1"
-            android:orientation="vertical">
+            android:background="@drawable/widget_tile"
+            android:orientation="vertical"
+            android:paddingStart="8dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="6dp"
+            android:paddingBottom="6dp">
 
             <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="28dp">
-
                 <Chronometer
                     android:id="@+id/ar_c4"
                     android:layout_width="match_parent"

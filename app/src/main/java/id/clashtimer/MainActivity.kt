@@ -132,14 +132,21 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** Widget & notifikasi membawa tag desa + sisi (Home/BB) + tab tujuan. */
+    /** Widget & notifikasi membawa tag desa + sisi (Home/BB) + tab tujuan (atau tab Desa saja). */
     private fun handleOpen(intent: Intent?): Boolean {
+        val target = intent?.getStringExtra(Widgets.EXTRA_TAB)?.let { runCatching { Tab.valueOf(it) }.getOrNull() }
+        if (target == Tab.VILLAGES) {
+            tab = Tab.VILLAGES
+            intent.removeExtra(Widgets.EXTRA_TAB)
+            return true
+        }
         val tag = intent?.getStringExtra(Widgets.EXTRA_TAG) ?: return false
         if (Store.accounts(this).none { it.tag == tag }) return false
         Store.setSelectedTag(this, tag)
         showBB = intent.getBooleanExtra(Widgets.EXTRA_BB, false)
-        tab = if (intent.getStringExtra(Widgets.EXTRA_TAB) == "HOME") Tab.HOME else Tab.PLAN
+        tab = if (wide && target == Tab.PLAN) Tab.HOME else target ?: Tab.HOME
         intent.removeExtra(Widgets.EXTRA_TAG)
+        intent.removeExtra(Widgets.EXTRA_TAB)
         return true
     }
 
@@ -322,7 +329,8 @@ class MainActivity : AppCompatActivity() {
     fun freeBuilders(tag: String, bb: Boolean): Int {
         val now = System.currentTimeMillis()
         val kind = if (bb) Kind.BB_BUILDER else Kind.BUILDER
-        val busy = Store.upgrades(this).count { it.tag == tag && it.kind == kind && it.finishAt > now }
+        // Goblin (event) tidak memakai builder tetap.
+        val busy = Store.upgrades(this).count { it.tag == tag && it.kind == kind && it.finishAt > now && !it.extra }
         val total = if (bb) {
             planCache[tag]?.let { id.clashtimer.core.Planner.laneCount(it.village, id.clashtimer.core.Lane.BB_BUILDER, it.ps) }
                 ?: maxOf(busy, 1)

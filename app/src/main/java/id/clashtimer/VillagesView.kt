@@ -123,10 +123,7 @@ object VillagesView {
         }
         val top = Ui.hbox(act)
         top.addView(Ui.muted(act, laneTitle(c.lane)).apply { maxLines = 1 }, Ui.weight1())
-        if (c.total > 1) {
-            val busy = (c.total - c.free).coerceAtLeast(0)
-            top.addView(Ui.muted(act, "$busy/${c.total}"))
-        }
+        if (c.total > 1) top.addView(Ui.muted(act, "${c.busy}/${c.total}"))
         v.addView(top)
         val main = when {
             free -> Ui.text(act, "${c.free} bebas", Ui.TITLE_S).apply { setTextColor(Ui.FREE) }

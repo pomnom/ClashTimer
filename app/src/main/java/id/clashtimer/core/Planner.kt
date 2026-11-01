@@ -2,10 +2,25 @@ package id.clashtimer.core
 
 import kotlin.math.sqrt
 
-enum class Strategy(val label: String, val desc: String) {
-    MAX("Seimbang (max TH)", "Maksimalkan TH sekarang: army, hero & pertahanan penting dulu, Town Hall terakhir"),
-    RUSH("Rush TH", "Town Hall secepatnya, lalu offense (hero, army, lab); pertahanan belakangan"),
-    HERO("Hero dulu", "Utamakan upgrade hero, lalu army dan pertahanan");
+enum class Strategy(val label: String, val desc: String, val target: String) {
+    MAX("Seimbang (max TH)", "Target: semua upgrade di TH sekarang (builder, lab & pet) selesai secepatnya; Town Hall terakhir", "max TH"),
+    RUSH("Rush TH", "Target: Town Hall berikutnya secepatnya — bangunan baru dipasang dulu, lalu TH; sisanya offense", "Town Hall naik"),
+    HERO("Hero dulu", "Target: semua level hero di TH sekarang selesai secepatnya; builder lain mengisi sisanya", "hero max");
+}
+
+/**
+ * Cara mengurutkan upgrade. Rencana mencoba semuanya lalu memakai yang paling cepat mencapai target
+ * strategi ([Planner.optimize]); saran & widget memakai urutan yang sama.
+ */
+enum class Policy(val label: String) {
+    /** Cara lama: nilai upgrade dibagi √(lama × biaya). */
+    VALUE("nilai per waktu & biaya"),
+    /** Rantai upgrade terpanjang dulu (sisa semua level item itu), memperhitungkan jam tidur. */
+    CHAIN("rantai upgrade terpanjang dulu"),
+    /** Upgrade terlama dulu, memperhitungkan jam tidur. */
+    LPT("upgrade terlama dulu"),
+    /** Rantai terpanjang dulu tanpa memperhitungkan jam tidur. */
+    CHAIN_STRICT("rantai terpanjang, urutan murni");
 }
 
 class PlanSettings(
@@ -23,18 +38,26 @@ class PlanSettings(
     val pinIds: Set<Int> = emptySet(),
     /** Item yang disembunyikan dari saran & rencana (tetap dihitung di progres). */
     val hideIds: Set<Int> = emptySet(),
+    /** Urutan tercepat per pekerja hasil [Planner.optimize] (tidak ada = cara lama). */
+    val policies: Map<Lane, Policy> = emptyMap(),
 ) {
+    fun policyFor(lane: Lane): Policy = policies[lane] ?: Policy.VALUE
+
     /** Id item yang tidak di-upgrade dan tidak dihitung di progres (collector). */
     val skipIds: Set<Int> = if (skipCollectors) Planner.COLLECTORS else emptySet()
 
     /** Id item yang tidak disarankan: collector (bila dipilih) + item yang disembunyikan. */
     val planSkip: Set<Int> = skipIds + hideIds
 
-    fun withBB(s: BBStrategy) = PlanSettings(schedule, cwl, gold, strategy, bbBuilders, s, skipCollectors, events, pinIds, hideIds)
+    fun withBB(s: BBStrategy) = PlanSettings(schedule, cwl, gold, strategy, bbBuilders, s, skipCollectors, events, pinIds, hideIds, policies)
 
     /** Salinan dengan Gold Pass / strategi / event lain (untuk simulasi). */
     fun with(gold: GoldPass = this.gold, strategy: Strategy = this.strategy, events: List<GameEvent> = this.events) =
-        PlanSettings(schedule, cwl, gold, strategy, bbBuilders, bbStrategy, skipCollectors, events, pinIds, hideIds)
+        PlanSettings(schedule, cwl, gold, strategy, bbBuilders, bbStrategy, skipCollectors, events, pinIds, hideIds, policies)
+
+    /** Salinan dengan urutan lain untuk pekerja tertentu (sisanya tetap). */
+    fun withPolicies(set: Map<Lane, Policy>) =
+        PlanSettings(schedule, cwl, gold, strategy, bbBuilders, bbStrategy, skipCollectors, events, pinIds, hideIds, policies + set)
 
     fun event(lane: Lane, t: Long): GameEvent? = Events.at(events, lane, t)
 
@@ -68,6 +91,10 @@ class Candidate(
     val gear: Boolean = false,
     /** Durasi asli dari data game (tanpa diskon apa pun). */
     val baseDuration: Long = duration,
+    /** Detik: level ini + semua level berikutnya item ini yang masih bisa di hall sekarang (Gold Pass). */
+    val chain: Long = duration,
+    /** Laboratory / Pet House / Hero Hall / Star Lab: naik level membuka level riset, pet atau hero. */
+    val gate: Boolean = false,
 ) {
     val title: String
         get() = when {
@@ -176,7 +203,37 @@ class SimResult(
     val sixth: SixthPlan? = null,
     /** Kebutuhan sumber daya 24 jam, 3 hari, 7 hari. */
     val needs: List<Needs> = emptyList(),
+    /** Level hero terakhir di hall sekarang selesai (null = tidak ada hero yang di-upgrade). */
+    val heroDone: Long? = null,
+    /** Town Hall berikutnya selesai (strategi Rush TH). */
+    val hallDone: Long? = null,
 )
+
+/** Ringkasan urutan tercepat untuk ditampilkan & disimpan (tanpa hasil simulasinya). */
+class PlanTarget(
+    /** Tanggal target saat dihitung (null = tidak tercapai). */
+    val target: Long?,
+    /** Tanggal target dengan cara lama. */
+    val legacy: Long?,
+    /** Jumlah simulasi yang dicoba. */
+    val tried: Int,
+    val policies: Map<Lane, Policy>,
+)
+
+/** Hasil [Planner.optimize]: simulasi dengan urutan tercepat + perbandingannya. */
+class Optimized(
+    val sim: SimResult,
+    /** Urutan terpilih per pekerja. */
+    val policies: Map<Lane, Policy>,
+    /** Tanggal target (null = tidak tercapai). */
+    val target: Long?,
+    /** Tanggal target dengan cara lama (nilai per waktu & biaya). */
+    val legacyTarget: Long?,
+    /** Jumlah cara yang dicoba. */
+    val tried: Int,
+) {
+    fun summary() = PlanTarget(target, legacyTarget, tried, policies)
+}
 
 object Planner {
     /** Pengali skor item yang diprioritaskan pengguna: didahulukan bila tersedia. */
@@ -251,18 +308,71 @@ object Planner {
         val finish = start + d
         val idle = ps.schedule.nextOnline(finish) - finish
         val hours = dur / 3600.0
-        val costM = costValue(cost, c.item.resource) / 1_000_000.0
-        val pin = if (c.item.id in ps.pinIds) PIN_BOOST else 1.0
-        val hero = if (c.item.cat == Cat.HERO && !c.gear) HERO_IDLE_BOOST else 1.0
-        val prio = importance(c, ps.strategy) * mult * pin * hero / sqrt((hours + 0.25) * (costM + 0.05))
         // Efisiensi = bagian waktu pekerja yang benar-benar dipakai. Dikuadratkan supaya
         // sebelum tidur upgrade panjang (yang selesai saat Anda bangun) lebih diutamakan
         // daripada upgrade singkat yang membuat builder menganggur semalaman.
         val eff = if (d + idle <= 0) 1.0 else d.toDouble() / (d + idle).toDouble()
-        val choice = prio * eff * eff
+        val policy = ps.policyFor(c.lane)
+        val choice = if (policy == Policy.VALUE) {
+            val costM = costValue(cost, c.item.resource) / 1_000_000.0
+            val pin = if (c.item.id in ps.pinIds) PIN_BOOST else 1.0
+            val hero = if (c.item.cat == Cat.HERO && !c.gear) HERO_IDLE_BOOST else 1.0
+            importance(c, ps.strategy) * mult * pin * hero / sqrt((hours + 0.25) * (costM + 0.05)) * eff * eff
+        } else {
+            // Waktu tercepat ke target: bobot target × lama rantai (atau lama upgrade ini).
+            val pin = if (c.item.id in ps.pinIds) PIN_TARGET else 1.0
+            val rushPlace = !c.lane.bb && ps.strategy == Strategy.RUSH && isPlacement(c)
+            val size = when {
+                rushPlace || policy == Policy.LPT -> hours
+                else -> c.chain / 3600.0
+            } + 0.05
+            val base = targetWeight(c, ps) * mult * pin * size
+            if (policy == Policy.CHAIN_STRICT) base else base * eff * eff
+        }
         val ev = if (c.gear) null else ps.event(c.lane, start)
         return Scored(c, start, finish, idle, choice, dur, cost, ev, tier)
     }
+
+    /** Pengali item yang diprioritaskan pengguna pada urutan waktu-tercepat. */
+    const val PIN_TARGET = 1e4
+
+    private fun isPlacement(c: Candidate) = c.isNew && (c.item.cat == Cat.BUILDING || c.item.cat == Cat.TRAP)
+
+    /**
+     * Bobot target strategi (urutan waktu-tercepat): upgrade yang menentukan tanggal target didahulukan,
+     * sisanya diurutkan menurut lamanya.
+     */
+    private fun targetWeight(c: Candidate, ps: PlanSettings): Double {
+        val it = c.item
+        if (c.lane.bb) return when {
+            it.isTownHall -> 1e-6
+            c.gate -> 1e3
+            else -> 1.0
+        }
+        return when (ps.strategy) {
+            Strategy.MAX -> when {
+                it.isTownHall -> 1e-6
+                c.gate -> 1e3
+                else -> 1.0
+            }
+            Strategy.HERO -> when {
+                it.isTownHall -> 1e-6
+                it.id == GameData.HERO_HALL -> 1e5
+                it.cat == Cat.HERO && !c.gear -> 1e4
+                c.gate -> 1e2
+                else -> 1.0
+            }
+            Strategy.RUSH -> when {
+                it.isTownHall -> 1e8
+                isPlacement(c) -> 1e6
+                else -> importance(c, Strategy.RUSH)
+            }
+        }
+    }
+
+    /** Pengali syarat gear-up (builder ke-6) & storage yang tertahan kapasitas, menurut cara mengurutkan. */
+    private fun needBoost(ps: PlanSettings, lane: Lane, legacy: Double): Double =
+        if (ps.policyFor(lane) == Policy.VALUE) legacy else 1e5
 
     // ------------------------------------------------------------------ kandidat
 
@@ -290,7 +400,52 @@ object Planner {
 
     private val skipNew = setOf(GameData.HUT, GameData.BOB_HUT, GameData.HELPER_HUT, GameData.WALL, GameData.BB_WALL)
 
+    private val GATES = setOf(GameData.LAB, GameData.PET_HOUSE, GameData.HERO_HALL, GameData.STAR_LAB)
+
+    /**
+     * Lama (detik, Gold Pass) level [from]+1 dan semua level sesudahnya yang masih bisa di hall sekarang,
+     * termasuk level yang butuh Laboratory / Pet House / Hero Hall / Star Lab lebih tinggi (yang juga
+     * akan di-upgrade di hall ini).
+     */
+    /** Hasil [chainOf] (data game tetap; kunci = item, level, hall, Gold Pass). */
+    private val chainMemo = java.util.concurrent.ConcurrentHashMap<Long, Long>()
+
+    private fun chainOf(v: Village, gd: GameData, item: Item, from: Int, lane: Lane, gold: GoldPass): Long {
+        val hall = if (lane.bb) v.bh else v.th
+        val key = (((item.id.toLong() * 512 + from) * 64 + hall) * 128 + gold.pctFor(lane)) * 2 + if (lane.bb) 1 else 0
+        chainMemo[key]?.let { return it }
+        return chainCalc(gd, item, from, lane, gold, hall).also { if (chainMemo.size < 50_000) chainMemo[key] = it }
+    }
+
+    private fun chainCalc(gd: GameData, item: Item, from: Int, lane: Lane, gold: GoldPass, hall: Int): Long {
+        val reqCap = when (item.cat) {
+            Cat.TROOP, Cat.SPELL -> gd.item(GameData.LAB)?.maxLevelFor(hall)
+            Cat.PET -> gd.item(GameData.PET_HOUSE)?.maxLevelFor(hall)
+            Cat.HERO -> gd.item(GameData.HERO_HALL)?.maxLevelFor(hall)?.takeIf { it > 0 }
+            Cat.BB_TROOP -> gd.item(GameData.STAR_LAB)?.maxLevelFor(hall)
+            else -> null
+        }
+        var sum = 0L
+        for (l in item.levels.sortedBy { it.level }) {
+            if (l.level <= from) continue
+            if (l.time <= 0) break
+            if (item.cat != Cat.BB_TROOP && l.hall > hall) break
+            if (reqCap != null && l.req > reqCap) break
+            sum += gold.apply(l.time, lane)
+        }
+        return sum
+    }
+
     fun candidates(
+        v: Village, gd: GameData, lane: Lane, gold: GoldPass, includeHall: Boolean,
+        skip: Set<Int> = emptySet(),
+    ): List<Candidate> = candidatesRaw(v, gd, lane, gold, includeHall, skip).map { c ->
+        if (c.gear) c
+        else Candidate(c.lane, c.item, c.inst, c.fromLevel, c.toLevel, c.duration, c.cost, c.isNew, c.count, c.gear, c.baseDuration,
+            maxOf(c.duration, chainOf(v, gd, c.item, c.fromLevel, lane, gold)), c.item.id in GATES)
+    }
+
+    private fun candidatesRaw(
         v: Village, gd: GameData, lane: Lane, gold: GoldPass, includeHall: Boolean,
         skip: Set<Int> = emptySet(),
     ): List<Candidate> {
@@ -402,7 +557,7 @@ object Planner {
             val prev = map[key]
             map[key] = if (prev == null) c
             else Candidate(c.lane, c.item, prev.inst, c.fromLevel, c.toLevel, c.duration, c.cost, c.isNew,
-                if (c.isNew) c.count else prev.count + 1, c.gear, c.baseDuration)
+                if (c.isNew) c.count else prev.count + 1, c.gear, c.baseDuration, maxOf(c.chain, prev.chain), c.gate || prev.gate)
         }
         return map.values.toList()
     }
@@ -429,9 +584,9 @@ object Planner {
     }
 
     /** Pengali prioritas Home Village untuk syarat gear-up (strategi builder ke-6). */
-    private fun homeMult(c: Candidate, needs: Map<Int, Int>): Double {
+    private fun homeMult(c: Candidate, needs: Map<Int, Int>, ps: PlanSettings): Double {
         val need = needs[c.item.id] ?: return 1.0
-        return if (c.toLevel <= need) 3.0 else 1.0
+        return if (c.toLevel <= need) needBoost(ps, c.lane, 3.0) else 1.0
     }
 
     private fun sixthActive(v: Village, lane: Lane, ps: PlanSettings): Boolean =
@@ -444,7 +599,7 @@ object Planner {
         val scored = ArrayList<Scored>()
         val needs = if (lane == Lane.BUILDER && ps.bbStrategy == BBStrategy.SIXTH) Sixth.homeNeeds(state) else emptyMap()
         for (c in dedupe(candidates(state, gd, lane, ps.gold, includeHall = true, skip = ps.planSkip))) {
-            val s = score(c, start, ps, homeMult(c, needs))
+            val s = score(c, start, ps, homeMult(c, needs, ps))
             if (c.item.cat == Cat.HERO && ps.cwl.overlap(s.start, s.finish) != null) {
                 skipped += c
                 continue
@@ -515,7 +670,7 @@ object Planner {
                 // Star Lab yang tertahan gudang menganggur: storage-nya setara langkah Builder Hall.
                 val tier = if (w.c.lane == Lane.STAR_LAB) minOf(w.tier, Sixth.T_HALL) else minOf(w.tier, Sixth.T_FILL)
                 if (tiered) base.with(tier = tier, reason = why)
-                else base.with(score = base.score * STORAGE_NEED, reason = why)
+                else base.with(score = base.score * needBoost(ps, lane, STORAGE_NEED), reason = why)
             }
         val rest = ok.filter { o -> boosted.none { b -> b.c.item.id == o.c.item.id && b.c.inst === o.c.inst } }
         return rest + boosted
@@ -644,6 +799,7 @@ object Planner {
             helpers += HelperSim(lane, h.level, nx)
         }
 
+        val startRunning = runs.map { it.inst }.toHashSet()
         val steps = ArrayList<PlannedStep>()
         val helperEvents = ArrayList<HelperEvent>()
         val horizon = now + 4L * 365 * DAY
@@ -653,6 +809,10 @@ object Planner {
         var builderIdle = 0L
         val idleWindowEnd = now + 7 * DAY
         val homeNeeds = if (ps.bbStrategy == BBStrategy.SIXTH && Lane.BUILDER in lanesWanted) Sixth.homeNeeds(v) else emptyMap()
+        // Rush TH: Town Hall ikut direncanakan (sekali); level desa lain tetap dihitung di TH sekarang.
+        val rushHall = ps.strategy == Strategy.RUSH && Lane.BUILDER in lanesWanted
+        var hallDone: Long? = null
+        var heroDone: Long? = null
 
         // Kebutuhan sumber daya per rentang waktu (dihitung untuk semua langkah, bukan hanya yang disimpan)
         val windows = longArrayOf(DAY, 3 * DAY, 7 * DAY)
@@ -688,7 +848,17 @@ object Planner {
         fun applyCompletions(t: Long) {
             val due = runs.filter { it.finish <= t }.sortedBy { it.finish }
             for (r in due) {
-                r.inst.complete()
+                val item = r.inst.item
+                if (item.id == GameData.TOWN_HALL && rushHall && hallDone == null) {
+                    hallDone = r.finish
+                    if (r.inst in startRunning) r.inst.complete()
+                    else {
+                        // Hasil Rush: tanggal TH naik. Sisa rencana tetap dihitung di level TH sekarang.
+                        r.inst.upgrading = false
+                        r.inst.remaining = 0
+                    }
+                } else r.inst.complete()
+                if (item.cat == Cat.HERO && !r.inst.gearing) heroDone = maxOf(heroDone ?: 0L, r.finish)
                 runs.remove(r)
                 trackSixth(r.finish)
             }
@@ -736,7 +906,8 @@ object Planner {
                     if (b == null || s.tier < b.tier || (s.tier == b.tier && s.score > b.score)) best = s
                 }
             } else {
-                val opts = candidates(v, gd, lane, ps.gold, includeHall = false, skip = ps.planSkip).map { score(it, tStart, ps, homeMult(it, homeNeeds)) }
+                val hall = rushHall && lane == Lane.BUILDER && hallDone == null && runs.none { it.inst.item.id == GameData.TOWN_HALL }
+                val opts = candidates(v, gd, lane, ps.gold, includeHall = hall, skip = ps.planSkip).map { score(it, tStart, ps, homeMult(it, homeNeeds, ps)) }
                 for (s in fitCapacity(v, gd, lane, tStart, ps, opts, tiered = false)) {
                     val c = s.c
                     if (c.item.cat == Cat.HERO) {
@@ -789,10 +960,93 @@ object Planner {
             SixthPlan(sixthStart, sixthEta, sixthDoneAt, if (sixthDoneAt == null) Sixth.blockers(v) else emptyList())
         } else null
         val needs = windows.indices.map { Needs(windows[it], needCost[it], needTop[it]) }
+        // Upgrade yang masih berjalan saat simulasi berhenti.
+        for (r in runs) {
+            if (r.inst.item.cat == Cat.HERO && !r.inst.gearing) heroDone = maxOf(heroDone ?: 0L, r.finish)
+            if (r.inst.item.id == GameData.TOWN_HALL && rushHall && hallDone == null) hallDone = r.finish
+        }
         return SimResult(
             doneFor(Lane.BUILDER), doneFor(Lane.LAB), doneFor(Lane.PET),
             doneFor(Lane.BB_BUILDER), doneFor(Lane.STAR_LAB), steps, builderIdle, truncated, helperEvents,
-            running, sixth, needs,
+            running, sixth, needs, heroDone, hallDone,
         )
+    }
+
+    // ------------------------------------------------------------------ urutan tercepat
+
+    private const val H = 3_600_000L
+
+    /** Tanggal target strategi dari hasil simulasi (Long.MAX_VALUE = tidak tercapai). */
+    fun target(s: SimResult, ps: PlanSettings, bb: Boolean): Long {
+        if (s.truncated) return Long.MAX_VALUE
+        val t = if (bb) {
+            if (ps.bbStrategy == BBStrategy.SIXTH && s.sixth != null) s.sixth.doneAt
+            else listOfNotNull(s.bbBuilderDone, s.starLabDone).maxOrNull()
+        } else when (ps.strategy) {
+            Strategy.MAX -> listOfNotNull(s.builderDone, s.labDone, s.petDone).maxOrNull()
+            Strategy.HERO -> s.heroDone ?: s.builderDone
+            Strategy.RUSH -> s.hallDone ?: s.builderDone
+        }
+        return t ?: Long.MAX_VALUE
+    }
+
+    /** Pembanding kedua bila tanggal target sama: pekerja utama selesai lebih awal. */
+    private fun secondary(s: SimResult, bb: Boolean): List<Long> = if (bb) {
+        listOf(listOfNotNull(s.bbBuilderDone, s.starLabDone).maxOrNull() ?: Long.MAX_VALUE, s.bbBuilderDone ?: Long.MAX_VALUE)
+    } else {
+        listOf(s.builderDone ?: Long.MAX_VALUE, s.heroDone ?: Long.MAX_VALUE, s.labDone ?: Long.MAX_VALUE)
+    }
+
+    /** Ukuran satu jenis pekerja: bagian target yang ditentukan pekerja itu, lalu kapan pekerja itu selesai. */
+    private fun laneKey(s: SimResult, ps: PlanSettings, lane: Lane): List<Long> {
+        val m = Long.MAX_VALUE
+        val bob = s.sixth?.takeIf { ps.bbStrategy == BBStrategy.SIXTH }?.let { it.doneAt ?: m }
+        return when (lane) {
+            Lane.BUILDER -> when (ps.strategy) {
+                Strategy.MAX -> listOf(s.builderDone ?: m, s.heroDone ?: m)
+                Strategy.HERO -> listOf(s.heroDone ?: s.builderDone ?: m, s.builderDone ?: m)
+                Strategy.RUSH -> listOf(s.hallDone ?: m, s.builderDone ?: m)
+            }
+            Lane.LAB -> listOf(s.labDone ?: m)
+            Lane.PET -> listOf(s.petDone ?: m)
+            Lane.BB_BUILDER -> listOfNotNull(bob, s.bbBuilderDone ?: m)
+            Lane.STAR_LAB -> listOfNotNull(bob, s.starLabDone ?: m)
+        }
+    }
+
+    private fun hours(k: List<Long>) = k.map { if (it == Long.MAX_VALUE) it else it / H }
+
+    private val keyOrder = Comparator<List<Long>> { a, b ->
+        for (i in 0 until minOf(a.size, b.size)) { val c = a[i].compareTo(b[i]); if (c != 0) return@Comparator c }
+        a.size.compareTo(b.size)
+    }
+
+    /**
+     * Cari urutan yang paling cepat mencapai target strategi terpilih (Seimbang: semua selesai; Rush: TH
+     * naik; Hero: hero max; BB: B.O.B / BB max) dengan jam tidur, Gold Pass, event, CWL, helper & kapasitas
+     * gudang yang sama: simulasikan tiap [Policy] untuk semua pekerja, pilih yang terbaik per jenis pekerja
+     * (builder, lab, pet, …), lalu uji gabungannya. Seri (selisih < 1 jam) → cara yang lebih awal di daftar.
+     */
+    fun optimize(
+        v: Village, gd: GameData, ps: PlanSettings, now: Long, finishes: Map<String, Long>,
+        lanes: Set<Lane>, keepSteps: Int, policies: List<Policy> = Policy.entries,
+    ): Optimized {
+        val bb = lanes.any { it.bb }
+        fun all(p: Policy) = lanes.associateWith { p }
+        fun key(s: SimResult) = hours(listOf(target(s, ps, bb)) + secondary(s, bb))
+        val runs = policies.map { p -> all(p) to simulate(v, gd, ps.withPolicies(all(p)), now, finishes, lanes, keepSteps = keepSteps) }
+        var best = runs.minWithOrNull { a, b -> keyOrder.compare(key(a.second), key(b.second)) }!!
+        // Terbaik per jenis pekerja (antar jenis hampir tidak saling memengaruhi), lalu uji gabungannya.
+        val mix = lanes.associateWith { lane ->
+            runs.minWithOrNull { a, b -> keyOrder.compare(hours(laneKey(a.second, ps, lane)), hours(laneKey(b.second, ps, lane))) }!!.first[lane]!!
+        }
+        if (runs.none { it.first == mix }) {
+            val sim = simulate(v, gd, ps.withPolicies(mix), now, finishes, lanes, keepSteps = keepSteps)
+            if (keyOrder.compare(key(sim), key(best.second)) < 0) best = mix to sim
+        }
+        val legacy = runs.firstOrNull { it.first.values.all { p -> p == Policy.VALUE } }?.second
+        fun real(t: Long) = t.takeIf { it != Long.MAX_VALUE }
+        return Optimized(best.second, best.first, real(target(best.second, ps, bb)), legacy?.let { real(target(it, ps, bb)) },
+            runs.size + if (runs.none { it.first == mix }) 1 else 0)
     }
 }

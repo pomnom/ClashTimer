@@ -19,6 +19,7 @@ import id.clashtimer.core.ItemTip
 import id.clashtimer.core.Lane
 import id.clashtimer.core.LaneSlot
 import id.clashtimer.core.PlanSettings
+import id.clashtimer.core.PlanTarget
 import id.clashtimer.core.Planner
 import id.clashtimer.core.ProgressCalc
 import id.clashtimer.core.Projector
@@ -47,6 +48,9 @@ class PlanBundle(
     val version: Int,
     /** Simulasi Builder Base strategi Max (untuk progres bila strategi = builder ke-6). */
     val simBBMax: SimResult? = simBB,
+    /** Urutan tercepat ke target (Home / Builder Base) dan perbandingannya dengan cara lama. */
+    val homeTarget: PlanTarget? = null,
+    val bbTarget: PlanTarget? = null,
 )
 
 /** Penghubung antara penyimpanan Android dan logika inti. */
@@ -451,19 +455,46 @@ object Repo {
     fun computePlan(ctx: Context, tag: String): PlanBundle? {
         val v = village(ctx, tag) ?: return null
         val gd = gameData(ctx)
-        val ps = Store.planSettings(ctx, tag)
+        val ps0 = Store.planSettings(ctx, tag)
         val now = System.currentTimeMillis()
         val fin = finishes(ctx, tag)
+        val home = ProgressCalc.compute(v, gd, false, ps0.gold, now, fin, ps0.skipIds)
+        val bb = if (v.hasBB && v.bh > 0) ProgressCalc.compute(v, gd, true, ps0.gold, now, fin, ps0.skipIds) else null
+        val homeLanes = setOf(Lane.BUILDER, Lane.LAB, Lane.PET)
+        val bbLanes = setOf(Lane.BB_BUILDER, Lane.STAR_LAB)
+
+        // Urutan tercepat ke target strategi: dicari ulang bila data / pengaturan berubah (atau tiap 6 jam),
+        // selain itu memakai hasil terakhir (satu simulasi saja).
+        val sig = listOf(Store.planVersion(ctx), v.exportAt, fin.size, fin.values.sum(), ps0.strategy, ps0.bbStrategy,
+            ps0.gold.builderPct, ps0.gold.researchPct, bb != null).joinToString("|")
+        val cached = Store.optCache(ctx, tag)?.takeIf { it.sig == sig && now - it.at in 0..6 * 3_600_000L }
+        val ps: PlanSettings
+        val simHome: SimResult
+        val simBB: SimResult?
+        val homeTarget: PlanTarget?
+        val bbTarget: PlanTarget?
+        if (cached != null) {
+            ps = ps0
+            simHome = Planner.simulate(v, gd, ps, now, fin, homeLanes, keepSteps = 120)
+            simBB = if (bb != null) Planner.simulate(v, gd, ps, now, fin, bbLanes, keepSteps = 160) else null
+            homeTarget = cached.home
+            bbTarget = cached.bb
+        } else {
+            val oh = Planner.optimize(v, gd, ps0, now, fin, homeLanes, keepSteps = 120)
+            val ob = if (bb != null) Planner.optimize(v, gd, ps0, now, fin, bbLanes, keepSteps = 160) else null
+            val chosen = oh.policies + (ob?.policies ?: emptyMap())
+            ps = ps0.withPolicies(chosen)
+            simHome = oh.sim
+            simBB = ob?.sim
+            homeTarget = oh.summary()
+            bbTarget = ob?.summary()
+            Store.setOptCache(ctx, tag, Store.OptCache(sig, now, chosen, homeTarget, bbTarget))
+        }
         val slots = Planner.suggest(v, gd, ps, now, fin)
         val tips = ItemAdvisor.tips(v, gd, ps, now, fin, Store.items(ctx, tag))
-        val home = ProgressCalc.compute(v, gd, false, ps.gold, now, fin, ps.skipIds)
-        val bb = if (v.hasBB && v.bh > 0) ProgressCalc.compute(v, gd, true, ps.gold, now, fin, ps.skipIds) else null
-        val simHome = Planner.simulate(v, gd, ps, now, fin, setOf(Lane.BUILDER, Lane.LAB, Lane.PET), keepSteps = 120)
-        val bbLanes = setOf(Lane.BB_BUILDER, Lane.STAR_LAB)
-        val simBB = if (bb != null) Planner.simulate(v, gd, ps, now, fin, bbLanes, keepSteps = 160) else null
         val simBBMax = if (simBB?.sixth != null) Planner.simulate(v, gd, ps.withBB(BBStrategy.MAX), now, fin, bbLanes, keepSteps = 10) else simBB
         Store.setLastPct(ctx, tag, home.pct.toFloat())
         runCatching { History.snapshot(ctx, tag, home.pct, bb?.pct) }
-        return PlanBundle(tag, v, ps, slots, tips, home, bb, simHome, simBB, now, Store.planVersion(ctx), simBBMax)
+        return PlanBundle(tag, v, ps, slots, tips, home, bb, simHome, simBB, now, Store.planVersion(ctx), simBBMax, homeTarget, bbTarget)
     }
 }

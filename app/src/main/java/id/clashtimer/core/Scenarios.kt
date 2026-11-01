@@ -27,7 +27,10 @@ object Scenarios {
     fun compute(v: Village, gd: GameData, ps: PlanSettings, now: Long, fin: Map<String, Long>, strategyLabel: (Strategy) -> String): List<Row> {
         val hasBB = v.hasBB && v.bh > 0
         fun run(label: String, note: String, p: PlanSettings, village: Village = v, withBB: Boolean = false, current: Boolean = false): Row {
-            val h = Planner.simulate(village, gd, p, now, fin, HOME, keepSteps = 100_000)
+            // Strategi lain: cari juga urutan tercepatnya (dua cara) supaya perbandingannya adil.
+            val h = if (p.strategy != ps.strategy) {
+                Planner.optimize(village, gd, p, now, fin, HOME, keepSteps = 100_000, policies = listOf(Policy.VALUE, Policy.CHAIN)).sim
+            } else Planner.simulate(village, gd, p, now, fin, HOME, keepSteps = 100_000)
             val b = if (withBB && hasBB) Planner.simulate(village, gd, p.withBB(BBStrategy.MAX), now, fin, BB, keepSteps = 1) else null
             val builder = (h.running + h.steps).filter { it.lane == Lane.BUILDER }
             val buildings = builder.filter { it.item?.cat != Cat.HERO }.maxOfOrNull { it.finish }

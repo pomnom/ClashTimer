@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Satu baris widget "Semua desa": nama desa + Builder, Lab, Builder Base, Star Lab.
-     Tiap sel berisi Chronometer (hitung mundur < 24 jam) atau teks ("2h 9j", "bebas", "–"). -->
+<!-- Satu baris widget "Semua desa": nama desa + kotak Builder, Lab, Builder Base, Star Lab (warna sama
+     dengan aplikasi: hijau = bebas, emas = builder, ungu = lab). Tiap kotak berisi Chronometer
+     (hitung mundur < 24 jam) atau teks ("2h 9j", "bebas", "–"). Dibuat oleh widget_gen.py. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/ar_row"
     android:layout_width="match_parent"
@@ -50,10 +51,14 @@
         </LinearLayout>
 
         <FrameLayout
+            android:id="@+id/ar_b1"
             android:layout_width="0dp"
-            android:layout_height="20dp"
-            android:layout_weight="1">
-
+            android:layout_height="24dp"
+            android:layout_marginStart="3dp"
+            android:layout_weight="1"
+            android:background="@drawable/widget_tile"
+            android:paddingStart="5dp"
+            android:paddingEnd="3dp">
             <Chronometer
                 android:id="@+id/ar_c1"
                 android:layout_width="match_parent"
@@ -86,10 +91,14 @@
         </FrameLayout>
 
         <FrameLayout
+            android:id="@+id/ar_b2"
             android:layout_width="0dp"
-            android:layout_height="20dp"
-            android:layout_weight="1">
-
+            android:layout_height="24dp"
+            android:layout_marginStart="3dp"
+            android:layout_weight="1"
+            android:background="@drawable/widget_tile"
+            android:paddingStart="5dp"
+            android:paddingEnd="3dp">
             <Chronometer
                 android:id="@+id/ar_c2"
                 android:layout_width="match_parent"
@@ -122,10 +131,14 @@
         </FrameLayout>
 
         <FrameLayout
+            android:id="@+id/ar_b3"
             android:layout_width="0dp"
-            android:layout_height="20dp"
-            android:layout_weight="1">
-
+            android:layout_height="24dp"
+            android:layout_marginStart="3dp"
+            android:layout_weight="1"
+            android:background="@drawable/widget_tile"
+            android:paddingStart="5dp"
+            android:paddingEnd="3dp">
             <Chronometer
                 android:id="@+id/ar_c3"
                 android:layout_width="match_parent"
@@ -158,10 +171,14 @@
         </FrameLayout>
 
         <FrameLayout
+            android:id="@+id/ar_b4"
             android:layout_width="0dp"
-            android:layout_height="20dp"
-            android:layout_weight="1">
-
+            android:layout_height="24dp"
+            android:layout_marginStart="3dp"
+            android:layout_weight="1"
+            android:background="@drawable/widget_tile"
+            android:paddingStart="5dp"
+            android:paddingEnd="3dp">
             <Chronometer
                 android:id="@+id/ar_c4"
                 android:layout_width="match_parent"

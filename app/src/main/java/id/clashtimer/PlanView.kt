@@ -12,6 +12,7 @@ import id.clashtimer.core.DAY
 import id.clashtimer.core.Fmt
 import id.clashtimer.core.Lane
 import id.clashtimer.core.PlannedStep
+import id.clashtimer.core.Planner
 import id.clashtimer.core.SixthPlan
 import id.clashtimer.core.Strategy
 import java.time.Instant
@@ -33,6 +34,7 @@ object PlanView {
             box.addView(Ui.muted(act, "Belum ada data untuk rencana ini.", Ui.BODY_M).apply { setPadding(Ui.dp(act, 4), Ui.dp(act, 16), 0, 0) })
             return
         }
+        targetCard(act, box, b, sim, bb, zone)
         val mode = pref(act, "plan_mode")
         modeRow(act, box, mode)
         if (mode == 1) timeline(act, box, b, sim, bb, now, zone)
@@ -105,6 +107,44 @@ object PlanView {
             col.addView(v)
         }
         box.addView(card)
+    }
+
+    // ---------------------------------------------------------------- target
+
+    private fun laneWord(l: Lane) = when (l) {
+        Lane.BUILDER -> "Builder"
+        Lane.LAB -> "Lab"
+        Lane.PET -> "Pet"
+        Lane.BB_BUILDER -> "Master Builder"
+        Lane.STAR_LAB -> "Star Lab"
+    }
+
+    /** "🎯 Target max TH ±7 Feb 09:13 · 14j lebih cepat dari urutan lama" + urutan yang dipilih. */
+    private fun targetCard(act: MainActivity, box: LinearLayout, b: PlanBundle, sim: id.clashtimer.core.SimResult, bb: Boolean, zone: ZoneId) {
+        val ps = b.ps
+        val t = Planner.target(sim, ps, bb).takeIf { it != Long.MAX_VALUE }
+        val label = when {
+            !bb -> ps.strategy.target
+            ps.bbStrategy == BBStrategy.SIXTH && sim.sixth != null -> "B.O.B terbuka"
+            else -> "Builder Base max"
+        }
+        val info = if (bb) b.bbTarget else b.homeTarget
+        val (card, col) = Ui.card(act, padV = 10, tinted = true)
+        col.addView(Ui.text(act, if (t != null) "🎯 Target $label: ±${Fmt.at(t, zone)}" else "🎯 Target $label: belum tercapai dalam rencana", Ui.TITLE_S))
+        if (info != null) {
+            val lanes = info.policies.keys.filter { Planner.laneCount(b.village, it, ps) > 0 }.sortedBy { it.ordinal }
+            val groups = lanes.groupBy { ps.policyFor(it) }
+            val how = groups.entries.joinToString(" · ") { (p, ls) -> ls.joinToString(" & ") { laneWord(it) } + ": " + p.label }
+            val diff = if (t != null && info.legacy != null) info.legacy - t else null
+            val cmp = when {
+                diff == null -> ""
+                diff >= 3_600_000L -> " — ${Fmt.dur(diff)} lebih cepat dari urutan lama"
+                diff <= -3_600_000L -> ""
+                else -> " — sama cepat dengan urutan lama"
+            }
+            col.addView(Ui.muted(act, "Urutan tercepat dari ${info.tried} simulasi$cmp.\n$how").apply { setPadding(0, Ui.dp(act, 2), 0, 0) })
+        }
+        box.addView(card, Ui.matchWrap(6, act).apply { topMargin = Ui.dp(act, 6) })
     }
 
     // ---------------------------------------------------------------- daftar / garis waktu

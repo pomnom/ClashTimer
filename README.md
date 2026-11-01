@@ -30,9 +30,18 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
   ringkasan jalur builder ke-6
 
 **📅 Rencana** (antrean upgrade per pekerja)
-- Cara memilih (Seimbang): nilai upgrade dibagi √(lama × biaya), dikurangi bila builder menganggur saat
-  tidur. **Hero yang menganggur selalu didahulukan** saat ada builder bebas (kecuali bentrok CWL), dan
-  biaya Dark Elixir disetarakan (1 DE ≈ 100 Gold/Elixir) supaya hero DE tidak dianggap murah
+- **Urutan tercepat ke target**: tiap strategi punya target — Seimbang = semua upgrade di TH sekarang
+  (builder, lab & pet) selesai; Rush TH = Town Hall berikutnya naik (bangunan baru dipasang dulu, TH ikut
+  direncanakan); Hero dulu = semua level hero selesai; Builder ke-6 = B.O.B terbuka; Max BB = Builder Base
+  selesai. Setiap kali data atau pengaturan berubah (dan tiap 6 jam) aplikasi menyimulasikan beberapa cara
+  mengurutkan — **rantai upgrade terpanjang dulu**, **upgrade terlama dulu**, rantai murni, dan cara lama
+  (nilai ÷ √(lama × biaya)) — untuk tiap jenis pekerja, menguji gabungan terbaiknya, lalu memakai yang paling
+  cepat mencapai target. Jam tidur/kerja, Gold Pass, event, CWL, helper & kapasitas gudang ikut dihitung;
+  Laboratory / Pet House / Hero Hall / Star Lab didahulukan karena membuka level berikutnya
+- Kartu **🎯 Target** di atas Rencana: tanggal target, selisihnya dengan urutan lama, dan urutan yang
+  dipilih per pekerja. Saran di Beranda, widget & notifikasi memakai urutan yang sama
+- Cara lama tetap ikut dicoba: hero yang menganggur didahulukan dan biaya Dark Elixir disetarakan
+  (1 DE ≈ 100 Gold/Elixir)
 - Builder Base: upgrade yang biayanya melebihi **kapasitas gudang** (Builder Hall + Gold/Elixir Storage)
   ditunda dan storage-nya dinaikkan dulu (juga untuk troop Star Lab); kapasitas tampil di Rencana BB
 - Pilih strategi langsung di atas: Seimbang / Rush TH / Hero dulu, dan untuk Builder Base:
@@ -43,7 +52,8 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
   batang penuh = berjalan, transparan = rencana, garis merah = menganggur, abu-abu = jam tidur/offline,
   garis vertikal = sekarang. Ketuk batang untuk detail
 - **Builder ke-6 (B.O.B)**: checklist 6 syarat (BH9 + B.O.B Control, 3 gear-up, troop Lv18,
-  pertahanan Lv9, BM + BC = 45) dengan perkiraan tanggal tiap syarat dan tanggal B.O.B terbuka
+  pertahanan Lv9, BM + BC = 45) dengan perkiraan tanggal tiap syarat dan tanggal B.O.B terbuka. Bangunan
+  **dan jebakan** baru (mis. Mine, Mega Mine) dipasang dulu supaya Builder Hall bisa naik ke BH9
 - Jam tidur/kerja, sesi helper, hero yang ditunda karena CWL, potongan event
 
 **📊 Progres**
@@ -59,17 +69,22 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
 **🏰 Multi desa** · **🎵 Nada notifikasi** (termasuk Alarm keras) — seperti versi sebelumnya
 
 **📱 Widget layar utama** (tahan lama layar HP → Widget → Clash Timer · semua desa)
-- Ukuran 4×2 (bisa diperbesar): satu baris per desa dengan kolom Builder, Lab, Builder Base &
-  Star Lab — hitung mundur (< 24 jam) atau sisa hari/jam, **bebas** (hijau), "max" bila tidak ada
-  lagi yang bisa di-upgrade, "–" bila belum dibangun
+- Ukuran 4×2 (bisa diperbesar): satu baris per desa dengan kotak Builder, Lab, Builder Base &
+  Star Lab — hitung mundur (< 24 jam) atau sisa hari/jam, **bebas** (kotak hijau), "max" bila tidak ada
+  lagi yang bisa di-upgrade, "–" bila belum dibangun. Warna sama dengan aplikasi: emas = builder,
+  ungu = lab
+- Isinya sama dengan tab **Desa**: Goblin Builder/Researcher tidak dihitung sebagai pekerja tetap
+  (tampil sebagai 👺 di bawah nama desa), dan saran memakai urutan tercepat yang sama dengan Rencana
 - Desa yang paling cepat bebas di atas; perbesar widget untuk menampilkan lebih banyak desa.
   Baris bawah: saran untuk pekerja yang bebas, atau upgrade berikutnya yang selesai
-- Tablet: huruf lebih besar, baris mengisi tinggi widget, dan nama upgrade tampil di bawah tiap waktu;
+- Tablet: huruf lebih besar, baris mengisi tinggi widget, dan nama upgrade (+ jumlah sibuk, mis. 4/5)
+  tampil di bawah tiap waktu;
   saat mendatar jumlah baris menyesuaikan tinggi widget (ukuran ditentukan dari layar penuh, jadi tetap benar
   walau Clash Timer sedang dibuka di layar terbagi)
 - Hitung mundur < 24 jam memakai format Android sesuai bahasa HP: "17.03" = 17 menit 3 detik,
   "16.27.11" = 16 jam 27 menit 11 detik
-- Ketuk baris → tab Rencana desa itu. Diperbarui saat data berubah (import, Sudah dimulai, API), saat
+- Ketuk baris → Beranda desa itu; ketuk kotak Builder Base / Star Lab → Beranda Builder Base; ketuk judul
+  "Semua desa" → tab Desa. Diperbarui saat data berubah (import, Sudah dimulai, API), saat
   upgrade selesai, saat keluar dari aplikasi, dan paling lambat tiap 30 menit; mengikuti tema terang/gelap
 - **↻ jam** di pojok kanan atas = terakhir diperbarui; ketuk untuk memperbarui sekarang
 - Setiap pembaruan menggambar widget dari awal, jadi tampilan baru langsung terpakai setelah update aplikasi

@@ -67,7 +67,7 @@ class AllVillagesWidget : AppWidgetProvider() {
 object Widgets {
     const val EXTRA_TAG = "widget_tag"
     const val EXTRA_BB = "widget_bb"
-    /** "HOME" atau "PLAN" (widget membuka Rencana, notifikasi membuka Beranda). */
+    /** "VILLAGES", "HOME" atau "PLAN": tab yang dibuka (widget & notifikasi membuka Beranda desa itu). */
     const val EXTRA_TAB = "widget_tab"
     /** Perbarui semua widget sekarang (tombol ↻ dan alarm penyegar). */
     const val ACTION_REFRESH = "id.clashtimer.WIDGET_REFRESH"
@@ -251,12 +251,12 @@ object Widgets {
 
     private val LANES = listOf(Lane.BUILDER, Lane.LAB, Lane.BB_BUILDER, Lane.STAR_LAB)
 
-    /** Chronometer, teks waktu, dan baris nama upgrade (hanya ada di layout tablet) tiap kolom. */
-    private class CellIds(val chrono: Int, val text: Int, val sub: Int)
+    /** Kotak, Chronometer, teks waktu, dan baris nama upgrade (hanya ada di layout tablet) tiap kolom. */
+    private class CellIds(val box: Int, val chrono: Int, val text: Int, val sub: Int)
 
     private val CELL_IDS = listOf(
-        CellIds(R.id.ar_c1, R.id.ar_t1, R.id.ar_s1), CellIds(R.id.ar_c2, R.id.ar_t2, R.id.ar_s2),
-        CellIds(R.id.ar_c3, R.id.ar_t3, R.id.ar_s3), CellIds(R.id.ar_c4, R.id.ar_t4, R.id.ar_s4),
+        CellIds(R.id.ar_b1, R.id.ar_c1, R.id.ar_t1, R.id.ar_s1), CellIds(R.id.ar_b2, R.id.ar_c2, R.id.ar_t2, R.id.ar_s2),
+        CellIds(R.id.ar_b3, R.id.ar_c3, R.id.ar_t3, R.id.ar_s3), CellIds(R.id.ar_b4, R.id.ar_c4, R.id.ar_t4, R.id.ar_s4),
     )
 
     /** Perkiraan tinggi (dp): satu baris desa, bagian tetap (padding, judul, judul kolom, catatan bawah), catatan bawah. */
@@ -276,6 +276,10 @@ object Widgets {
         val next: Upgrade?,
         /** Saran untuk pekerja yang bebas. */
         val tip: String?,
+        /** Goblin Builder / Goblin Researcher (event) yang sedang bekerja — di luar pekerja tetap. */
+        val goblins: Int = 0,
+        /** Pekerja tetap yang sedang bekerja. */
+        val busy: Int = 0,
     ) {
         fun soonest(now: Long): Long = when {
             free > 0 -> now
@@ -284,22 +288,28 @@ object Widgets {
         }
     }
 
+    /**
+     * Sama dengan Beranda: Goblin (event) tidak dihitung sebagai pekerja tetap — tidak menambah jumlah
+     * pekerja dan tidak dianggap "berikutnya bebas".
+     */
     private fun cellOf(s: Snap, acc: Account?, lane: Lane, now: Long): Cell {
         val kind = Kind.of(lane)
-        val running = s.ups.filter { it.kind == kind && it.finishAt > now }
+        val all = s.ups.filter { it.kind == kind && it.finishAt > now }
+        val running = all.filter { !it.extra }
+        val goblins = all.size - running.size
         val next = running.minByOrNull { it.finishAt }
         val v = s.v
         val ps = s.ps
         if (v == null || ps == null) {
             val total = maxOf(if (lane == Lane.BUILDER) acc?.builders ?: 0 else 0, running.size)
-            return Cell(lane, total, (total - running.size).coerceAtLeast(0), next, null)
+            return Cell(lane, total, (total - running.size).coerceAtLeast(0), next, null, goblins, running.size)
         }
         val total = maxOf(Planner.laneCount(v, lane, ps), running.size)
         // Pekerja bebas tanpa pilihan upgrade (sudah max) tidak dihitung "bebas".
         val slot = s.slots.firstOrNull { it.lane == lane && it.freeAt <= now }
         val pick = slot?.ranked?.firstOrNull()
         val free = if (pick != null) slot?.count ?: 0 else 0
-        return Cell(lane, total, free, next, pick?.c?.title)
+        return Cell(lane, total, free, next, pick?.c?.title, goblins, running.size)
     }
 
     internal fun laneName(lane: Lane): String = when (lane) {
@@ -327,11 +337,16 @@ object Widgets {
         rv.setTextColor(ids.text, color(ctx, colorRes))
     }
 
+    /** Warna waktu: emas = builder, ungu = lab (sama dengan aplikasi). */
+    private fun laneColor(lane: Lane): Int =
+        if (lane == Lane.BUILDER || lane == Lane.BB_BUILDER) R.color.widget_builder else R.color.widget_lab
+
     /** Baris nama upgrade (ids.sub) selalu diisi; di layout HP view itu tidak ada sehingga diabaikan. */
     private fun fillCell(ctx: Context, rv: RemoteViews, ids: CellIds, c: Cell, now: Long) {
         val next = c.next
         var sub = ""
         var subColor = R.color.widget_text2
+        rv.setInt(ids.box, "setBackgroundResource", if (c.free > 0) R.drawable.widget_tile_free else R.drawable.widget_tile)
         when {
             c.free > 0 -> {
                 showText(ctx, rv, ids, if (c.free > 1) "${c.free} bebas" else "bebas", R.color.widget_green)
@@ -345,10 +360,12 @@ object Widgets {
                 if (rem in 1..DAY) {
                     rv.setViewVisibility(ids.text, View.GONE)
                     rv.setViewVisibility(ids.chrono, View.VISIBLE)
+                    rv.setTextColor(ids.chrono, color(ctx, laneColor(c.lane)))
                     rv.setChronometer(ids.chrono, SystemClock.elapsedRealtime() + rem, null, true)
                     rv.setChronometerCountDown(ids.chrono, true)
-                } else showText(ctx, rv, ids, Fmt.dur(rem), R.color.widget_text)
+                } else showText(ctx, rv, ids, Fmt.dur(rem), laneColor(c.lane))
                 sub = shortTitle(next)
+                if (c.total > 1) sub += " · ${c.busy}/${c.total}"
             }
             c.total > 0 -> showText(ctx, rv, ids, "max", R.color.widget_text2)
             else -> {
@@ -443,21 +460,29 @@ object Widgets {
     private fun row(ctx: Context, r: VRow, index: Int, now: Long): RemoteViews {
         val row = RemoteViews(ctx.packageName, R.layout.widget_all_row)
         row.setTextViewText(R.id.ar_name, r.name)
+        val gob = r.cells.sumOf { it.goblins }
         row.setTextViewText(R.id.ar_hall, listOfNotNull(
             r.acc.th.takeIf { it > 0 }?.let { "TH$it" },
             r.acc.bh.takeIf { it > 0 }?.let { "BH$it" },
+            gob.takeIf { it > 0 }?.let { "👺$it" },
         ).joinToString(" · "))
         r.cells.forEachIndexed { k, c -> fillCell(ctx, row, CELL_IDS[k], c, now) }
-        // Ketuk baris: buka tab Rencana desa itu.
-        val open = Intent(ctx, MainActivity::class.java)
-            .setAction("id.clashtimer.OPEN_PLAN")
-            .setData(Uri.parse("clashtimer://desa/" + Uri.encode(r.tag)))
-            .putExtra(EXTRA_TAG, r.tag)
-            .putExtra(EXTRA_BB, false)
-            .putExtra(EXTRA_TAB, "PLAN")
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        row.setOnClickPendingIntent(R.id.ar_row, PendingIntent.getActivity(ctx, 9_100_000 + index, open, FLAGS))
+        // Ketuk baris: Beranda desa itu (Home Village); kotak Builder Base / Star Lab: Beranda Builder Base.
+        row.setOnClickPendingIntent(R.id.ar_row, openVillage(ctx, r.tag, false, 9_100_000 + index * 2))
+        val bb = openVillage(ctx, r.tag, true, 9_100_001 + index * 2)
+        r.cells.forEachIndexed { k, c -> if (c.lane.bb) row.setOnClickPendingIntent(CELL_IDS[k].box, bb) }
         return row
+    }
+
+    private fun openVillage(ctx: Context, tag: String, bb: Boolean, code: Int): PendingIntent {
+        val open = Intent(ctx, MainActivity::class.java)
+            .setAction("id.clashtimer.OPEN_HOME")
+            .setData(Uri.parse("clashtimer://desa/" + Uri.encode(tag) + if (bb) "/bb" else ""))
+            .putExtra(EXTRA_TAG, tag)
+            .putExtra(EXTRA_BB, bb)
+            .putExtra(EXTRA_TAB, "HOME")
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        return PendingIntent.getActivity(ctx, code, open, FLAGS)
     }
 
     /** Kerangka widget: ketuk di luar baris membuka aplikasi; ↻ jam terakhir diperbarui (ketuk = perbarui). */
@@ -465,6 +490,12 @@ object Widgets {
         val rv = RemoteViews(ctx.packageName, layout)
         val open = Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         rv.setOnClickPendingIntent(R.id.a_root, PendingIntent.getActivity(ctx, 5998, open, FLAGS))
+        // Judul "Semua desa" → tab Desa di aplikasi.
+        val villages = Intent(ctx, MainActivity::class.java)
+            .setAction("id.clashtimer.OPEN_VILLAGES")
+            .putExtra(EXTRA_TAB, "VILLAGES")
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        rv.setOnClickPendingIntent(R.id.a_title, PendingIntent.getActivity(ctx, 5995, villages, FLAGS))
         rv.setTextViewText(R.id.a_refresh, "↻ " + Fmt.time(now, ZoneId.systemDefault()))
         val refresh = Intent(ctx, AllVillagesWidget::class.java).setAction(ACTION_REFRESH)
         rv.setOnClickPendingIntent(R.id.a_refresh, PendingIntent.getBroadcast(ctx, 5997, refresh, FLAGS))
