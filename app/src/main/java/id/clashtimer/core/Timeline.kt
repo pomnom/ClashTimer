@@ -112,10 +112,13 @@ object Projector {
         }
         val sessionStarts = ArrayList<Long>()
         if (helper != null && helper.level > 0) {
-            var s = maxOf(helper.firstSession, from)
+            // Sesi helper berulang tiap HELPER_CYCLE sejak sesi pertama; [from] bisa setelahnya
+            // (mis. sisa waktu dikoreksi pengguna), jadi lompati sesi yang sudah lewat.
+            var s = helper.firstSession
+            while (s + HELPER_WORK <= from) s += HELPER_CYCLE
             while (s < base && s < sessionsBefore) {
                 sessionStarts += s
-                segs += Seg(s, s + HELPER_WORK, helper.level.toDouble())
+                segs += Seg(maxOf(s, from), s + HELPER_WORK, helper.level.toDouble())
                 s += HELPER_CYCLE
             }
         }

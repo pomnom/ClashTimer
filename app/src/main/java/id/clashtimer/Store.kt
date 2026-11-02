@@ -224,7 +224,7 @@ object Store {
             .remove("cwl_auto_$tag").remove("gpdet_b_$tag").remove("gpdet_r_$tag").remove("bob_$tag")
             .remove("pins_$tag").remove("hides_$tag").remove("api_stats_$tag")
             .remove("hist_$tag").remove("ulog_$tag").remove("hist_start_$tag").remove("ore_$tag").remove("opt_$tag")
-            .remove("sessrem_$tag")
+            .remove("sessrem_$tag").remove("gp_pts_$tag").remove("gp_rate_$tag").remove("fix_$tag")
         VILLAGE_KEYS.forEach { e.remove("${it}_$tag") }
         e.commit()
         if (selectedTag(ctx) == tag) prefs(ctx).edit().remove("selected_tag").apply()
@@ -543,6 +543,83 @@ object Store {
             .putInt("plan_version", prefs(ctx).getInt("plan_version", 0) + 1).commit()
 
     /** Musim Gold Pass (dari API, sama untuk semua akun). */
+    // ---------------------------------------------------------------- Gold Pass bertahap (poin track)
+
+    /** Ambang poin boost 15% / 20% musim ini (sama untuk semua desa). */
+    fun gpTrack(ctx: Context): id.clashtimer.core.GpTrack = runCatching {
+        val o = JSONObject(prefs(ctx).getString("gp_track", null) ?: return id.clashtimer.core.GpTrack.DEFAULT)
+        id.clashtimer.core.GpTrack(o.getInt("r15"), o.getInt("b15"), o.getInt("r20"), o.getInt("b20"))
+    }.getOrDefault(id.clashtimer.core.GpTrack.DEFAULT)
+
+    fun setGpTrack(ctx: Context, t: id.clashtimer.core.GpTrack) = prefs(ctx).edit().putString(
+        "gp_track", JSONObject().put("r15", t.r15).put("b15", t.b15).put("r20", t.r20).put("b20", t.b20).toString(),
+    ).putInt("plan_version", planVersion(ctx) + 1).apply()
+
+    // ---------------------------------------------------------------- koreksi sisa waktu
+
+    /** Sisa waktu yang dikoreksi pengguna: uid timer → (kapan, sisa detik seperti di game). Dihapus saat import. */
+    fun fixes(ctx: Context, tag: String): Map<String, Pair<Long, Long>> = runCatching {
+        val o = JSONObject(prefs(ctx).getString("fix_$tag", "{}"))
+        o.keys().asSequence().associateWith { k -> o.getJSONArray(k).let { it.getLong(0) to it.getLong(1) } }
+    }.getOrDefault(emptyMap())
+
+    fun setFix(ctx: Context, tag: String, uid: String, at: Long, remainingSec: Long) {
+        val o = runCatching { JSONObject(prefs(ctx).getString("fix_$tag", "{}")) }.getOrDefault(JSONObject())
+        o.put(uid, JSONArray().put(at).put(remainingSec))
+        prefs(ctx).edit().putString("fix_$tag", o.toString()).putInt("plan_version", planVersion(ctx) + 1).apply()
+    }
+
+    fun clearFixes(ctx: Context, tag: String) = prefs(ctx).edit().remove("fix_$tag").apply()
+
+    /** Poin Gold Pass yang diisi pengguna (waktu, poin) — hanya musim ini. */
+    fun gpPoints(ctx: Context, tag: String): List<Pair<Long, Int>> {
+        val start = goldPassStart(ctx)
+        return runCatching {
+            val a = JSONArray(prefs(ctx).getString("gp_pts_$tag", "[]"))
+            (0 until a.length()).map { a.getJSONArray(it).let { e -> e.getLong(0) to e.getInt(1) } }
+        }.getOrDefault(emptyList()).filter { it.first >= start }.sortedBy { it.first }
+    }
+
+    fun addGpPoints(ctx: Context, tag: String, points: Int) {
+        val list = (gpPoints(ctx, tag) + (System.currentTimeMillis() to points)).takeLast(12)
+        val a = JSONArray()
+        for ((t, p) in list) a.put(JSONArray().put(t).put(p))
+        prefs(ctx).edit().putString("gp_pts_$tag", a.toString()).putInt("plan_version", planVersion(ctx) + 1).apply()
+    }
+
+    /** Poin per hari yang diisi pengguna (0 = otomatis dari riwayat poin). */
+    fun gpRateManual(ctx: Context, tag: String): Int = prefs(ctx).getInt("gp_rate_$tag", 0)
+    fun setGpRateManual(ctx: Context, tag: String, perDay: Int) =
+        prefs(ctx).edit().putInt("gp_rate_$tag", perDay).putInt("plan_version", planVersion(ctx) + 1).apply()
+
+    /** Perkiraan poin per hari: isian pengguna, atau dari dua catatan poin yang berjarak ≥ 1 hari, atau 90. */
+    fun gpRate(ctx: Context, tag: String): Double {
+        gpRateManual(ctx, tag).takeIf { it > 0 }?.let { return it.toDouble() }
+        val pts = gpPoints(ctx, tag)
+        val last = pts.lastOrNull() ?: return GP_DEFAULT_RATE
+        val first = pts.firstOrNull { last.first - it.first >= DAY_MS } ?: return GP_DEFAULT_RATE
+        val days = (last.first - first.first).toDouble() / DAY_MS
+        return ((last.second - first.second) / days).takeIf { it > 0 } ?: GP_DEFAULT_RATE
+    }
+
+    private const val GP_DEFAULT_RATE = 90.0
+    private const val DAY_MS = 86_400_000L
+
+    /**
+     * Gold Pass dengan kenaikan 15% / 20% yang diperkirakan dari poin terakhir (bila diisi musim ini dan
+     * desa punya Gold Pass). Persen sekarang = yang terbesar dari isian/deteksi dan perkiraan dari poin.
+     */
+    private fun staged(ctx: Context, tag: String?, base: GoldPass): GoldPass {
+        if (tag == null || (base.builderPct == 0 && base.researchPct == 0)) return base
+        val last = gpPoints(ctx, tag).lastOrNull() ?: return base
+        val track = gpTrack(ctx)
+        val steps = track.steps(last.second, last.first, gpRate(ctx, tag), goldPassEnd(ctx))
+        val all = GoldPass(maxOf(base.builderPct, track.builderAt(last.second)), maxOf(base.researchPct, track.researchAt(last.second)), steps)
+        val now = System.currentTimeMillis()
+        val cur = all.at(now)
+        return GoldPass(cur.builderPct, cur.researchPct, steps.filter { it.at > now })
+    }
+
     fun goldPassEnd(ctx: Context): Long = prefs(ctx).getLong("gp_end", 0L)
     fun setGoldPassEnd(ctx: Context, end: Long) = prefs(ctx).edit().putLong("gp_end", end).commit()
     fun goldPassStart(ctx: Context): Long = prefs(ctx).getLong("gp_start", 0L)
@@ -727,7 +804,7 @@ object Store {
         // Dengan API: ikut CWL atau tidak ditentukan otomatis (roster clan & war preference).
         val auto = if (tag != null) cwlAuto(ctx, tag) else null
         val cwl = CwlRule(auto?.counts ?: getBool(ctx, "cwl_on", true, tag), 1, 8, getInt(ctx, "cwl_days", 11, tag), known)
-        val gold = GoldPass(getInt(ctx, "gp_builder", 0, tag), getInt(ctx, "gp_research", 0, tag))
+        val gold = staged(ctx, tag, GoldPass(getInt(ctx, "gp_builder", 0, tag), getInt(ctx, "gp_research", 0, tag)))
         val strategy = runCatching { Strategy.valueOf(getStr(ctx, "strategy", "MAX", tag)) }.getOrDefault(Strategy.MAX)
         val bbChosen = runCatching { BBStrategy.valueOf(getStr(ctx, "bb_strategy", "SIXTH", tag)) }.getOrDefault(BBStrategy.SIXTH)
         // B.O.B sudah terbuka: jalur builder ke-6 selesai, jadi otomatis Max.

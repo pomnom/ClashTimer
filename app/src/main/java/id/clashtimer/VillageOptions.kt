@@ -251,7 +251,8 @@ object VillageOptions {
                 LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(act, 1)))
             col.addView(r, Ui.matchWrap())
         }
-        row("Gold Pass", goldAuto(act, tag, ps, bb), goldLabel(ps, bb).let { if (it.endsWith("%") && !bb && !it.contains("·")) "Builder $it · Riset $it" else it } + gpEnd(act)) { pickGoldPass(act, tag) }
+        row("Gold Pass", goldAuto(act, tag, ps, bb), goldLabel(ps, bb).let { if (it.endsWith("%") && !bb && !it.contains("·")) "Builder $it · Riset $it" else it } +
+            (stepsText(act, tag)?.let { " · naik: " + it.substringBefore(" · ") } ?: gpEnd(act))) { pickGoldPass(act, tag) }
         if (bb) row("Builder Builder Base", false, if (ps.bbBuilders > 0) "${ps.bbBuilders} builder" else "otomatis dari export") { pickBbBuilders(act, tag) }
         else row("CWL", Store.cwlAuto(act, tag) != null, cwlLabel(act, tag, ps)) { pickCwl(act, tag) }
         val sw = androidx.appcompat.widget.SwitchCompat(act).apply {
@@ -392,6 +393,103 @@ object VillageOptions {
             .show()
     }
 
+    /** "Builder 15% ±Rab 4 Nov · Research 20% ±Sen 9 Nov" dari kenaikan yang diperkirakan. */
+    fun stepsText(act: MainActivity, tag: String): String? {
+        val g = Store.planSettings(act, tag).gold
+        if (g.steps.isEmpty()) return null
+        val now = System.currentTimeMillis()
+        var b = g.builderPct
+        var r = g.researchPct
+        val parts = ArrayList<String>()
+        for (s in g.steps) {
+            val at = HomeView.short(s.at, now, act.zoneId())
+            if (s.builderPct > b) parts += "Builder ${s.builderPct}% ±$at"
+            if (s.researchPct > r) parts += "Research ${s.researchPct}% ±$at"
+            b = maxOf(b, s.builderPct)
+            r = maxOf(r, s.researchPct)
+        }
+        return parts.joinToString(" · ").ifBlank { null }
+    }
+
+    /** Bagian "Naik bertahap": poin track sekarang → kapan boost 15% / 20% terbuka. */
+    private fun staged(act: MainActivity, col: LinearLayout, tag: String, stored: id.clashtimer.core.GoldPass, refresh: () -> Unit) {
+        col.addView(Ui.text(act, "📈 Naik bertahap (poin track)", Ui.BODY_M).apply { setPadding(0, Ui.dp(act, 16), 0, Ui.dp(act, 2)) })
+        val track = Store.gpTrack(act)
+        val last = Store.gpPoints(act, tag).lastOrNull()
+        val zone = java.time.ZoneId.systemDefault()
+        val now = System.currentTimeMillis()
+        val text = when {
+            stored.builderPct == 0 && stored.researchPct == 0 ->
+                "Pilih persen di atas dulu (akun ini punya Gold Pass), lalu isi poin track supaya 15% & 20% dihitung otomatis."
+            last == null ->
+                "Boost 15% terbuka di ${track.r15} (Research) & ${track.b15} poin (Builder), 20% di ${track.r20} & ${track.b20} poin. " +
+                    "Isi poin track sekarang: rencana memakai persen yang naik di perkiraan tanggalnya."
+            else -> {
+                val g = Store.planSettings(act, tag).gold
+                val rate = Store.gpRate(act, tag).toInt()
+                val auto = Store.gpRateManual(act, tag) == 0
+                "Poin ${last.second} (${HomeView.short(last.first, now, zone)}) · ±$rate poin/hari" + (if (auto) " (perkiraan)" else "") +
+                    "\nSekarang: Builder ${g.builderPct}% · Research ${g.researchPct}%" +
+                    (stepsText(act, tag)?.let { "\nNaik: $it" } ?: "\nSudah 20% semua, atau musim berakhir sebelum ambang berikutnya.")
+            }
+        }
+        col.addView(Ui.muted(act, text))
+        if (stored.builderPct == 0 && stored.researchPct == 0) return
+        val row = Ui.hbox(act).apply { setPadding(0, Ui.dp(act, 6), 0, 0) }
+        fun btn(label: String, onClick: () -> Unit) {
+            row.addView(Ui.outlined(act, label, onClick).apply { isAllCaps = false; minWidth = 0; minimumWidth = 0 },
+                Ui.weight1().apply { if (row.childCount > 0) marginStart = Ui.dp(act, 4) })
+        }
+        btn("Isi poin") {
+            numbers(act, "Poin Gold Pass sekarang", listOf("poin" to (last?.second ?: 0))) { v ->
+                Store.addGpPoints(act, tag, v[0])
+                refresh()
+            }
+        }
+        btn("Poin/hari") {
+            numbers(act, "Poin per hari (0 = otomatis)", listOf("poin/hari" to Store.gpRateManual(act, tag))) { v ->
+                Store.setGpRateManual(act, tag, v[0])
+                refresh()
+            }
+        }
+        btn("Ambang") {
+            numbers(act, "Ambang poin musim ini (semua desa)", listOf(
+                "Research 15%" to track.r15, "Builder 15%" to track.b15, "Research 20%" to track.r20, "Builder 20%" to track.b20,
+            )) { v ->
+                Store.setGpTrack(act, id.clashtimer.core.GpTrack(v[0], v[1], v[2], v[3]))
+                refresh()
+            }
+        }
+        col.addView(row)
+    }
+
+    /** Dialog isian angka sederhana. */
+    private fun numbers(act: MainActivity, title: String, fields: List<Pair<String, Int>>, onSave: (List<Int>) -> Unit) {
+        val box = Ui.vbox(act).apply { setPadding(Ui.dp(act, 24), Ui.dp(act, 8), Ui.dp(act, 24), 0) }
+        val edits = fields.map { (label, value) ->
+            val line = Ui.hbox(act)
+            line.addView(Ui.text(act, label, Ui.BODY_M), Ui.weight1())
+            val e = android.widget.EditText(act).apply {
+                inputType = android.text.InputType.TYPE_CLASS_NUMBER
+                setText(value.toString())
+                setSelectAllOnFocus(true)
+                gravity = android.view.Gravity.END
+                minEms = 4
+            }
+            line.addView(e)
+            box.addView(line, Ui.matchWrap())
+            e
+        }
+        MaterialAlertDialogBuilder(act)
+            .setTitle(title)
+            .setView(box)
+            .setPositiveButton("Simpan") { _, _ ->
+                onSave(edits.mapIndexed { i, e -> e.text.toString().trim().toIntOrNull()?.coerceAtLeast(0) ?: fields[i].second })
+            }
+            .setNegativeButton("Batal", null)
+            .show()
+    }
+
     /** Builder Boost & Research Boost dalam satu dialog. */
     fun pickGoldPass(act: MainActivity, tag: String) {
         val col = Ui.vbox(act).apply { setPadding(Ui.dp(act, 20), Ui.dp(act, 4), Ui.dp(act, 20), 0) }
@@ -399,7 +497,8 @@ object VillageOptions {
         lateinit var fill: () -> Unit
         fill = {
             col.removeAllViews()
-            val gold = Store.planSettings(act, tag).gold
+            // Nilai yang tersimpan (deteksi / pilihan manual), tanpa perkiraan kenaikan dari poin.
+            val gold = id.clashtimer.core.GoldPass(Store.getInt(act, "gp_builder", 0, tag), Store.getInt(act, "gp_research", 0, tag))
             val zone = java.time.ZoneId.systemDefault()
             val seasonStart = Store.goldPassStart(act)
             fun line(label: String, d: Store.GoldDetected?): String = when {
@@ -439,11 +538,12 @@ object VillageOptions {
             col.addView(Ui.muted(act, "Ubah manual: lihat persentasenya di menu Gold Pass akun ini. Hanya untuk ${name(act, tag)}.").apply {
                 setPadding(0, Ui.dp(act, 8), 0, 0)
             })
+            staged(act, col, tag, gold) { fill() }
         }
         fill()
         MaterialAlertDialogBuilder(act)
             .setTitle("🎫 Gold Pass · ${name(act, tag)}")
-            .setView(col)
+            .setView(android.widget.ScrollView(act).apply { addView(col) })
             .setPositiveButton("Selesai", null)
             .setOnDismissListener { act.dataChanged() }
             .show()

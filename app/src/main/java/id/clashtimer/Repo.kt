@@ -93,6 +93,7 @@ object Repo {
         val events = Store.events(ctx)
         val done = Store.done(ctx, tag)
         val cancelled = Store.cancelled(ctx, tag)
+        val fixes = Store.fixes(ctx, tag)
         val list = ArrayList<Upgrade>()
         val finishes = HashMap<String, Long>()
 
@@ -100,7 +101,7 @@ object Repo {
             if (t.uid in cancelled) continue
             if (t.gear) {
                 // Gear-up: Master Builder bekerja di Home Village; tidak ikut potion / Clock Tower.
-                val base = v.exportAt + t.remaining * 1000
+                val base = fixes[t.uid]?.let { it.first + it.second * 1000 } ?: (v.exportAt + t.remaining * 1000)
                 val doneAt = done[t.uid]
                 val finish = doneAt ?: base
                 finishes[t.uid] = finish
@@ -113,16 +114,21 @@ object Repo {
                 continue
             }
             val helper = Projector.helperFor(v, t.lane, t.helped)
-            val cuts = Events.cutsFor(events, t.lane, v.exportAt)
-            val p = Projector.project(v.exportAt, t.remaining, t.lane, boosts, helper, cuts)
+            // Sisa waktu yang dikoreksi pengguna menggantikan sisa dari export.
+            val fix = fixes[t.uid]
+            val from = fix?.first ?: v.exportAt
+            val remain = fix?.second ?: t.remaining
+            val cuts = Events.cutsFor(events, t.lane, from)
+            val p = Projector.project(from, remain, t.lane, boosts, helper, cuts)
             val doneAt = done[t.uid]
             val finish = doneAt ?: p.finishAt
             finishes[t.uid] = finish
-            val noBoost = Projector.project(v.exportAt, t.remaining, t.lane, emptyList(), helper, cuts).finishAt
-            val noCut = if (cuts.isEmpty()) p.finishAt else Projector.project(v.exportAt, t.remaining, t.lane, boosts, helper).finishAt
+            val noBoost = Projector.project(from, remain, t.lane, emptyList(), helper, cuts).finishAt
+            val noCut = if (cuts.isEmpty()) p.finishAt else Projector.project(from, remain, t.lane, boosts, helper).finishAt
             val notes = ArrayList<String>()
             if (doneAt != null) notes += "Ditandai selesai lebih awal"
             else {
+                if (fix != null) notes += "Sisa waktu dikoreksi ${Fmt.at(fix.first, zone)}"
                 if (p.helperSessions.isNotEmpty()) {
                     notes += "🧑‍🔧 dibantu ${helperName(t.lane)} ${p.helperSessions.size}× (perkiraan) · tanpa helper ${Fmt.at(p.baseFinishAt, zone)}"
                 }
@@ -131,7 +137,7 @@ object Repo {
             }
             // Waktu di game sebelum tiap sesi helper berikutnya (game belum menghitung sesi yang belum mulai).
             val steps = if (doneAt != null || helper == null) emptyList() else p.helperSessions.map { s ->
-                s to Projector.project(v.exportAt, t.remaining, t.lane, boosts, helper, cuts, sessionsBefore = s).finishAt
+                s to Projector.project(from, remain, t.lane, boosts, helper, cuts, sessionsBefore = s).finishAt
             }
             list += Upgrade(
                 id = t.uid, tag = tag, kind = Kind.of(t.lane), name = t.name,
@@ -145,7 +151,7 @@ object Repo {
             if (st.uid in cancelled) continue
             val doneAt = done[st.uid]
             if (st.gear) {
-                val finish = doneAt ?: st.finish
+                val finish = doneAt ?: fixes[st.uid]?.let { it.first + it.second * 1000 } ?: st.finish
                 finishes[st.uid] = finish
                 list += Upgrade(
                     id = st.uid, tag = tag, kind = Kind.BB_BUILDER, name = st.name,
@@ -155,11 +161,14 @@ object Repo {
                 )
                 continue
             }
-            val p = Projector.project(st.start, st.durationSec, st.lane, boosts, null, Events.cutsFor(events, st.lane, st.start))
+            val fix = fixes[st.uid]
+            val p = if (fix != null) Projector.project(fix.first, fix.second, st.lane, boosts, null, Events.cutsFor(events, st.lane, fix.first))
+            else Projector.project(st.start, st.durationSec, st.lane, boosts, null, Events.cutsFor(events, st.lane, st.start))
             val finish = doneAt ?: p.finishAt
             finishes[st.uid] = finish
             val note = when {
                 doneAt != null -> "Ditandai selesai lebih awal"
+                fix != null -> "Dimulai di aplikasi · sisa waktu dikoreksi ${Fmt.at(fix.first, zone)}"
                 st.finish - p.finishAt > 60_000 -> "Dimulai di aplikasi · ⚡ dipercepat ${Fmt.dur(st.finish - p.finishAt)}"
                 else -> "Dimulai di aplikasi"
             }
@@ -240,6 +249,7 @@ object Repo {
         Store.setDone(ctx, tag, emptyMap())
         Store.setCancelled(ctx, tag, emptyMap())
         Store.setBumps(ctx, tag, emptyList())
+        Store.clearFixes(ctx, tag) // export baru membawa sisa waktu yang tepat
         Store.setBoosts(ctx, tag, boostsFromExport(ctx, tag, v, Boosts.afterImport(Store.boosts(ctx, tag), v.exportAt)))
         // Upgrade yang ditandai dimulai sebelum export sudah tercakup di export.
         Store.setStarted(ctx, tag, Store.started(ctx, tag).filter { it.start > v.exportAt })
@@ -497,7 +507,7 @@ object Repo {
         // Urutan tercepat ke target strategi: dicari ulang bila data / pengaturan berubah (atau tiap 6 jam),
         // selain itu memakai hasil terakhir (satu simulasi saja).
         val sig = listOf(Store.planVersion(ctx), v.exportAt, fin.size, fin.values.sum(), ps0.strategy, ps0.bbStrategy,
-            ps0.gold.builderPct, ps0.gold.researchPct, bb != null).joinToString("|")
+            ps0.gold.builderPct, ps0.gold.researchPct, ps0.gold.steps.joinToString(",") { "${it.at / 3_600_000L}" }, bb != null).joinToString("|")
         val cached = Store.optCache(ctx, tag)?.takeIf { it.sig == sig && now - it.at in 0..6 * 3_600_000L }
         val ps: PlanSettings
         val simHome: SimResult

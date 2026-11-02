@@ -156,7 +156,45 @@ object Events {
 }
 
 /** Diskon Gold Pass (Builder Boost & Research Boost), dengan pembulatan seperti di game. */
-data class GoldPass(val builderPct: Int, val researchPct: Int) {
+/** Gold Pass naik di tengah musim (poin track): mulai [at], boost menjadi [builderPct] / [researchPct]. */
+data class GpStep(val at: Long, val builderPct: Int, val researchPct: Int)
+
+/**
+ * Track Gold Pass musim ini: poin yang dibutuhkan untuk Research/Builder Boost 15% dan 20%
+ * (boost 10% terbuka di awal track begitu Gold Pass dibeli).
+ */
+data class GpTrack(val r15: Int, val b15: Int, val r20: Int, val b20: Int) {
+    fun builderAt(points: Int) = when { points >= b20 -> 20; points >= b15 -> 15; else -> 10 }
+    fun researchAt(points: Int) = when { points >= r20 -> 20; points >= r15 -> 15; else -> 10 }
+
+    /** Kapan tiap ambang tercapai dari [points] poin pada [at] dengan [perDay] poin per hari (sebelum [end]). */
+    fun steps(points: Int, at: Long, perDay: Double, end: Long): List<GpStep> {
+        if (perDay <= 0) return emptyList()
+        val out = ArrayList<GpStep>()
+        for (p in listOf(r15, b15, r20, b20).filter { it > points }.distinct().sorted()) {
+            val t = at + ((p - points) / perDay * DAY).toLong()
+            if (end > 0 && t >= end) break
+            out += GpStep(t, builderAt(p), researchAt(p))
+        }
+        return out
+    }
+
+    companion object {
+        /** Musim Clash of Titans (November 2026). */
+        val DEFAULT = GpTrack(580, 640, 1000, 1060)
+    }
+}
+
+data class GoldPass(val builderPct: Int, val researchPct: Int, val steps: List<GpStep> = emptyList()) {
+    /** Gold Pass yang berlaku pada [t] (setelah kenaikan yang sudah tercapai). */
+    fun at(t: Long): GoldPass {
+        if (steps.isEmpty()) return this
+        var b = builderPct
+        var r = researchPct
+        for (s in steps) if (s.at <= t) { b = maxOf(b, s.builderPct); r = maxOf(r, s.researchPct) }
+        return GoldPass(b, r)
+    }
+
     fun pctFor(lane: Lane): Int = when (lane) {
         Lane.BUILDER, Lane.BB_BUILDER -> builderPct
         Lane.LAB, Lane.PET -> researchPct

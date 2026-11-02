@@ -309,8 +309,15 @@ object Notifier {
                 )
             }
         }
-        post(ctx, id, KEY_DONE, "${u.kind.emoji} ${u.title()}", body, openApp(ctx, u.tag, u.kind.builderBase, id), actions)
+        // Sesi login yang diingatkan (lonceng) pada saat yang sama sudah berbunyi: yang ini cukup masuk tanpa suara.
+        val covered = coveredBySession(ctx, u)
+        post(ctx, id, KEY_DONE, "${u.kind.emoji} ${u.title()}", body, openApp(ctx, u.tag, u.kind.builderBase, id), actions, silent = covered)
     }
+
+    /** Upgrade [u] selesai tepat di sesi login yang diingatkan (lonceng): pengingat sesi yang berbunyi. */
+    fun coveredBySession(ctx: Context, u: Upgrade): Boolean =
+        u.tag.isNotBlank() && u.kind != Kind.REMINDER &&
+            Store.sessionReminders(ctx, u.tag).any { u.finishAt in (it.at - 60_000L)..(it.at + 5 * 60_000L) }
 
     /** Ganti notifikasi [id] dengan konfirmasi tanpa suara. */
     fun info(ctx: Context, id: Int, title: String, body: String, tag: String?, bb: Boolean) {
@@ -355,10 +362,13 @@ object Notifier {
         content: PendingIntent = openApp(ctx),
         actions: List<Pair<String, PendingIntent>> = emptyList(),
         allowQuiet: Boolean = true,
+        /** Tanpa suara (mis. sudah tercakup pengingat sesi login), tanpa ikut ringkasan jam istirahat. */
+        silent: Boolean = false,
     ) {
         if (!canNotify(ctx)) return
         createChannels(ctx)
-        if (allowQuiet && isQuiet(ctx)) {
+        val quiet = allowQuiet && isQuiet(ctx)
+        if (quiet || silent) {
             // Jam istirahat: masuk ke panel tanpa bunyi; diringkas sekali saat jam istirahat selesai.
             val n = NotificationCompat.Builder(ctx, QUIET_CHANNEL)
                 .setSmallIcon(R.drawable.ic_notif)
@@ -371,7 +381,7 @@ object Notifier {
                 .setContentIntent(content)
                 .setWhen(System.currentTimeMillis())
             for ((label, pi) in actions) n.addAction(R.drawable.ic_notif, label, pi)
-            Store.addQuietPending(ctx, title)
+            if (quiet && !silent) Store.addQuietPending(ctx, title)
             try {
                 NotificationManagerCompat.from(ctx).notify(id, n.build())
             } catch (_: SecurityException) {

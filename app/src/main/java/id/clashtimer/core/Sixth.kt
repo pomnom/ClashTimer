@@ -187,7 +187,10 @@ object Sixth {
         }
         // Builder Hall 9. Bangunan & jebakan baru harus dipasang dulu sebelum Builder Hall bisa naik.
         if (bh < 9 && control(v) == 0) {
-            all.filter { it.isNew && (it.item.cat == Cat.BB_BUILDING || it.item.cat == Cat.BB_TRAP) && it.item.id != GameData.BOB_CONTROL }
+            all.filter {
+                it.isNew && (it.item.cat == Cat.BB_BUILDING || it.item.cat == Cat.BB_TRAP) && it.item.id != GameData.BOB_CONTROL &&
+                    it.item.instances.isEmpty() // kamp pasukan tidak dibutuhkan untuk naik hall
+            }
                 .forEach { add(it, T_PLACE) }
             all.firstOrNull { it.item.id == GameData.BUILDER_HALL }?.let { add(it, T_HALL) }
         }

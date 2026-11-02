@@ -437,10 +437,13 @@ object HomeView {
     fun progress(u: Upgrade, gd: GameData, now: Long): Double? {
         val itemId = Repo.itemIdOf(u.id)
         val gear = u.id.contains("|gear|")
-        val total = if (gear) Sixth.rules.firstOrNull { it.homeId == itemId }?.durationSec ?: 0L
-        else itemId?.let { gd.item(it) }?.lv(u.targetLevel)?.time ?: 0L
-        if (total <= 0) return null
         val rem = (u.finishAt - now) / 1000.0
+        val item = itemId?.let { gd.item(it) }
+        val total = if (gear) Sixth.rules.firstOrNull { it.homeId == itemId }?.durationSec ?: 0L
+        else item?.lv(u.targetLevel)?.time?.takeIf { it > 0 }
+            ?: item?.buildTimeFor(rem.toLong()) // kamp pasukan BB: lama menurut bangunan ke-N
+            ?: 0L
+        if (total <= 0) return null
         return (1 - rem / total).coerceIn(0.02, 0.99)
     }
 

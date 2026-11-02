@@ -54,7 +54,8 @@ class AlarmReceiver : BroadcastReceiver() {
                 ) {
                     val left = ((u.finishAt - now + 59_999) / 60_000).toInt().coerceAtLeast(1)
                     // Jam istirahat: pengingat "sebentar lagi" dilewati (yang selesai tetap masuk tanpa suara).
-                    if (!quiet) Notifier.early(ctx, u, left)
+                    // Sesi login yang diingatkan: cukup pengingat sesinya.
+                    if (!quiet && !Notifier.coveredBySession(ctx, u)) Notifier.early(ctx, u, left)
                     u.earlyNotified = true
                     changed = true
                 }

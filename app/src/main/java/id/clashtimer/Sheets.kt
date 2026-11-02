@@ -91,6 +91,24 @@ object Sheets {
         return wrap
     }
 
+    /**
+     * Hitung mundur yang terus berjalan selama [tv] tampil (tidak bergantung pada penyegaran layar di
+     * belakang lembar).
+     */
+    fun live(tv: TextView, target: Long, text: (Long) -> String) {
+        val r = object : Runnable {
+            override fun run() {
+                val left = target - System.currentTimeMillis()
+                tv.text = text(left)
+                if (left > 0) tv.postDelayed(this, 1000 - (System.currentTimeMillis() % 1000))
+            }
+        }
+        tv.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) { tv.removeCallbacks(r); r.run() }
+            override fun onViewDetachedFromWindow(v: View) { tv.removeCallbacks(r) }
+        })
+    }
+
     /** Kotak angka kecil: "Sisa / 1h 22j". */
     fun stat(act: MainActivity, label: String, value: String, valueColor: Int = Ui.TEXT): Pair<LinearLayout, TextView> {
         val box = Ui.panel(act, padH = 10, padV = 8, color = Ui.SURFACE2, radiusDp = 12)
@@ -180,14 +198,14 @@ object DetailSheet {
             if (done) add(Sheets.stat(act, "Status", "Selesai", Ui.FREE))
             else {
                 val sisa = Sheets.stat(act, "Sisa", act.countdown(u.finishAt - now))
-                act.registerCountdown(sisa.second, u.finishAt, clockStyle = false)
+                Sheets.live(sisa.second, u.finishAt) { if (it > 0) act.countdown(it) else "selesai" }
                 add(sisa)
             }
             add(Sheets.stat(act, "Selesai", HomeView.short(u.finishAt, now, zone)))
             val game = u.gameFinishAt(now)
             if (!done && game - u.finishAt >= 60_000L && game > now) {
                 val g = Sheets.stat(act, "Di game", act.countdown(game - now), Ui.TEXT2)
-                act.registerCountdown(g.second, game, clockStyle = false)
+                Sheets.live(g.second, game) { if (it > 0) act.countdown(it) else "selesai" }
                 add(g)
             }
             col.addView(grid, Ui.matchWrap())
@@ -215,6 +233,11 @@ object DetailSheet {
                     dismiss(); act.openItems(u.tag)
                 })
             }
+            if (!done && u.kind != Kind.REMINDER && u.kind != Kind.HELPER && Store.exportText(act, u.tag) != null) {
+                acts.addView(Sheets.action(act, "Ubah sisa waktu", "isi sisa waktu yang terlihat di game") {
+                    dismiss(); editRemaining(act, u)
+                })
+            }
             if (itemId != null && !gear) {
                 val pins = Store.pins(act, u.tag)
                 val pinned = itemId in pins
@@ -233,6 +256,52 @@ object DetailSheet {
             })
             col.addView(acts, Ui.matchWrap())
         }
+    }
+
+    /** Koreksi sisa waktu: isi seperti yang terlihat di game (hari, jam, menit). Berlaku sampai import berikutnya. */
+    fun editRemaining(act: MainActivity, u: Upgrade) {
+        val now = System.currentTimeMillis()
+        val left = ((u.gameFinishAt(now) - now) / 1000).coerceAtLeast(0)
+        val row = Ui.hbox(act).apply { setPadding(Ui.dp(act, 20), Ui.dp(act, 8), Ui.dp(act, 20), 0) }
+        fun field(label: String, value: Long): android.widget.EditText {
+            val c = Ui.vbox(act)
+            val e = android.widget.EditText(act).apply {
+                inputType = android.text.InputType.TYPE_CLASS_NUMBER
+                setText(value.toString())
+                gravity = Gravity.CENTER
+                setSelectAllOnFocus(true)
+                textSize = 20f
+            }
+            c.addView(e, Ui.matchWrap())
+            c.addView(Ui.muted(act, label).apply { gravity = Gravity.CENTER }, Ui.matchWrap())
+            row.addView(c, Ui.weight1().apply { if (row.childCount > 0) marginStart = Ui.dp(act, 8) })
+            return e
+        }
+        val d = field("hari", left / 86_400)
+        val h = field("jam", left % 86_400 / 3600)
+        val m = field("menit", left % 3600 / 60)
+        val box = Ui.vbox(act)
+        box.addView(row)
+        box.addView(Ui.muted(act, "Lihat sisa waktu upgrade ini di game lalu isi di sini. Helper & potion berikutnya tetap " +
+            "diperhitungkan. Berlaku sampai import berikutnya.").apply { setPadding(Ui.dp(act, 24), Ui.dp(act, 10), Ui.dp(act, 24), 0) })
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(act)
+            .setTitle("Sisa waktu · ${u.title()}")
+            .setView(box)
+            .setPositiveButton("Simpan") { _, _ ->
+                fun n(e: android.widget.EditText) = e.text.toString().trim().toLongOrNull()?.coerceAtLeast(0) ?: 0L
+                val sec = n(d) * 86_400 + n(h) * 3600 + n(m) * 60
+                if (sec <= 0) {
+                    act.markUpgrade(u, true)
+                    return@setPositiveButton
+                }
+                Store.setFix(act, u.tag, u.id, System.currentTimeMillis(), sec)
+                Repo.reproject(act, u.tag)
+                act.dataChanged()
+                val fin = Store.upgrades(act).firstOrNull { it.id == u.id }?.finishAt
+                act.snack("Sisa waktu diperbarui" + (fin?.let { " · selesai ${HomeView.short(it, System.currentTimeMillis(), act.zoneId())}" } ?: ""))
+            }
+            .setNegativeButton("Batal", null)
+            .show()
     }
 
     private fun potionFor(k: Kind): MagicItem? = when {

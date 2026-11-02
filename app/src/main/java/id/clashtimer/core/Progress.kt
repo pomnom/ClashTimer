@@ -137,7 +137,8 @@ object ProgressCalc {
             val max = item.maxLevelFor(hall)
             if (max <= 0) continue
             val first = firstCounted(item)
-            val insts = byItem[id].orEmpty()
+            // Kamp pasukan BB: bangunan yang sudah jadi = urutan awal, yang sedang dibangun = berikutnya.
+            val insts = byItem[id].orEmpty().let { l -> if (item.instances.isEmpty()) l else l.sortedByDescending { it.level } }
             val allowedN = when (item.cat) {
                 Cat.BUILDING, Cat.TRAP, Cat.BB_BUILDING, Cat.BB_TRAP -> maxOf(Planner.allowed(v, gd, id, hall, bb), insts.size)
                 else -> maxOf(1, insts.size)
@@ -153,7 +154,7 @@ object ProgressCalc {
                 val cur = inst?.level ?: 0
                 levelCounts[cur] = (levelCounts[cur] ?: 0) + 1
                 for (l in first..max) {
-                    val lv = item.lv(l) ?: continue
+                    val lv = (if (l == 1 && item.instances.isNotEmpty()) item.build(k + 1) else item.lv(l)) ?: continue
                     val t = gold.apply(lv.time, item.lane)
                     a.total += t
                     a.totalLv += 1

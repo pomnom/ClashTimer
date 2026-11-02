@@ -29,7 +29,10 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
   **Batalkan** di pesan bawah; **Opsi lain** membuka semua pilihan dengan filter (pas bangun, hero,
   pertahanan, murah)
 - **Sedang bekerja**: ikon, label pekerja, hitung mundur & bar progres; ketuk → lembar detail (progres,
-  sisa, waktu di game, tandai selesai, potion, prioritaskan, batalkan). **Baru selesai** dengan tombol ✓
+  sisa, waktu di game, tandai selesai, potion, **ubah sisa waktu** seperti di game — berlaku sampai import
+  berikutnya, prioritaskan, batalkan). **Baru selesai** dengan tombol ✓
+- Lonceng sesi login aktif: notifikasi "selesai" per upgrade di sesi itu (dan pengingat "sebentar lagi")
+  masuk tanpa suara — cukup satu pengingat sesi yang berbunyi
 - Helper (Apprentice, Lab Assistant, Alchemist), Potion & item yang layak dipakai, banner CWL & event
 - Upgrade yang dibantu helper berulang: waktu utama sudah memperhitungkan sesi helper berikutnya (otomatis
   tiap hari), jadi lebih cepat dari timer di game; "Di game" di lembar detail = sisa waktu seperti di game
@@ -148,6 +151,10 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
   ("Semua upgrade TH11 selesai ±7 Feb", "Semua hero max ±7 Des"); Gold Pass & CWL bertanda **OTOMATIS**
   bila terdeteksi; sakelar collector; prioritas & disembunyikan. Semua disimpan **per desa**.
 - Lembar ini juga berisi Update dari export, Ganti nama, Hapus desa, Potion & item, dan Pengaturan.
+- **Gold Pass naik bertahap**: boost 10% terbuka di awal track, 15% dan 20% setelah poin tertentu (musim
+  November 2026: Research 580/1.000, Builder 640/1.060 — bisa diubah di "Ambang"). Isi poin track sekarang
+  di Opsi desa → Gold Pass: aplikasi memperkirakan tanggal tiap ambang tercapai (poin per hari dari riwayat
+  poin, bawaan ±90, atau isi sendiri) dan rencana memakai persen yang naik mulai tanggal itu
 - Jam tidur/kerja, event, ikon, nada & notifikasi (⚙️ Pengaturan) berlaku untuk semua desa.
 
 **⚔️ Pengingat serangan** (butuh API key)
@@ -210,7 +217,7 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
    notifikasi "Unduhan selesai" → Update. File-nya dihapus otomatis setelah build baru dibuka. Data tetap
    aman karena kunci tanda tangan sama. Mengunduh APK manual dari **Releases** tetap bisa.
 - Folder `.github/workflows` tidak ikut diperbarui dari zip (token Actions tidak boleh mengubah file
-  workflow) — bila workflow berubah, salin manual dari `.github/workflows/build-apk.yml`.
+  workflow) — bila workflow berubah, salin manual dari `.github/workflows/build.yml`.
 - **Catatan rilis**: isi `app/src/main/assets/changelog.txt` (`# judul`, lalu `- butir` per perubahan) setiap
   build. Workflow menjadikannya isi rilis di GitHub (tampil di kartu update aplikasi), dan aplikasi
   menampilkannya sekali sebagai "Yang baru" setelah update. Bila file itu tidak berubah, isi rilis

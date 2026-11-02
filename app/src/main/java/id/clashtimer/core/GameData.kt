@@ -68,7 +68,19 @@ class Item(
     /** Jalur ikon di assets.clashk.ing (folder per level, atau file tunggal). */
     val iconPath: String? = null,
     val iconLevels: List<Int> = emptyList(),
+    /**
+     * Bangunan yang waktu & biayanya per bangunan ke-N, bukan per level (Army Camp & Reinforcement Camp
+     * Builder Base). [Lv.level] = urutan bangunan (1 = pertama), [Lv.hall] = Builder Hall minimal.
+     */
+    val instances: List<Lv> = emptyList(),
 ) {
+    /** Waktu & biaya membangun bangunan ke-[n] (1 = pertama). Tanpa [instances]: sama dengan level 1. */
+    fun build(n: Int): Lv? = if (instances.isEmpty()) lv(1) else instances.firstOrNull { it.level == n } ?: instances.lastOrNull()
+
+    /** Perkiraan lama total pembangunan yang masih berjalan dengan sisa [remainingSec] (bangunan ke-N tidak diketahui). */
+    fun buildTimeFor(remainingSec: Long): Long? =
+        instances.filter { it.time >= remainingSec }.minByOrNull { it.time }?.time
+
     /** Jalur ikon untuk level tertentu (dibatasi ke level gambar yang tersedia). */
     fun icon(level: Int): String? {
         val p = iconPath ?: return null
@@ -174,10 +186,14 @@ class GameData(
                 val id = o["id"].int()
                 // Item yang sama bisa muncul di Home & Builder Base (mis. id troop BB) — ambil yang pertama.
                 if (!items.containsKey(id)) {
+                    val instances = o["in"].arr().orEmpty().mapNotNull { l ->
+                        val a = l.arr() ?: return@mapNotNull null
+                        if (a.size < 4) null else Lv(a[0].int(), a[1].long(), a[2].long(), a[3].int(), 0)
+                    }
                     items[id] = Item(
                         id, o["n"].str(), cat, o["t"].str(), o["r"].str(),
                         o["pb"].str(), o["pbl"].int(), levels, merges,
-                        o["ic"]?.str(), o["il"].arr().orEmpty().map { it.int() },
+                        o["ic"]?.str(), o["il"].arr().orEmpty().map { it.int() }, instances,
                     )
                 }
             }

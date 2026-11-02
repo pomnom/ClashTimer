@@ -18,7 +18,8 @@ object Help {
                 "• \"Sudah dimulai\" langsung memasang timer & notifikasi tanpa import ulang; salah pencet? ketuk Batalkan di pesan bawah.\n" +
                 "• \"Opsi lain\" = semua pilihan dengan filter (selesai pas bangun, hero, pertahanan, murah).\n" +
                 "• Hijau \"pas bangun\" = selesai saat Anda bisa langsung mengisinya lagi; oranye = pekerja akan menganggur.\n" +
-                "• Ketuk upgrade yang berjalan → detail, tandai selesai (gem/book), potion, prioritas, atau batal. Tahan lama → prioritaskan / sembunyikan.\n" +
+                "• Ketuk upgrade yang berjalan → detail, tandai selesai (gem/book), potion, ubah sisa waktu (isi seperti di game), prioritas, atau batal. Tahan lama → prioritaskan / sembunyikan.\n" +
+                "• Lonceng sesi login aktif: notifikasi \"selesai\" per upgrade di sesi itu masuk tanpa suara, cukup pengingat sesinya yang berbunyi.\n" +
                 "• Goblin Builder / Researcher (event) tidak dihitung sebagai pekerja tetap.",
         ),
         PLAN(
@@ -76,6 +77,7 @@ object Help {
         OPTIONS(
             "Opsi desa",
             "• Semua opsi di sini hanya untuk desa ini.\n" +
+                "• Gold Pass naik bertahap: isi poin track sekarang di Gold Pass → boost 15% & 20% dipakai rencana mulai perkiraan tanggal tercapainya (dari poin per hari; perbarui poin kapan saja). Ambang poin bisa diubah tiap musim.\n" +
                 "• Terdeteksi otomatis: jumlah builder, helper, B.O.B & gear-up (dari export), Gold Pass (dari lama timer saat import), CWL dan upgrade yang selesai lebih cepat (dari API, bila API key diisi).\n" +
                 "• Strategi & collector sesuai pilihan Anda.",
         ),

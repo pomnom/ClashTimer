@@ -65,7 +65,9 @@ class PlanSettings(
     fun durationAt(c: Candidate, t: Long): Long {
         if (c.gear) return c.duration
         val ev = event(c.lane, t)?.timePct ?: 0
-        return if (ev == 0) c.duration else gold.apply(c.baseDuration, c.lane, ev)
+        // Gold Pass bisa naik di tengah musim (15% / 20% setelah poin tercapai).
+        val g = gold.at(t)
+        return if (ev == 0 && g.pctFor(c.lane) == gold.pctFor(c.lane)) c.duration else g.apply(c.baseDuration, c.lane, ev)
     }
 
     fun costAt(c: Candidate, t: Long): Long {
@@ -499,11 +501,13 @@ object Planner {
                 val item = gd.item(id) ?: continue
                 if (item.cat != Cat.BUILDING && item.cat != Cat.TRAP && item.cat != Cat.BB_BUILDING && item.cat != Cat.BB_TRAP) continue
                 if (item.isWall || item.levels.isEmpty() || item.merges[1] != null) continue
-                val lv1 = item.lv(1) ?: continue
+                // Army Camp / Reinforcement Camp BB: waktu & biaya menurut bangunan ke berapa.
+                val lv1 = item.build(v.count(id) + 1) ?: continue
                 if (lv1.hall > hall) continue
                 val missing = allowed(v, gd, id, hall, bb) - v.count(id)
                 if (missing <= 0) continue
-                placements++
+                // Kamp pasukan tidak menahan Builder Hall (bukan syarat naik hall).
+                if (item.instances.isEmpty()) placements++
                 out += Candidate(lane, item, null, 0, 1, gold.apply(lv1.time, lane), lv1.cost, true, missing,
                     baseDuration = lv1.time)
             }

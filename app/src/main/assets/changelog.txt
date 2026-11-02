@@ -1,4 +1,6 @@
-# Jam istirahat senyap & catatan rilis
-- Jam istirahat: alarm & notifikasi tidak berbunyi saat jam tidur (bisa juga jam kerja); satu ringkasan bersuara saat bangun.
-- Kartu update kini menampilkan daftar perubahan build baru (juga di Pengaturan → Update aplikasi).
-- Setelah update, "Yang baru" tampil sekali.
+# Gold Pass bertahap & perbaikan
+- Gold Pass naik bertahap: isi poin track di Opsi desa → Gold Pass; boost 15% & 20% dipakai rencana mulai perkiraan tanggalnya.
+- Ubah sisa waktu: di lembar detail upgrade, isi sisa waktu seperti di game (berlaku sampai import berikutnya).
+- Lonceng sesi login tidak lagi dobel dengan notifikasi "selesai" per upgrade.
+- Army Camp & Reinforcement Camp Builder Base kini ikut rencana & progres (waktu bangun per kamp).
+- Hitung mundur di lembar detail tetap berjalan.
