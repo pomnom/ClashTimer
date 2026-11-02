@@ -211,6 +211,10 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
    aman karena kunci tanda tangan sama. Mengunduh APK manual dari **Releases** tetap bisa.
 - Folder `.github/workflows` tidak ikut diperbarui dari zip (token Actions tidak boleh mengubah file
   workflow) — bila workflow berubah, salin manual dari `.github/workflows/build-apk.yml`.
+- **Catatan rilis**: isi `app/src/main/assets/changelog.txt` (`# judul`, lalu `- butir` per perubahan) setiap
+  build. Workflow menjadikannya isi rilis di GitHub (tampil di kartu update aplikasi), dan aplikasi
+  menampilkannya sekali sebagai "Yang baru" setelah update. Bila file itu tidak berubah, isi rilis
+  cukup "Perbaikan kecil".
 - Mengedit file langsung di GitHub (tanpa zip) juga langsung dibuatkan APK dari kode di repo.
 
 ## Cara pakai

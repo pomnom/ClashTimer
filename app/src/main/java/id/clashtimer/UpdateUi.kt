@@ -24,7 +24,7 @@ object UpdateUi {
         card.addView(Ui.muted(act, "terpasang build ${Updater.installedBuild(act)} · ${Updater.mb(r.size)}$date").apply { textSize = 13f })
         if (r.notes.isNotBlank()) {
             val lines = r.notes.lines().filter { it.isNotBlank() }
-            card.addView(Ui.muted(act, lines.take(3).joinToString("\n") { "• " + it.trimStart('-', '*', ' ') }).apply {
+            card.addView(Ui.muted(act, lines.take(3).joinToString("\n") { line(it) }).apply {
                 textSize = 13f
                 setTextColor(Ui.TEXT)
                 setPadding(0, Ui.dp(act, 8), 0, 0)
@@ -44,11 +44,15 @@ object UpdateUi {
         box.addView(card, Ui.matchWrap(12, act))
     }
 
+    /** "### Judul" → judul tanpa titik; "- butir" → "• butir". */
+    private fun line(s: String): String =
+        if (s.trimStart().startsWith("#")) s.trimStart('#', ' ') else "• " + s.trimStart('-', '*', ' ')
+
     /** Daftar perubahan dalam dialog. */
     fun notes(act: AppCompatActivity, title: String, lines: List<String>) {
         MaterialAlertDialogBuilder(act)
             .setTitle(title)
-            .setMessage(lines.joinToString("\n") { "• " + it.trimStart('-', '*', ' ') })
+            .setMessage(lines.joinToString("\n") { line(it) })
             .setPositiveButton("OK", null)
             .show()
     }
