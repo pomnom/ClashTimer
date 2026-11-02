@@ -497,7 +497,7 @@ object Widgets {
         val rv = RemoteViews(ctx.packageName, layout)
         val open = Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         rv.setOnClickPendingIntent(R.id.a_root, PendingIntent.getActivity(ctx, 5998, open, FLAGS))
-        // Judul "Semua desa" → tab Desa di aplikasi.
+        // Judul "Semua desa" → lembar Desa anda di aplikasi.
         val villages = Intent(ctx, MainActivity::class.java)
             .setAction("id.clashtimer.OPEN_VILLAGES")
             .putExtra(EXTRA_TAB, "VILLAGES")

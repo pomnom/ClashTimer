@@ -1,6 +1,6 @@
-# Gold Pass bertahap & perbaikan
-- Gold Pass naik bertahap: isi poin track di Opsi desa → Gold Pass; boost 15% & 20% dipakai rencana mulai perkiraan tanggalnya.
-- Ubah sisa waktu: di lembar detail upgrade, isi sisa waktu seperti di game (berlaku sampai import berikutnya).
-- Lonceng sesi login tidak lagi dobel dengan notifikasi "selesai" per upgrade.
-- Army Camp & Reinforcement Camp Builder Base kini ikut rencana & progres (waktu bangun per kamp).
-- Hitung mundur di lembar detail tetap berjalan.
+# Navigasi baru: Dashboard · Tukang · Lab · Progres
+- Dashboard (desa yang dipilih saja): ringkasan strategi, Gold Pass, event & boost, hitung mundur tukang dan lab tercepat, lalu yang bekerja + satu saran.
+- Tukang: Agenda sampai bangun atau Timeline, kartu yang sedang dikerjakan, dan antrian besok dst.
+- Lab: riset berjalan, antrian riset dengan lonceng pengingat atau Timeline, dan sisa riset.
+- Tab Desa digabung ke lembar Desa anda (ketuk nama desa di atas); ketuk kotak Tukang/Lab untuk langsung ke halamannya.
+- Pengaturan kini ada di lembar Desa anda dan di Opsi desa.

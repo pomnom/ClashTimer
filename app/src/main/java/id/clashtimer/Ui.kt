@@ -213,6 +213,8 @@ object Ui {
     val SELECTED_BG get() = pick(0xFF2B3A31, 0xFFD7EEDD)
     val BUSY_BG get() = pick(0xFF3A3020, 0xFFFFF0D6)
     val LAB_BG get() = pick(0xFF2C2846, 0xFFECE9FF)
+    /** Teks ungu lembut (tab Lab terpilih). */
+    val LAB_TEXT get() = pick(0xFFC8BCFF, 0xFF5F57C2)
     val TEXT get() = pick(0xFFEEF0F3, 0xFF1B1C18)
     val TEXT2 get() = pick(0xFFA7ADB8, 0xFF5F6159)
     val ON_FREE get() = pick(0xFF0D1F15, 0xFFFFFFFF)
@@ -320,7 +322,9 @@ object Ui {
     }
 
     /** Segmented penuh lebar: pilihan sama lebar, yang aktif hijau tipis. */
-    fun segmentedWide(ctx: Context, labels: List<String>, selected: Int, heightDp: Int = 40, onSelect: (Int) -> Unit): LinearLayout {
+    fun segmentedWide(
+        ctx: Context, labels: List<String>, selected: Int, heightDp: Int = 40, lab: Boolean = false, onSelect: (Int) -> Unit,
+    ): LinearLayout {
         val box = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             background = rounded(SURFACE, dp(ctx, 12).toFloat())
@@ -334,9 +338,9 @@ object Ui {
                 gravity = Gravity.CENTER
                 maxLines = 1
                 ellipsize = android.text.TextUtils.TruncateAt.END
-                setTextColor(if (on) FREE_TEXT else TEXT2)
+                setTextColor(if (on) (if (lab) LAB_TEXT else FREE_TEXT) else TEXT2)
                 if (on) {
-                    background = rounded(SELECTED_BG, dp(ctx, 9).toFloat())
+                    background = rounded(if (lab) LAB_BG else SELECTED_BG, dp(ctx, 9).toFloat())
                     setTypeface(typeface, android.graphics.Typeface.BOLD)
                 }
                 isClickable = true

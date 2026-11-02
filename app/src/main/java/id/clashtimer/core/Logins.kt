@@ -8,15 +8,17 @@ class Session(val at: Long, val steps: List<PlannedStep>, val now: Boolean)
 
 /**
  * Jadwal login dari rencana: kapan perlu membuka game dan apa yang dimulai saat itu. Dipakai kartu
- * "Buka game berikutnya", agenda Jadwal, dan pengingat per sesi.
+ * agenda Tukang, saran berikutnya di Dashboard, dan pengingat per sesi.
  */
 object Logins {
     private const val GAP = 45 * 60_000L
     private const val HOUR = 3_600_000L
 
-    fun build(sim: SimResult?, bb: Boolean, now: Long, until: Long): List<Session> {
+    /** [lanes] = hanya jenis pekerja ini (null = semua di sisi [bb]). */
+    fun build(sim: SimResult?, bb: Boolean, now: Long, until: Long, lanes: Set<Lane>? = null): List<Session> {
         if (sim == null) return emptyList()
-        val steps = sim.steps.filter { it.lane.bb == bb && !it.running && it.start <= until }.sortedBy { it.start }
+        val steps = sim.steps.filter { it.lane.bb == bb && !it.running && it.start <= until && (lanes == null || it.lane in lanes) }
+            .sortedBy { it.start }
         val out = ArrayList<Session>()
         var cur = ArrayList<PlannedStep>()
         var start = 0L

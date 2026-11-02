@@ -12,28 +12,29 @@ object Help {
 
     enum class Topic(val title: String, val body: String) {
         HOME(
-            "Sekarang",
-            "• Buka game berikutnya = kapan ada pekerja yang bebas lagi menurut jadwal (di luar jam tidur). Ketuk lonceng untuk satu notifikasi per sesi login.\n" +
-                "• Bebas sekarang: satu kartu per pekerja (B1… = builder, Lab, Pet, M = Master Builder). Saran teratas = urutan tercepat menuju target strategi.\n" +
+            "Dashboard",
+            "• Dashboard hanya untuk desa yang dipilih; ganti desa dengan mengetuk namanya di atas (lembar Desa anda).\n" +
+                "• Kartu teratas = strategi & target, plus Gold Pass, event, CWL dan boost yang aktif. Ketuk untuk membuka Opsi desa.\n" +
+                "• Dua hitung mundur = tukang dan lab yang paling cepat selesai. Ketuk untuk membuka halaman Tukang / Lab.\n" +
+                "• Pekerja bebas mendapat satu saran (B1… = builder, Lab, Pet, M = Master Builder). Saran teratas = urutan tercepat menuju target strategi.\n" +
                 "• \"Sudah dimulai\" langsung memasang timer & notifikasi tanpa import ulang; salah pencet? ketuk Batalkan di pesan bawah.\n" +
                 "• \"Opsi lain\" = semua pilihan dengan filter (selesai pas bangun, hero, pertahanan, murah).\n" +
                 "• Hijau \"pas bangun\" = selesai saat Anda bisa langsung mengisinya lagi; oranye = pekerja akan menganggur.\n" +
                 "• Ketuk upgrade yang berjalan → detail, tandai selesai (gem/book), potion, ubah sisa waktu (isi seperti di game), prioritas, atau batal. Tahan lama → prioritaskan / sembunyikan.\n" +
-                "• Lonceng sesi login aktif: notifikasi \"selesai\" per upgrade di sesi itu masuk tanpa suara, cukup pengingat sesinya yang berbunyi.\n" +
                 "• Goblin Builder / Researcher (event) tidak dihitung sebagai pekerja tetap.",
         ),
         PLAN(
-            "Jadwal & target",
-            "• Agenda = sesi login: kapan perlu membuka game dan apa yang dimulai tiap sesi. Pekerja yang bebas berdekatan (≤ 45 menit) digabung jadi satu sesi.\n" +
-                "• Jadwal = perkiraan bila setiap pekerja langsung diisi saran teratas saat Anda online. Jam tidur/kerja, helper, Gold Pass, event, CWL & kapasitas gudang ikut dihitung.\n" +
+            "Tukang & Lab",
+            "• Agenda (Tukang) = sesi login sampai Anda bangun lagi: kapan perlu membuka game dan apa yang dimulai. Pekerja yang bebas berdekatan (≤ 45 menit) digabung jadi satu sesi.\n" +
+                "• Antrian = langkah berikutnya menurut rencana (Tukang: besok dan seterusnya, Lab: riset berikutnya).\n" +
+                "• Rencana = perkiraan bila setiap pekerja langsung diisi saran teratas saat Anda online. Jam tidur/kerja, helper, Gold Pass, event, CWL & kapasitas gudang ikut dihitung.\n" +
                 "• Target tiap strategi: Seimbang = semua upgrade di TH sekarang selesai · Rush TH = Town Hall naik · Hero dulu = semua hero max · Builder ke-6 = B.O.B terbuka · Max BB = Builder Base selesai. Ganti strategi di ikon opsi.\n" +
-                "• Aplikasi mencoba beberapa cara mengurutkan (rantai upgrade terpanjang dulu, upgrade terlama dulu, nilai per waktu & biaya) untuk tiap jenis pekerja dan memakai yang paling cepat mencapai target.\n" +
                 "• Hero yang bentrok dengan CWL ditunda dan tidak dimasukkan ke antrean selama CWL.\n" +
-                "• Ketuk sebuah langkah untuk detail; lonceng = pengingat untuk sesi itu.",
+                "• Ketuk sebuah langkah untuk detail; lonceng = pengingat untuk sesi itu. Saat lonceng sesi aktif, notifikasi \"selesai\" per upgrade di sesi itu masuk tanpa suara.",
         ),
         TIMELINE(
             "Timeline",
-            "• Satu baris per pekerja untuk 24 jam atau 3 hari.\n" +
+            "• Satu baris per pekerja (Tukang atau Lab) untuk 24 jam atau 3 hari.\n" +
                 "• Batang penuh = sedang berjalan · transparan = rencana · garis merah = menganggur · abu-abu = jam tidur/offline · garis vertikal = sekarang.\n" +
                 "• Emas = builder, ungu = lab, abu-abu = Goblin.\n" +
                 "• Ketuk batang untuk detail.",
@@ -68,10 +69,10 @@ object Help {
                 "• Ketuk helper yang sedang cooldown untuk mengubah timernya.",
         ),
         VILLAGES(
-            "Semua desa",
-            "• Ketuk desa atau kotaknya untuk membuka (kotak Builder Base / Star Lab → Sekarang di Builder Base).\n" +
+            "Desa anda",
+            "• Ketuk sebuah desa untuk membukanya; ketuk kotak Tukang / Lab / BB / Star untuk langsung ke halamannya.\n" +
                 "• Tahan lama sebuah desa → ganti nama, opsi, update, atau hapus.\n" +
-                "• Login berikutnya = kapan tiap desa perlu dibuka lagi; desa dengan pekerja bebas ada di atas. Isinya sama dengan widget.\n" +
+                "• Login berikutnya = kapan tiap desa perlu dibuka lagi. Isinya sama dengan widget.\n" +
                 "• Desa baru ditambah otomatis saat Anda meng-import export dari akun lain.",
         ),
         OPTIONS(

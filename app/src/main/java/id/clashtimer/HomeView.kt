@@ -28,8 +28,8 @@ import id.clashtimer.core.Sixth
 import java.time.ZoneId
 
 /**
- * Tab "Sekarang": kapan buka game lagi, apa yang dimulai untuk pekerja yang bebas, lalu yang sedang
- * bekerja. Satu tombol utama per kartu; detail & aksi lain ada di lembar bawah.
+ * Tab "Dashboard" (desa yang dipilih saja): ringkasan strategi & boost, hitung mundur tukang & lab
+ * tercepat, tukang dan lab yang bekerja + satu saran masing-masing, helper, lalu potion & item.
  */
 object HomeView {
 
@@ -62,17 +62,19 @@ object HomeView {
         val ps = b?.ps ?: Store.planSettings(act, tag)
         val sim = if (bb) b?.simBB else b?.simHome
         val labels = Sessions.labels(ups, now)
+        val bLanes = PlanView.lanes(bb, lab = false)
+        val lLanes = PlanView.lanes(bb, lab = true)
+        val freeB = freeCards(act, tag, bb, b, sim, ups, labels, now, bLanes)
+        val freeL = freeCards(act, tag, bb, b, sim, ups, labels, now, lLanes)
 
-        nextLogin(act, box, tag, bb, sim, ps, now, zone)
+        summary(act, box, tag, bb, b, sim, ps, now, zone)
         if (!bb && b != null) cwl(act, box, b, ups, now, zone)
-        freeNow(act, box, tag, bb, b, sim, ups, labels, now, zone, hasExport)
+        countdowns(act, box, tag, bb, ups, labels, freeB, freeL, now, zone)
         finished(act, box, bb, ups, gd, labels, now)
-        if (bb) {
-            clockTower(act, box, tag, b, ups, now, zone)
-            sixth(act, box, b, zone)
-        }
-        working(act, box, bb, b, ups, gd, labels, acc, now)
+        workers(act, box, tag, bb, false, b, sim, ups, gd, labels, freeB, now, zone, hasExport)
+        workers(act, box, tag, bb, true, b, sim, ups, gd, labels, freeL, now, zone, hasExport)
         if (!bb) helpers(act, box, tag, ups, b, now, zone)
+        if (bb) clockTower(act, box, tag, b, ups, now, zone)
         if (hasExport) items(act, box, tag, bb, b, now, zone)
         if (!bb) superTroops(act, box, tag, zone)
     }
@@ -104,51 +106,316 @@ object HomeView {
     }
 
     /** "Bebas sekarang · 2" dengan angka hijau. */
-    private fun countTitle(text: String, n: Int): CharSequence {
+    fun countTitle(text: String, n: Int): CharSequence {
         val s = SpannableString("$text · $n")
         s.setSpan(ForegroundColorSpan(Ui.FREE), text.length, s.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         return s
     }
 
-    // ---------------------------------------------------------------- buka game berikutnya
-
-    private fun nextLogin(act: MainActivity, box: LinearLayout, tag: String, bb: Boolean, sim: SimResult?, ps: PlanSettings, now: Long, zone: ZoneId) {
-        if (sim == null) return
-        val sessions = Sessions.build(sim, bb, now, now + 4 * DAY).filter { !it.now }
-        val first = sessions.firstOrNull() ?: return
-        val card = Ui.panel(act, padH = 16, padV = 14)
-        val top = Ui.hbox(act).apply { gravity = Gravity.TOP }
-        val left = Ui.vbox(act)
-        left.addView(Ui.muted(act, "Buka game berikutnya").apply { textSize = 13f })
-        left.addView(Ui.monoText(act, short(first.at, now, zone), 34f).apply { setPadding(0, Ui.dp(act, 4), 0, Ui.dp(act, 4)) })
-        val line = Ui.hbox(act)
-        val cd = Ui.muted(act, "dalam " + act.countdown(first.at - now)).apply { textSize = 14f; setTextColor(Ui.TEXT) }
-        act.registerCountdown(cd, first.at, clockStyle = false, prefix = "dalam ")
-        line.addView(cd)
-        line.addView(Ui.muted(act, " · " + Sessions.workers(first)).apply {
-            textSize = 14f
+    /** Judul bagian: "Tukang · 4/5 bekerja" + tautan "Lihat semua ›". */
+    private fun sectionHead(act: MainActivity, title: String, sub: String?, link: String, onLink: () -> Unit): View {
+        val row = Ui.hbox(act).apply { setPadding(Ui.dp(act, 2), Ui.dp(act, 10), 0, Ui.dp(act, 2)) }
+        val s = SpannableString(title + (sub?.let { " · $it" } ?: ""))
+        if (sub != null) s.setSpan(ForegroundColorSpan(Ui.TEXT2), title.length, s.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        row.addView(Ui.text(act, s, Ui.TITLE_S).apply {
+            textSize = 15f
+            setTypeface(typeface, Typeface.BOLD)
             setTextColor(Ui.TEXT)
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
         }, Ui.weight1())
-        left.addView(line)
-        top.addView(left, Ui.weight1())
-        top.addView(bell(act, tag, first))
+        row.addView(TextView(act).apply {
+            text = "$link ›"
+            textSize = 13f
+            setTypeface(typeface, Typeface.BOLD)
+            setTextColor(Ui.FREE_TEXT)
+            gravity = Gravity.CENTER_VERTICAL
+            minHeight = Ui.dp(act, 40)
+            setPadding(Ui.dp(act, 12), 0, Ui.dp(act, 4), 0)
+            isClickable = true
+            setOnClickListener { onLink() }
+        })
+        return row
+    }
+
+    /** Pil kecil berwarna untuk ringkasan (Gold Pass, event, CWL, boost). */
+    private fun chip(act: MainActivity, text: String, color: Int): View {
+        val c = Ui.hbox(act).apply {
+            background = Ui.rounded(Ui.SURFACE2, Ui.dp(act, 15).toFloat())
+            setPadding(Ui.dp(act, 10), 0, Ui.dp(act, 10), 0)
+            minimumHeight = Ui.dp(act, 30)
+        }
+        c.addView(View(act).apply { background = Ui.rounded(color, Ui.dp(act, 4).toFloat()) },
+            LinearLayout.LayoutParams(Ui.dp(act, 7), Ui.dp(act, 7)).apply { marginEnd = Ui.dp(act, 6) })
+        c.addView(TextView(act).apply { this.text = text; textSize = 12f; setTextColor(Ui.TEXT); maxLines = 1 })
+        return c
+    }
+
+    /** "hari ini", "Rab", atau "12 Nov" untuk yang lebih jauh. */
+    private fun day(t: Long, now: Long, zone: ZoneId): String {
+        val d1 = java.time.Instant.ofEpochMilli(t).atZone(zone).toLocalDate()
+        val d0 = java.time.Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+        return when {
+            d1 == d0 -> "hari ini"
+            d1.isBefore(d0.plusDays(6)) -> java.time.format.DateTimeFormatter.ofPattern("EEE", Fmt.locale).format(d1)
+            else -> Fmt.dateShort(t, zone)
+        }
+    }
+
+    // ---------------------------------------------------------------- 0. ringkasan strategi & boost
+
+    fun strategyName(act: MainActivity, tag: String, ps: PlanSettings, bb: Boolean): String =
+        if (bb) (if (Store.bobDone(act, tag)) "Max" else ps.bbStrategy.label) else VillageOptions.shortStrategy(ps.strategy)
+
+    private fun summary(act: MainActivity, box: LinearLayout, tag: String, bb: Boolean, b: PlanBundle?, sim: SimResult?, ps: PlanSettings, now: Long, zone: ZoneId) {
+        val card = Ui.panel(act, padH = 14, padV = 12)
+        val top = Ui.hbox(act)
+        top.addView(Ui.icon(act, R.drawable.ic_target, 20, Ui.FREE_TEXT), LinearLayout.LayoutParams(Ui.dp(act, 20), Ui.dp(act, 20)).apply { marginEnd = Ui.dp(act, 10) })
+        val col = Ui.vbox(act)
+        val strat = strategyName(act, tag, ps, bb)
+        val title: String
+        val sub: String
+        if (b == null || sim == null) {
+            title = if (Store.exportText(act, tag) == null) "Import ulang desa ini sekali" else "Menghitung rencana…"
+            sub = "strategi $strat"
+        } else {
+            val t = Planner.target(sim, ps, bb).takeIf { it != Long.MAX_VALUE }
+            title = "$strat · ${PlanView.targetLabel(b, sim, bb)}" + (t?.let { " ±" + Fmt.date(it, zone) } ?: " · belum tercapai")
+            sub = etaLine(act, b, sim, bb, now, zone)
+        }
+        col.addView(Ui.text(act, title, Ui.BODY_M).apply { textSize = 14f; setTypeface(typeface, Typeface.BOLD); setTextColor(Ui.TEXT) })
+        col.addView(Ui.muted(act, sub).apply { textSize = 12f })
+        top.addView(col, Ui.weight1())
+        top.addView(Ui.icon(act, R.drawable.ic_chevron_right, 18, Ui.TEXT2))
         card.addView(top)
 
-        val more = ArrayList<String>()
-        sessions.getOrNull(1)?.let { s ->
-            more += "Lalu ${short(s.at, now, zone)}" + (Sessions.mood(ps.schedule, s.at)?.let { m -> if (m == "sblm tidur") " sebelum tidur" else " saat bangun" } ?: "")
+        val chips = chipsFor(act, tag, bb, ps, now, zone)
+        if (chips.isNotEmpty()) {
+            val row = Ui.hbox(act)
+            chips.forEachIndexed { i, (txt, color) ->
+                row.addView(chip(act, txt, color), LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                    if (i > 0) marginStart = Ui.dp(act, 6)
+                })
+            }
+            card.addView(android.widget.HorizontalScrollView(act).apply {
+                isHorizontalScrollBarEnabled = false
+                addView(row)
+            }, Ui.matchWrap().apply { topMargin = Ui.dp(act, 10) })
         }
-        val sl = ps.schedule.sleep
-        if (sl.enabled && sl.startMin != sl.endMin) more += "tidur ${Fmt.clock(sl.startMin)}–${Fmt.clock(sl.endMin)}"
-        if (more.isNotEmpty()) card.addView(Ui.muted(act, more.joinToString(" · ")).apply {
-            textSize = 13f
-            setPadding(0, Ui.dp(act, 10), 0, 0)
-        })
         card.isClickable = true
-        card.setOnClickListener { act.openTab(MainActivity.Tab.PLAN) }
+        card.contentDescription = "Opsi desa: strategi, Gold Pass, CWL"
+        card.setOnClickListener { VillageOptions.sheet(act, tag, bb) }
+        Ui.ripple(card)
         box.addView(gap(act, card))
+    }
+
+    /** "tukang ±27 Nov · lab ±7 Feb (penentu)" atau syarat B.O.B. */
+    private fun etaLine(act: MainActivity, b: PlanBundle, sim: SimResult, bb: Boolean, now: Long, zone: ZoneId): String {
+        val six = sim.sixth
+        if (bb && b.ps.bbStrategy == BBStrategy.SIXTH && six != null && !Store.bobDone(act, b.tag)) return sixLine(six)
+        val list = if (bb) listOf("master builder" to sim.bbBuilderDone, "star lab" to sim.starLabDone)
+        else listOf("tukang" to sim.builderDone, "lab" to sim.labDone)
+        val open = list.filter { it.second != null && it.second!! > now }
+        val last = open.maxByOrNull { it.second!! }
+        return list.joinToString(" · ") { (name, t) ->
+            when {
+                t == null || t <= now -> "$name max"
+                else -> "$name ±${Fmt.dateShort(t, zone)}" + if (open.size > 1 && last?.first == name) " (penentu)" else ""
+            }
+        }
+    }
+
+    private fun sixLine(six: id.clashtimer.core.SixthPlan): String {
+        val done = six.reqs.count { it.done }
+        val next = six.reqs.firstOrNull { !it.done }
+        return "$done/${six.reqs.size} syarat" + (next?.let { " · berikutnya ${it.label}" } ?: " · semua syarat selesai")
+    }
+
+    /** Gold Pass (+ kenaikan berikutnya), event, CWL, boost yang aktif. */
+    private fun chipsFor(act: MainActivity, tag: String, bb: Boolean, ps: PlanSettings, now: Long, zone: ZoneId): List<Pair<String, Int>> {
+        val out = ArrayList<Pair<String, Int>>()
+        val gp = ps.gold.at(now)
+        if (bb) {
+            if (gp.builderPct > 0) out += "Gold Pass Builder ${gp.builderPct}%" to Ui.BUSY
+        } else if (gp.builderPct > 0 || gp.researchPct > 0) {
+            val cur = if (gp.builderPct == gp.researchPct) "${gp.builderPct}%" else "B${gp.builderPct}% · R${gp.researchPct}%"
+            val next = ps.gold.steps.filter { it.at > now }.minByOrNull { it.at }
+            val up = next?.let { s -> " · ${maxOf(s.builderPct, s.researchPct)}% ±${day(s.at, now, zone)}" } ?: ""
+            out += "Gold Pass $cur$up" to Ui.BUSY
+        }
+        for (e in ps.events) {
+            if (!e.enabled || e.end <= now || e.start > now + 7 * DAY) continue
+            val mine = if (bb) e.covers(Lane.BB_BUILDER) else e.covers(Lane.BUILDER) || e.covers(Lane.LAB)
+            if (!mine) continue
+            out += (if (e.start <= now) "${e.name} −${e.timePct}% s/d ${Fmt.dateShort(e.end, zone)}" else "${e.name} mulai ${day(e.start, now, zone)}") to Ui.LAB
+        }
+        if (!bb && ps.cwl.enabled) {
+            val w = ps.cwl.next(now)
+            if (w.first - now < 7 * DAY) {
+                val txt = if (w.first <= now) "CWL s/d ${Fmt.dateShort(w.last + 1, zone)}" else "CWL ${Fmt.dateShort(w.first, zone)}–${Fmt.dateShort(w.last + 1, zone)}"
+                out += "$txt · hero ditunda" to Ui.IDLE
+            }
+        }
+        for (a in Boosts.merged(Store.boosts(act, tag))) {
+            if (a.start > now || a.end <= now || a.kind.lanes.none { it.bb == bb }) continue
+            out += "${a.kind.label} ${Fmt.dur(a.end - now)}" to Ui.FREE
+        }
+        return out
+    }
+
+    // ---------------------------------------------------------------- CWL
+
+    /** Hero yang masih upgrade saat CWL (CWL sendiri tampil di ringkasan). */
+    private fun cwl(act: MainActivity, box: LinearLayout, b: PlanBundle, ups: List<Upgrade>, now: Long, zone: ZoneId) {
+        if (!b.ps.cwl.enabled) return
+        val fin = ups.associate { it.id to it.finishAt }
+        for (i in b.village.insts) {
+            if (!i.upgrading || i.item.cat != Cat.HERO) continue
+            val f = fin[i.uid] ?: continue
+            if (f > now && b.ps.cwl.overlap(now, f) != null) {
+                box.addView(notice(act, "${i.item.name} masih upgrade saat CWL", "selesai ${Fmt.at(f, zone)} · pertimbangkan Book of Heroes / potion", Ui.IDLE))
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- 1–2. hitung mundur tercepat
+
+    private fun countdowns(
+        act: MainActivity, box: LinearLayout, tag: String, bb: Boolean, ups: List<Upgrade>, labels: Map<String, String>,
+        freeB: List<FreeCard>, freeL: List<FreeCard>, now: Long, zone: ZoneId,
+    ) {
+        val bKinds = PlanView.lanes(bb, false).map { Kind.of(it) }.toSet()
+        val lKinds = PlanView.lanes(bb, true).map { Kind.of(it) }.toSet()
+        val row = Ui.hbox(act).apply { gravity = Gravity.TOP }
+        row.addView(fastTile(act, (if (bb) "Master Builder" else "Tukang") + " tercepat", false,
+            ups.filter { it.kind in bKinds && it.finishAt > now && !it.extra }.sortedBy { it.finishAt }, labels, freeB, now, zone) {
+            act.openTab(MainActivity.Tab.BUILDERS)
+        }, Ui.weight1())
+        row.addView(fastTile(act, (if (bb) "Star Lab" else "Lab") + " tercepat", true,
+            ups.filter { it.kind in lKinds && it.finishAt > now }.sortedBy { it.finishAt }, labels, freeL, now, zone) {
+            act.openTab(MainActivity.Tab.LAB)
+        }, Ui.weight1().apply { marginStart = Ui.dp(act, 10) })
+        box.addView(gap(act, row.apply { layoutParams = Ui.matchWrap() }))
+    }
+
+    private fun fastTile(
+        act: MainActivity, head: String, lab: Boolean, running: List<Upgrade>, labels: Map<String, String>,
+        free: List<FreeCard>, now: Long, zone: ZoneId, onClick: () -> Unit,
+    ): View {
+        val color = if (lab) Ui.LAB else Ui.BUSY
+        val card = Ui.panel(act, padH = 12, padV = 12)
+        val first = running.firstOrNull()
+        val top = Ui.hbox(act)
+        top.addView(Ui.muted(act, head).apply { textSize = 12f; maxLines = 1 }, Ui.weight1())
+        val label = first?.let { labels[it.id] } ?: free.firstOrNull()?.label
+        if (label != null) top.addView(Sessions.badge(act, label, lab))
+        card.addView(top)
+        val none = first == null && free.isEmpty()
+        val clock = Ui.monoText(act, if (first != null) act.clock(first.finishAt - now) else if (none) "—" else "bebas", 26f).apply {
+            setTextColor(if (first != null) color else if (none) Ui.TEXT2 else Ui.FREE_TEXT)
+            setPadding(0, Ui.dp(act, 2), 0, 0)
+        }
+        if (first != null) act.registerCountdown(clock, first.finishAt, clockStyle = true)
+        card.addView(clock)
+        card.addView(Ui.muted(act, first?.let { Widgets.shortTitle(it) + " · " + short(it.finishAt, now, zone) } ?: if (none) "tidak ada yang berjalan" else "siap diisi").apply {
+            textSize = 12f
+            setTextColor(Ui.TEXT)
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+        })
+        val second = running.getOrNull(1)
+        val (foot, footColor) = when {
+            free.isNotEmpty() -> (free.first().label + " bebas sekarang" + if (free.size > 1) " +${free.size - 1}" else "") to Ui.FREE_TEXT
+            lab && second != null -> "${labels[second.id] ?: second.kind.label} ${act.countdown(second.finishAt - now)}" to Ui.TEXT2
+            first != null -> "semua bekerja" to Ui.TEXT2
+            else -> "" to Ui.TEXT2
+        }
+        if (foot.isNotEmpty()) {
+            val f = Ui.hbox(act).apply { setPadding(0, Ui.dp(act, 6), 0, 0) }
+            f.addView(View(act).apply { background = Ui.rounded(if (footColor == Ui.FREE_TEXT) Ui.FREE else color, Ui.dp(act, 4).toFloat()) },
+                LinearLayout.LayoutParams(Ui.dp(act, 7), Ui.dp(act, 7)).apply { marginEnd = Ui.dp(act, 6) })
+            f.addView(TextView(act).apply {
+                text = foot
+                textSize = 12f
+                setTextColor(footColor)
+                if (footColor == Ui.FREE_TEXT) setTypeface(typeface, Typeface.BOLD)
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            }, Ui.weight1())
+            card.addView(f)
+        }
+        card.isClickable = true
+        card.setOnClickListener { onClick() }
+        Ui.ripple(card)
+        return card
+    }
+
+    // ---------------------------------------------------------------- 3–4. tukang & lab + satu saran
+
+    private fun workers(
+        act: MainActivity, box: LinearLayout, tag: String, bb: Boolean, lab: Boolean, b: PlanBundle?, sim: SimResult?,
+        ups: List<Upgrade>, gd: GameData, labels: Map<String, String>, free: List<FreeCard>, now: Long, zone: ZoneId, hasExport: Boolean,
+    ) {
+        val kinds = PlanView.lanes(bb, lab).map { Kind.of(it) }.toSet()
+        val running = ups.filter { it.kind in kinds && it.finishAt > now }.sortedBy { it.finishAt }
+        // Tidak ada yang bebas: saran untuk pekerja yang paling cepat bebas (+ lonceng pengingat).
+        val next = if (free.isEmpty()) nextStep(sim, PlanView.lanes(bb, lab), now) else null
+        if (running.isEmpty() && free.isEmpty() && next == null) return
+        val title = when {
+            lab -> if (bb) "Star Lab" else "Lab"
+            else -> if (bb) "Master Builder" else "Tukang"
+        }
+        val sub = if (lab) "${running.size} berjalan" else act.builderCounts(tag, bb).let { (busy, total) -> "$busy/$total bekerja" }
+        box.addView(sectionHead(act, title, sub, "Lihat semua") { act.openTab(if (lab) MainActivity.Tab.LAB else MainActivity.Tab.BUILDERS) })
+        free.firstOrNull()?.let { box.addView(gap(act, freeCard(act, tag, b, it, bb, now, zone, hasExport), 8)) }
+        if (free.size > 1) box.addView(Ui.muted(act, "+${free.size - 1} bebas lagi · lihat semua").apply {
+            textSize = 13f
+            setTextColor(Ui.FREE_TEXT)
+            setPadding(Ui.dp(act, 4), 0, 0, Ui.dp(act, 8))
+            isClickable = true
+            setOnClickListener { act.openTab(if (lab) MainActivity.Tab.LAB else MainActivity.Tab.BUILDERS) }
+        })
+        if (running.isEmpty() && next == null) {
+            box.addView(Ui.space(act), LinearLayout.LayoutParams(1, Ui.dp(act, 4)))
+            return
+        }
+        val panel = Ui.panel(act, padH = 14, padV = 2)
+        running.forEachIndexed { i, u ->
+            panel.addView(workRow(act, u, gd, labels[u.id], now))
+            if (i < running.size - 1) panel.addView(line(act))
+        }
+        if (next != null && b != null) {
+            if (running.isNotEmpty()) panel.addView(View(act), LinearLayout.LayoutParams(1, Ui.dp(act, 8)))
+            panel.addView(nextBox(act, b, next, lab, now, zone), Ui.matchWrap().apply {
+                if (running.isEmpty()) topMargin = Ui.dp(act, 12)
+                bottomMargin = Ui.dp(act, 12)
+            })
+        }
+        box.addView(gap(act, panel))
+    }
+
+    /** Langkah rencana berikutnya untuk [lanes] (belum dimulai, paling awal). */
+    fun nextStep(sim: SimResult?, lanes: Set<Lane>, now: Long): PlannedStep? =
+        sim?.steps?.filter { it.lane in lanes && !it.running && it.start > now + 60_000L }?.minByOrNull { it.start }
+
+    /** "SARAN BERIKUTNYA · LAB BEBAS 17:14 — Rage Spell → 6" + lonceng pengingat. */
+    private fun nextBox(act: MainActivity, b: PlanBundle, s: PlannedStep, lab: Boolean, now: Long, zone: ZoneId): View {
+        val p = Ui.panel(act, padH = 12, padV = 10, color = Ui.SURFACE2, radiusDp = 14)
+        val row = Ui.hbox(act)
+        val col = Ui.vbox(act)
+        col.addView(Ui.muted(act, "SARAN BERIKUTNYA · ${Sessions.label(s).uppercase(Fmt.locale)} ${if (s.idle > 10 * 60_000L) "MULAI" else "BEBAS"} ${short(s.start, now, zone).uppercase(Fmt.locale)}").apply {
+            textSize = 12f
+            setTypeface(typeface, Typeface.BOLD)
+        })
+        col.addView(Ui.text(act, Sessions.title(s), Ui.BODY_M).apply { textSize = 14f; setTypeface(typeface, Typeface.BOLD); setTextColor(Ui.TEXT) })
+        val cost = if (s.cost > 0) " · ${Fmt.money(s.cost)} ${Fmt.resource(s.item?.resource ?: "")}" else ""
+        col.addView(Ui.muted(act, "${Fmt.durSec(s.durationSec)}$cost · selesai ${short(s.finish, now, zone)}").apply { textSize = 12f })
+        row.addView(col, Ui.weight1())
+        row.addView(bell(act, b.tag, Session(s.start, listOf(s), false)))
+        p.addView(row)
+        p.isClickable = true
+        p.setOnClickListener { PlanView.stepSheet(act, b, s, now, zone) }
+        return p
     }
 
     /** Tombol lonceng: pasang / lepas pengingat untuk sesi login ini. */
@@ -158,7 +425,8 @@ object HomeView {
             background = if (on) Ui.rounded(Ui.FREE_BG, Ui.dp(act, 18).toFloat(), Ui.FREE_LINE, Ui.dp(act, 1))
             else Ui.rounded(android.graphics.Color.TRANSPARENT, Ui.dp(act, 18).toFloat(), Ui.OUTLINE, Ui.dp(act, 1))
             setPadding(Ui.dp(act, 10), 0, Ui.dp(act, 12), 0)
-            minimumHeight = Ui.dp(act, 36)
+            minimumHeight = Ui.dp(act, 40)
+            gravity = Gravity.CENTER_VERTICAL
             isClickable = true
             contentDescription = if (on) "Pengingat aktif, ketuk untuk mematikan" else "Ingatkan saat waktunya login"
             setOnClickListener {
@@ -173,42 +441,19 @@ object HomeView {
         return pill
     }
 
-    // ---------------------------------------------------------------- CWL
+    // ---------------------------------------------------------------- pekerja bebas
 
-    private fun cwl(act: MainActivity, box: LinearLayout, b: PlanBundle, ups: List<Upgrade>, now: Long, zone: ZoneId) {
-        if (!b.ps.cwl.enabled) return
-        val w = b.ps.cwl.next(now)
-        if (w.first - now < 3 * DAY) {
-            // Hero yang ditunda tidak masuk saran & antrean; cukup disebut di sini.
-            val deferred = b.slots.filter { it.lane == Lane.BUILDER }.flatMap { it.cwlSkipped }.map { it.item.name }.distinct()
-            val title = if (now >= w.first) "CWL sampai ${Fmt.at(w.last + 1, zone)}" else "CWL mulai ${Fmt.at(w.first, zone)}"
-            val body = if (deferred.isEmpty()) "upgrade hero yang bentrok ditunda sampai CWL selesai"
-            else "ditunda: " + deferred.joinToString(", ")
-            box.addView(notice(act, title, body, Ui.BUSY))
-        }
-        val fin = ups.associate { it.id to it.finishAt }
-        for (i in b.village.insts) {
-            if (!i.upgrading || i.item.cat != Cat.HERO) continue
-            val f = fin[i.uid] ?: continue
-            if (f > now && b.ps.cwl.overlap(now, f) != null) {
-                box.addView(notice(act, "${i.item.name} masih upgrade saat CWL", "selesai ${Fmt.at(f, zone)} · pertimbangkan Book of Heroes / potion", Ui.IDLE))
-            }
-        }
-    }
+    class FreeCard(val label: String, val lane: Lane, val slot: LaneSlot?, val pick: Scored?)
 
-    // ---------------------------------------------------------------- bebas sekarang
-
-    private class FreeCard(val label: String, val lane: Lane, val slot: LaneSlot?, val pick: Scored?)
-
-    private fun freeNow(
-        act: MainActivity, box: LinearLayout, tag: String, bb: Boolean, b: PlanBundle?, sim: SimResult?,
-        ups: List<Upgrade>, labels: Map<String, String>, now: Long, zone: ZoneId, hasExport: Boolean,
-    ) {
+    /** Satu kartu per pekerja [lanes] yang bebas sekarang, dengan saran teratas masing-masing. */
+    fun freeCards(
+        act: MainActivity, tag: String, bb: Boolean, b: PlanBundle?, sim: SimResult?,
+        ups: List<Upgrade>, labels: Map<String, String>, now: Long, lanes: Set<Lane>,
+    ): List<FreeCard> {
         val cards = ArrayList<FreeCard>()
-        val lanes = if (bb) listOf(Lane.BB_BUILDER, Lane.STAR_LAB) else listOf(Lane.BUILDER, Lane.LAB, Lane.PET)
         val nowSteps = sim?.steps?.filter { it.lane.bb == bb && !it.running && it.start <= now + 60_000L }.orEmpty()
         val acc = Store.accounts(act).firstOrNull { it.tag == tag }
-        for (lane in lanes) {
+        for (lane in lanes.sortedBy { it.ordinal }) {
             val kind = Kind.of(lane)
             val running = ups.filter { it.kind == kind && it.finishAt > now && !it.extra }
             val total = b?.let { Planner.laneCount(it.village, lane, it.ps) } ?: when (lane) {
@@ -244,10 +489,7 @@ object HomeView {
             val order = (stepLabels + freeLabels).distinct()
             order.forEachIndexed { i, l -> cards += FreeCard(l, lane, slot, picks.getOrNull(i)) }
         }
-        if (cards.isEmpty()) return
-        val target = if (bb) b?.ps?.bbStrategy?.label?.let { "urutan tercepat: $it" } else b?.ps?.strategy?.target?.let { "urutan tercepat ke $it" }
-        box.addView(Ui.heading(act, countTitle("Bebas sekarang", cards.size), target, Help.Topic.HOME))
-        for (c in cards) box.addView(gap(act, freeCard(act, tag, b, c, bb, now, zone, hasExport)))
+        return cards
     }
 
     private fun match(slot: LaneSlot, st: PlannedStep, used: List<Scored>): Scored? =
@@ -255,7 +497,7 @@ object HomeView {
             p.c.item.id == st.item?.id && p.c.gear == st.gear && p.c.fromLevel == st.fromLevel && p.c.isNew == st.isNew && used.none { it === p }
         }
 
-    private fun freeCard(act: MainActivity, tag: String, b: PlanBundle?, fc: FreeCard, bb: Boolean, now: Long, zone: ZoneId, hasExport: Boolean): View {
+    fun freeCard(act: MainActivity, tag: String, b: PlanBundle?, fc: FreeCard, bb: Boolean, now: Long, zone: ZoneId, hasExport: Boolean): View {
         val lab = fc.lane == Lane.LAB || fc.lane == Lane.PET || fc.lane == Lane.STAR_LAB
         val card = Ui.panel(act, padH = 14, padV = 12, stroke = Ui.FREE_LINE)
         val p = fc.pick
@@ -362,35 +604,9 @@ object HomeView {
         box.addView(gap(act, panel))
     }
 
-    // ---------------------------------------------------------------- sedang bekerja
+    // ---------------------------------------------------------------- baris pekerja
 
-    private fun working(
-        act: MainActivity, box: LinearLayout, bb: Boolean, b: PlanBundle?, ups: List<Upgrade>, gd: GameData,
-        labels: Map<String, String>, acc: Account, now: Long,
-    ) {
-        val kinds = if (bb) listOf(Kind.BB_BUILDER, Kind.STAR_LAB) else listOf(Kind.BUILDER, Kind.LAB, Kind.PET)
-        val running = ups.filter { it.kind in kinds && it.finishAt > now }.sortedBy { it.finishAt }
-        if (running.isEmpty()) return
-        val bLane = if (bb) Lane.BB_BUILDER else Lane.BUILDER
-        val bKind = Kind.of(bLane)
-        val total = b?.let { Planner.laneCount(it.village, bLane, it.ps) } ?: if (bb) running.count { it.kind == bKind } else acc.builders
-        val busy = running.count { it.kind == bKind && !it.extra }
-        val gob = running.count { it.extra }
-        val parts = arrayListOf("$busy/$total " + if (bb) "master builder" else "builder")
-        if (running.any { it.kind == Kind.LAB && !it.extra }) parts += "lab"
-        if (running.any { it.kind == Kind.PET }) parts += "pet"
-        if (running.any { it.kind == Kind.STAR_LAB }) parts += "star lab"
-        if (gob > 0) parts += "$gob goblin"
-        box.addView(Ui.heading(act, "Sedang bekerja", parts.joinToString(" · ")))
-        val panel = Ui.panel(act, padH = 14, padV = 2)
-        running.forEachIndexed { i, u ->
-            panel.addView(workRow(act, u, gd, labels[u.id], now))
-            if (i < running.size - 1) panel.addView(line(act))
-        }
-        box.addView(gap(act, panel))
-    }
-
-    private fun workRow(act: MainActivity, u: Upgrade, gd: GameData, label: String?, now: Long): View {
+    fun workRow(act: MainActivity, u: Upgrade, gd: GameData, label: String?, now: Long): View {
         val lab = Sessions.isLabKind(u.kind)
         val color = if (u.id.contains("|gear|")) Ui.BUSY else if (lab) Ui.LAB else Ui.BUSY
         val row = Ui.hbox(act).apply {
@@ -418,14 +634,14 @@ object HomeView {
         return row
     }
 
-    private fun icon(act: MainActivity, u: Upgrade, gd: GameData, size: Int, badge: TextView?): View {
+    fun icon(act: MainActivity, u: Upgrade, gd: GameData, size: Int, badge: TextView?): View {
         val gear = u.id.contains("|gear|")
         val item = Repo.itemIdOf(u.id)?.let { gd.item(it) }
         val level = if (gear) u.targetLevel else (u.targetLevel - 1).coerceAtLeast(1)
         return Ui.gameIcon(act, Icons.forItem(item, level), u.name, size, badge)
     }
 
-    private fun line(act: MainActivity): View = View(act).apply {
+    fun line(act: MainActivity): View = View(act).apply {
         setBackgroundColor(Ui.LINE)
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(act, 1))
     }
@@ -504,29 +720,6 @@ object HomeView {
         box.addView(gap(act, card))
     }
 
-    private fun sixth(act: MainActivity, box: LinearLayout, b: PlanBundle?, zone: ZoneId) {
-        if (b == null || b.ps.bbStrategy != BBStrategy.SIXTH) return
-        val six = b.simBB?.sixth ?: return
-        val done = six.reqs.count { it.done }
-        val card = Ui.panel(act, padH = 14, padV = 12)
-        val top = Ui.hbox(act)
-        top.addView(Ui.text(act, "Builder ke-6 (B.O.B)", Ui.TITLE_S).apply { textSize = 15f; setTypeface(typeface, Typeface.BOLD); setTextColor(Ui.TEXT) }, Ui.weight1())
-        top.addView(Ui.monoText(act, six.doneAt?.let { "±" + Fmt.dateShort(it, zone) } ?: "belum bisa", 15f).apply { setTextColor(Ui.BUSY) })
-        card.addView(top)
-        val seg = Ui.hbox(act).apply { setPadding(0, Ui.dp(act, 10), 0, Ui.dp(act, 8)) }
-        six.reqs.forEachIndexed { i, r ->
-            seg.addView(View(act).apply { background = Ui.rounded(if (r.done) Ui.FREE else Ui.SURFACE2, Ui.dp(act, 3).toFloat()) },
-                LinearLayout.LayoutParams(0, Ui.dp(act, 6), 1f).apply { if (i > 0) marginStart = Ui.dp(act, 4) })
-        }
-        card.addView(seg)
-        val next = six.reqs.firstOrNull { !it.done }
-        card.addView(Ui.muted(act, "$done/${six.reqs.size} syarat · " + (next?.let { "berikutnya: ${it.label} (${it.detail})" } ?: "semua syarat selesai")).apply { textSize = 13f })
-        card.isClickable = true
-        card.setOnClickListener { act.openTab(MainActivity.Tab.PROGRESS) }
-        Ui.ripple(card)
-        box.addView(gap(act, card))
-    }
-
     // ---------------------------------------------------------------- helper
 
     /** Super troop yang sedang aktif menurut API (API tidak memberi waktu habisnya). */
@@ -587,9 +780,6 @@ object HomeView {
 
     private fun items(act: MainActivity, box: LinearLayout, tag: String, bb: Boolean, b: PlanBundle?, now: Long, zone: ZoneId) {
         val tips = b?.tips?.filter { it.item.forBB == bb && it.item != MagicItem.CLOCK_TOWER_POTION }.orEmpty()
-        val active = Boosts.merged(Store.boosts(act, tag)).filter { b2 ->
-            b2.start <= now && b2.end > now && b2.kind.lanes.any { it.bb == bb } && b2.kind.group != "clock"
-        }
         val head = Ui.heading(act, "Potion & item", null, Help.Topic.ITEMS) as LinearLayout
         head.addView(TextView(act).apply {
             text = "Kelola"
@@ -606,16 +796,6 @@ object HomeView {
         fun add(v: View) {
             if (n++ > 0) panel.addView(line(act))
             panel.addView(v)
-        }
-        for (a in active) {
-            val row = Ui.hbox(act).apply { setPadding(0, Ui.dp(act, 8), 0, Ui.dp(act, 8)) }
-            val mi = MagicItem.entries.firstOrNull { it.boost == a.kind }
-            row.addView(Icons.view(act, mi?.icon, 36, mi?.emoji ?: "⚡", Ui.BUSY, round = false))
-            val c = Ui.vbox(act).apply { setPadding(Ui.dp(act, 10), 0, 0, 0) }
-            c.addView(Ui.text(act, "${a.kind.label} aktif", Ui.BODY_M).apply { textSize = 14f; setTypeface(typeface, Typeface.BOLD); setTextColor(Ui.BUSY) })
-            c.addView(Ui.muted(act, "${a.kind.speedLabel} sampai ${Fmt.time(a.end, zone)}").apply { textSize = 12f })
-            row.addView(c, Ui.weight1())
-            add(row)
         }
         for (t in tips.take(3)) {
             val row = Ui.hbox(act).apply {

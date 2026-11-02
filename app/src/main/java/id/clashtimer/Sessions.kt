@@ -11,7 +11,8 @@ typealias Session = id.clashtimer.core.Session
 
 /** Sesi login ([Logins]) + label & lencana pekerja untuk tampilan. */
 object Sessions {
-    fun build(sim: SimResult?, bb: Boolean, now: Long, until: Long) = Logins.build(sim, bb, now, until)
+    fun build(sim: SimResult?, bb: Boolean, now: Long, until: Long, lanes: Set<id.clashtimer.core.Lane>? = null) =
+        Logins.build(sim, bb, now, until, lanes)
     fun label(s: PlannedStep) = Logins.label(s)
     fun isLab(s: PlannedStep) = Logins.isLab(s)
     fun workers(session: Session) = Logins.workers(session)

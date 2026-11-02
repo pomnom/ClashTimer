@@ -179,7 +179,7 @@ object Repo {
             )
         }
 
-        // Pengingat sesi login yang dinyalakan di Sekarang / Jadwal
+        // Pengingat sesi login yang dinyalakan di Dashboard / Tukang / Lab
         for (r in Store.sessionReminders(ctx, tag)) {
             if (r.at < System.currentTimeMillis() - 60_000L) continue
             list += Upgrade(

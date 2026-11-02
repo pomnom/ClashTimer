@@ -62,7 +62,7 @@ object ItemMenu {
         if (pins.isEmpty() && hides.isEmpty()) {
             MaterialAlertDialogBuilder(act)
                 .setTitle("📌 Prioritas & tersembunyi")
-                .setMessage("Belum ada. Tahan lama sebuah upgrade di Sekarang, Jadwal, atau Progres untuk " +
+                .setMessage("Belum ada. Tahan lama sebuah upgrade di Dashboard, Tukang, Lab, atau Progres untuk " +
                     "mendahulukannya atau menyembunyikannya dari saran desa ${Store.villageName(act, tag)}.")
                 .setPositiveButton("OK", null)
                 .show()

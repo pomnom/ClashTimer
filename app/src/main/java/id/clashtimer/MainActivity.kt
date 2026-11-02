@@ -37,10 +37,20 @@ import java.util.concurrent.Executors
 class MainActivity : AppCompatActivity() {
 
     enum class Tab(val iconRes: Int, val label: String) {
-        HOME(R.drawable.ic_nav_now, "Sekarang"),
-        PLAN(R.drawable.ic_nav_schedule, "Jadwal"),
-        VILLAGES(R.drawable.ic_nav_villages, "Desa"),
-        PROGRESS(R.drawable.ic_nav_progress, "Progres"),
+        HOME(R.drawable.ic_nav_dashboard, "Dashboard"),
+        BUILDERS(R.drawable.ic_nav_builder, "Tukang"),
+        LAB(R.drawable.ic_flask, "Lab"),
+        PROGRESS(R.drawable.ic_nav_progress, "Progres");
+
+        companion object {
+            /** Nama tab dari widget / notifikasi / versi lama ("PLAN" = Tukang, "VILLAGES" = lembar Desa anda). */
+            fun of(name: String?): Tab? = when (name) {
+                null -> null
+                "PLAN" -> BUILDERS
+                "VILLAGES" -> HOME
+                else -> runCatching { valueOf(name) }.getOrNull()
+            }
+        }
     }
 
     private var tab = Tab.HOME
@@ -52,7 +62,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var scroll: ScrollView
     private lateinit var body: LinearLayout
     private lateinit var nav: LinearLayout
-    /** Layar lebar (tablet / HP landscape): Beranda di kiri, Rencana di kanan. */
+    /** Layar lebar (tablet / HP landscape): Dashboard di kiri, Tukang di kanan. */
     private var wide = false
     private var body2: LinearLayout? = null
     private var scroll2: ScrollView? = null
@@ -89,7 +99,7 @@ class MainActivity : AppCompatActivity() {
         Notifier.createChannels(this)
         Updater.cleanup(this) // sisa unduhan update yang gagal / sudah terpasang
         savedInstanceState?.let { st ->
-            st.getString("tab")?.let { t -> runCatching { tab = Tab.valueOf(t) } }
+            Tab.of(st.getString("tab"))?.let { tab = it }
             showBB = st.getBoolean("bb", false)
         }
 
@@ -137,26 +147,29 @@ class MainActivity : AppCompatActivity() {
         handleShare(intent)
         // Dibuka dari widget / notifikasi / shortcut (bukan saat layar dibuat ulang).
         if (savedInstanceState == null) {
-            val opened = handleOpen(intent)
+            handleOpen(intent)
             if (intent?.action == ACTION_IMPORT) pendingImport = true
-            // Lebih dari satu desa: mulai dari ringkasan semua desa.
-            if (!opened && Store.accounts(this).size > 1) tab = Tab.VILLAGES
         }
     }
 
-    /** Widget & notifikasi membawa tag desa + sisi (Home/BB) + tab tujuan (atau tab Desa saja). */
+    /** Lembar Desa anda dibuka begitu layar siap (dari widget / notifikasi semua desa). */
+    private var pendingPicker = false
+
+    /** Widget & notifikasi membawa tag desa + sisi (Home/BB) + tab tujuan (atau "semua desa" = lembar Desa anda). */
     private fun handleOpen(intent: Intent?): Boolean {
-        val target = intent?.getStringExtra(Widgets.EXTRA_TAB)?.let { runCatching { Tab.valueOf(it) }.getOrNull() }
-        if (target == Tab.VILLAGES) {
-            tab = Tab.VILLAGES
+        val raw = intent?.getStringExtra(Widgets.EXTRA_TAB)
+        if (raw == "VILLAGES") {
+            tab = Tab.HOME
+            pendingPicker = Store.accounts(this).size > 1
             intent.removeExtra(Widgets.EXTRA_TAB)
             return true
         }
+        val target = Tab.of(raw)
         val tag = intent?.getStringExtra(Widgets.EXTRA_TAG) ?: return false
         if (Store.accounts(this).none { it.tag == tag }) return false
         Store.setSelectedTag(this, tag)
         showBB = intent.getBooleanExtra(Widgets.EXTRA_BB, false)
-        tab = if (wide && target == Tab.PLAN) Tab.HOME else target ?: Tab.HOME
+        tab = target ?: Tab.HOME
         intent.removeExtra(Widgets.EXTRA_TAG)
         intent.removeExtra(Widgets.EXTRA_TAB)
         return true
@@ -270,6 +283,10 @@ class MainActivity : AppCompatActivity() {
             AlarmScheduler.schedule(this)
         }
         renderAll()
+        if (pendingPicker) {
+            pendingPicker = false
+            handler.post { if (!isFinishing) VillagesView.sheet(this) }
+        }
         handler.removeCallbacks(tick)
         handler.post(tick)
         ApiSync.maybeSync(this)
@@ -316,8 +333,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Desa aktif (ketuk = ganti desa) + update & opsi; di bawahnya Home Village | Builder Base.
-     * Di tab Desa: judul "Semua desa" + tambah desa & pengaturan.
+     * Desa aktif (ketuk = lembar Desa anda) + update & opsi. Di bawahnya Home Village | Builder Base;
+     * di Tukang & Lab: Agenda/Antrian | Timeline dan Home | BB.
      */
     private fun renderHeader() {
         header.removeAllViews()
@@ -327,41 +344,72 @@ class MainActivity : AppCompatActivity() {
         val acc = accounts.firstOrNull { it.tag == tag }
         val row = Ui.hbox(this)
         header.addView(row, Ui.matchWrap())
-        if (tab == Tab.VILLAGES || acc == null) {
+        if (acc == null) {
             val col = Ui.vbox(this).apply { setPadding(0, dp(4), 0, dp(4)) }
-            col.addView(Ui.text(this, if (acc == null) "Clash Timer" else "Semua desa", Ui.TITLE_L).apply {
+            col.addView(Ui.text(this, "Clash Timer", Ui.TITLE_L).apply {
                 textSize = 22f; setTypeface(typeface, Typeface.BOLD); setTextColor(Ui.TEXT)
             })
-            col.addView(Ui.muted(this, if (acc == null) "Belum ada desa" else "${accounts.size} desa · yang butuh perhatian di atas"))
+            col.addView(Ui.muted(this, "Belum ada desa"))
             row.addView(col, Ui.weight1())
-            if (acc != null) row.addView(Help.button(this, Help.Topic.VILLAGES))
             row.addView(Ui.icon(this, R.drawable.ic_add, 24, sec, "Tambah desa dari export") { ImportUi.show(this) })
             row.addView(Ui.icon(this, R.drawable.ic_settings, 22, sec, "Pengaturan") { openSettings() })
             return
         }
-        val multi = accounts.size > 1
+        val name = Store.villageName(this, acc.tag)
+        val workers = tab == Tab.BUILDERS || tab == Tab.LAB
         val col = Ui.vbox(this).apply {
             setPadding(0, dp(2), dp(4), dp(2))
             isClickable = true
-            contentDescription = "Ganti desa"
-            setOnClickListener { VillagesUi.show(this@MainActivity) }
+            contentDescription = "Desa anda: ganti desa"
+            setOnClickListener { VillagesView.sheet(this@MainActivity) }
         }
-        col.addView(Ui.text(this, Store.villageName(this, acc.tag) + " ▾", Ui.TITLE_L).apply {
+        val title = when (tab) {
+            Tab.BUILDERS -> (if (showBB) "Master Builder" else "Tukang") + " · " + name
+            Tab.LAB -> (if (showBB) "Star Lab" else "Lab") + " · " + name
+            else -> name
+        }
+        col.addView(Ui.text(this, "$title ▾", Ui.TITLE_L).apply {
             textSize = 20f
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(Ui.TEXT)
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
         })
-        val hall = if (showBB) acc.bh.takeIf { it > 0 }?.let { "BH$it" } else acc.th.takeIf { it > 0 }?.let { "TH$it" }
-        val sub = listOfNotNull(hall, if (multi) "desa ${accounts.indexOf(acc) + 1} dari ${accounts.size}" else null).joinToString(" · ")
-        col.addView(Ui.muted(this, sub).apply { maxLines = 1 })
+        col.addView(Ui.muted(this, headerSub(acc)).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END })
         row.addView(col, Ui.weight1())
-        val seg = sideSwitch(acc)
-        if (wide) row.addView(seg, LinearLayout.LayoutParams(dp(380), LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(8) })
+        val seg = if (workers) null else sideSwitch(acc)
+        if (wide && seg != null) row.addView(seg, LinearLayout.LayoutParams(dp(380), LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(8) })
         row.addView(Ui.icon(this, R.drawable.ic_import, 22, sec, "Update desa dari export") { importFromClipboard() })
         row.addView(Ui.icon(this, R.drawable.ic_tune, 22, sec, "Opsi desa") { VillageOptions.sheet(this, acc.tag, showBB) })
-        if (!wide) header.addView(seg, Ui.matchWrap().apply { topMargin = dp(8); marginEnd = dp(8) })
+        if (workers) header.addView(workerSwitch(acc), Ui.matchWrap().apply { topMargin = dp(8); marginEnd = dp(8) })
+        else if (!wide && seg != null) header.addView(seg, Ui.matchWrap().apply { topMargin = dp(8); marginEnd = dp(8) })
+    }
+
+    /** Keterangan di bawah nama desa, sesuai tab. */
+    private fun headerSub(acc: Account): String {
+        val b = planCache[acc.tag]
+        val sim = if (showBB) b?.simBB else b?.simHome
+        val zone = zone
+        fun eta(t: Long?) = t?.takeIf { it > System.currentTimeMillis() }?.let { "selesai ±" + Fmt.dateShort(it, zone) }
+        return when (tab) {
+            Tab.BUILDERS -> {
+                val (busy, total) = builderCounts(acc.tag, showBB)
+                listOfNotNull("$busy/$total bekerja", eta(if (showBB) sim?.bbBuilderDone else sim?.builderDone)).joinToString(" · ")
+            }
+            Tab.LAB -> {
+                val now = System.currentTimeMillis()
+                val kinds = if (showBB) setOf(Kind.STAR_LAB) else setOf(Kind.LAB, Kind.PET)
+                val n = Store.upgrades(this).count { it.tag == acc.tag && it.kind in kinds && it.finishAt > now }
+                listOfNotNull(if (n > 0) "$n riset berjalan" else "tidak ada riset berjalan",
+                    eta(if (showBB) sim?.starLabDone else sim?.labDone)).joinToString(" · ")
+            }
+            else -> {
+                val hall = if (showBB) acc.bh.takeIf { it > 0 }?.let { "BH$it" } else acc.th.takeIf { it > 0 }?.let { "TH$it" }
+                val p = if (showBB) b?.bb else b?.home
+                val pct = p?.pct ?: Store.lastPct(this, acc.tag).takeIf { it >= 0 && !showBB }?.toDouble()
+                listOfNotNull(hall, pct?.let { "${Ui.pct(it)} menuju max" }).joinToString(" · ")
+            }
+        }
     }
 
     /** Home Village | Builder Base, dengan jumlah pekerja bebas di sisi lain. */
@@ -371,6 +419,21 @@ class MainActivity : AppCompatActivity() {
         val home = "Home Village" + if (showBB && freeHome > 0) " · $freeHome bebas" else ""
         val bb = "Builder Base" + if (!showBB && freeBB > 0) " · $freeBB bebas" else ""
         return Ui.segmentedWide(this, listOf(home, bb), if (showBB) 1 else 0) { selectSide(it == 1) }
+    }
+
+    /** Tukang & Lab: Agenda (Antrian) | Timeline, lalu Home | BB (Star) yang ringkas. */
+    private fun workerSwitch(acc: Account): View {
+        val lab = tab == Tab.LAB
+        val row = Ui.hbox(this)
+        row.addView(Ui.segmentedWide(this, listOf(if (lab) "Antrian" else "Agenda", "Timeline"), PlanView.mode(this, lab), lab = lab) {
+            PlanView.setMode(this, lab, it)
+            renderHeader()
+            renderBody()
+            scroll.scrollTo(0, 0)
+        }, Ui.weight1())
+        row.addView(Ui.segmentedWide(this, listOf("Home", if (lab) "Star" else "BB"), if (showBB) 1 else 0, lab = lab) { selectSide(it == 1) },
+            LinearLayout.LayoutParams(dp(150), LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(8) })
+        return row
     }
 
     /** Urutan desa untuk tombol ‹ ›: menurut nama. */
@@ -385,15 +448,20 @@ class MainActivity : AppCompatActivity() {
 
     /** Builder bebas sekarang untuk satu desa (dari timer tersimpan). */
     fun freeBuilders(tag: String, bb: Boolean): Int {
+        val (busy, total) = builderCounts(tag, bb)
+        return (total - busy).coerceAtLeast(0)
+    }
+
+    /** (builder yang bekerja, jumlah builder) — Goblin (event) tidak memakai builder tetap. */
+    fun builderCounts(tag: String, bb: Boolean): Pair<Int, Int> {
         val now = System.currentTimeMillis()
         val kind = if (bb) Kind.BB_BUILDER else Kind.BUILDER
-        // Goblin (event) tidak memakai builder tetap.
         val busy = Store.upgrades(this).count { it.tag == tag && it.kind == kind && it.finishAt > now && !it.extra }
         val total = if (bb) {
             planCache[tag]?.let { id.clashtimer.core.Planner.laneCount(it.village, id.clashtimer.core.Lane.BB_BUILDER, it.ps) }
                 ?: maxOf(busy, 1)
         } else Store.accounts(this).firstOrNull { it.tag == tag }?.builders ?: 5
-        return (total - busy).coerceAtLeast(0)
+        return minOf(busy, total) to total
     }
 
     private fun selectSide(bb: Boolean) {
@@ -406,12 +474,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun renderNav() {
         nav.removeAllViews()
-        if (wide && tab == Tab.PLAN) tab = Tab.HOME
         for (t in Tab.entries) {
-            // Layar lebar: Jadwal tampil di samping Sekarang.
-            if (wide && t == Tab.PLAN) continue
             val selected = t == tab
-            val color = if (selected) Ui.FREE_TEXT else Ui.TEXT2
+            val lab = t == Tab.LAB
+            val color = if (!selected) Ui.TEXT2 else if (lab) Ui.LAB_TEXT else Ui.FREE_TEXT
             val item = Ui.vbox(this).apply {
                 gravity = Gravity.CENTER_HORIZONTAL
                 setPadding(0, dp(if (wide) 10 else 4), 0, dp(if (wide) 10 else 4))
@@ -420,7 +486,7 @@ class MainActivity : AppCompatActivity() {
                 setOnClickListener { selectTab(t) }
             }
             val pill = FrameLayout(this).apply {
-                if (selected) background = Ui.rounded(Ui.SELECTED_BG, dp(16).toFloat())
+                if (selected) background = Ui.rounded(if (lab) Ui.LAB_BG else Ui.SELECTED_BG, dp(16).toFloat())
                 setPadding(dp(18), dp(4), dp(18), dp(4))
                 addView(Ui.icon(this@MainActivity, t.iconRes, 22, color), FrameLayout.LayoutParams(dp(22), dp(22)))
             }
@@ -442,9 +508,8 @@ class MainActivity : AppCompatActivity() {
     fun zoneId(): ZoneId = ZoneId.systemDefault()
 
     private fun selectTab(t: Tab) {
-        val target = if (wide && t == Tab.PLAN) Tab.HOME else t
-        if (target == tab) return
-        tab = target
+        if (t == tab) return
+        tab = t
         renderHeader()
         renderNav()
         renderBody()
@@ -456,13 +521,13 @@ class MainActivity : AppCompatActivity() {
     fun selectVillage(tag: String, bb: Boolean? = null, open: Tab? = null) {
         Store.setSelectedTag(this, tag)
         if (bb != null) showBB = bb
-        if (open != null) tab = if (wide && open == Tab.PLAN) Tab.HOME else open
+        if (open != null) tab = open
         renderAll()
         scroll.scrollTo(0, 0)
         scroll2?.scrollTo(0, 0)
     }
 
-    // ---------------------------------------------------------------- ringkasan semua desa
+    // ---------------------------------------------------------------- ringkasan semua desa (lembar Desa anda)
 
     private var villageRows: List<Widgets.VRow>? = null
     private var villageRowsAt = 0L
@@ -487,12 +552,15 @@ class MainActivity : AppCompatActivity() {
                     villageRows = res ?: Store.accounts(this).map { Widgets.VRow(it.tag, Store.villageName(this, it.tag), it, emptyList()) }
                     villageRowsAt = System.currentTimeMillis()
                     villageRowsVersion = version
-                    if (tab == Tab.VILLAGES) renderBody()
+                    onVillageRows?.invoke()
                 }
             }
         }
         return r
     }
+
+    /** Lembar Desa anda yang sedang terbuka: isi ulang begitu status semua desa selesai dihitung. */
+    var onVillageRows: (() -> Unit)? = null
 
     fun renderBody() {
         body.removeAllViews()
@@ -500,7 +568,7 @@ class MainActivity : AppCompatActivity() {
         countdowns.clear()
         val tag = currentTag()
         val right = body2
-        val split = wide && right != null && tab != Tab.PROGRESS && tab != Tab.VILLAGES && tag != null
+        val split = wide && right != null && tab == Tab.HOME && tag != null
         scroll2?.visibility = if (split) View.VISIBLE else View.GONE
         if (tag == null) {
             addClipOffer(body)
@@ -509,7 +577,7 @@ class MainActivity : AppCompatActivity() {
             val card = Ui.panel(this, padH = 16, padV = 16)
             card.addView(Ui.text(this, "Belum ada desa", Ui.TITLE_M).apply { textSize = 20f; setTypeface(typeface, Typeface.BOLD); setTextColor(Ui.TEXT) })
             card.addView(Ui.muted(this, "Di Clash of Clans: Settings → More Settings → paling bawah \"Export village data\" → Copy, lalu kembali ke sini. " +
-                "Untuk desa lain, ulangi dengan akun lain — semua desa tampil di tab Desa.").apply { textSize = 14f; setPadding(0, dp(6), 0, dp(14)) })
+                "Untuk desa lain, ulangi dengan akun lain — semua desa ada di lembar Desa anda (ketuk nama desa di atas).").apply { textSize = 14f; setPadding(0, dp(6), 0, dp(14)) })
             card.addView(Ui.primary(this, "Tambah desa") { ImportUi.show(this) }, Ui.matchWrap(8, this))
             card.addView(Ui.secondary(this, "Tempel dari clipboard") { importFromClipboard() }, Ui.matchWrap())
             body.addView(card, Ui.matchWrap().apply { topMargin = dp(12) })
@@ -521,11 +589,11 @@ class MainActivity : AppCompatActivity() {
         try {
             if (split && right != null) {
                 HomeView.render(this, body, tag, showBB, b)
-                if (b == null) waiting(tag, right) else PlanView.render(this, right, b, showBB)
+                PlanView.render(this, right, tag, showBB, lab = false, b = b, showFree = false)
             } else when (tab) {
-                Tab.VILLAGES -> VillagesView.render(this, body, villageRows(), wide)
                 Tab.HOME -> HomeView.render(this, body, tag, showBB, b)
-                Tab.PLAN -> if (b == null) waiting(tag) else PlanView.render(this, body, b, showBB)
+                Tab.BUILDERS -> PlanView.render(this, body, tag, showBB, lab = false, b = b)
+                Tab.LAB -> PlanView.render(this, body, tag, showBB, lab = true, b = b)
                 Tab.PROGRESS -> if (b == null) waiting(tag) else ProgressView.render(this, body, b, showBB)
             }
         } catch (e: Exception) {
@@ -533,7 +601,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun waiting(tag: String, into: LinearLayout = body) {
+    fun waiting(tag: String, into: LinearLayout = body) {
         val msg = when {
             Store.exportText(this, tag) == null ->
                 "Import ulang desa ini sekali (Export village data → Copy → 📋 Update desa) supaya rencana dan progres bisa dihitung."

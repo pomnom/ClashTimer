@@ -18,30 +18,71 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /**
- * Tab "Jadwal": kapan perlu login dan apa yang dimulai tiap sesi (Agenda), atau semua pekerja di garis
- * waktu (Timeline). Strategi dipilih di lembar Opsi desa.
+ * Tab "Tukang" dan "Lab": pekerja yang bebas (dengan saran), Agenda hari ini / Antrian riset atau
+ * Timeline, yang sedang dikerjakan, lalu antrian besok dst. Strategi dipilih di lembar Opsi desa.
  */
 object PlanView {
 
-    fun render(act: MainActivity, box: LinearLayout, b: PlanBundle, bb: Boolean) {
+    /** Jenis pekerja per tab: Tukang = builder / Master Builder, Lab = Lab + Pet / Star Lab. */
+    fun lanes(bb: Boolean, lab: Boolean): Set<Lane> = when {
+        !lab && !bb -> setOf(Lane.BUILDER)
+        !lab -> setOf(Lane.BB_BUILDER)
+        !bb -> setOf(Lane.LAB, Lane.PET)
+        else -> setOf(Lane.STAR_LAB)
+    }
+
+    /** 0 = Agenda (Tukang) / Antrian (Lab), 1 = Timeline. */
+    fun mode(act: MainActivity, lab: Boolean) = pref(act, if (lab) "lab_mode" else "plan_mode")
+
+    fun setMode(act: MainActivity, lab: Boolean, v: Int) = setPref(act, if (lab) "lab_mode" else "plan_mode", v)
+
+    /** [showFree] = false di layar lebar (kartu pekerja bebas sudah ada di Dashboard sebelah kiri). */
+    fun render(act: MainActivity, box: LinearLayout, tag: String, bb: Boolean, lab: Boolean, b: PlanBundle?, showFree: Boolean = true) {
         val zone = ZoneId.systemDefault()
         val now = System.currentTimeMillis()
-        val ps = b.ps
-        val sim = if (bb) b.simBB else b.simHome
-        if (sim == null) {
-            box.addView(Ui.muted(act, "Belum ada data untuk rencana ini.", Ui.BODY_M).apply { setPadding(Ui.dp(act, 4), Ui.dp(act, 16), 0, 0) })
+        val acc = Store.accounts(act).firstOrNull { it.tag == tag } ?: return
+        val ups = Store.upgrades(act).filter { it.tag == tag }
+        if (bb && acc.bh == 0 && ups.none { it.kind.builderBase }) {
+            box.addView(Ui.muted(act, "Belum ada data Builder Base di export desa ini.", Ui.BODY_M).apply {
+                setPadding(Ui.dp(act, 4), Ui.dp(act, 24), Ui.dp(act, 4), 0)
+            })
             return
         }
-        val mode = pref(act, "plan_mode")
-        modeRow(act, box, mode)
-        targetCard(act, box, b, sim, bb, zone)
-        if (!bb && sim.cwlDeferred.isNotEmpty() && ps.cwl.enabled) {
-            val w = ps.cwl.next(now)
+        val gd = Repo.gameData(act)
+        val labels = Sessions.labels(ups, now)
+        val sim = b?.let { if (bb) it.simBB else it.simHome }
+        val lanes = lanes(bb, lab)
+        val mode = mode(act, lab)
+        val hasExport = Store.exportText(act, tag) != null
+
+        // Pekerja yang bebas sekarang: kartu saran (Sudah dimulai / Opsi lain).
+        val free = if (showFree) HomeView.freeCards(act, tag, bb, b, sim, ups, labels, now, lanes) else emptyList()
+        if (free.isNotEmpty()) {
+            val target = b?.let { if (bb) "urutan tercepat: ${it.ps.bbStrategy.label}" else "urutan tercepat ke ${it.ps.strategy.target}" }
+            box.addView(Ui.heading(act, HomeView.countTitle("Bebas sekarang", free.size), target, Help.Topic.HOME))
+            for (c in free) box.addView(HomeView.freeCard(act, tag, b, c, bb, now, zone, hasExport), Ui.matchWrap(12, act))
+        }
+
+        if (b == null || sim == null) {
+            if (b == null) act.waiting(tag, box)
+            working(act, box, bb, lab, null, null, ups, gd, labels, now, zone)
+            return
+        }
+        if (!bb && !lab && sim.cwlDeferred.isNotEmpty() && b.ps.cwl.enabled) {
+            val w = b.ps.cwl.next(now)
             box.addView(note(act, "CWL sampai ${Fmt.dateShort(w.last + 1, zone)}: ${sim.cwlDeferred.joinToString(", ")} ditunda", Ui.BUSY))
         }
-        if (bb) capacityLine(act, box, b)
-        if (mode == 1) timeline(act, box, b, sim, bb, now, zone)
-        else agenda(act, box, b, sim, bb, now, zone)
+        if (bb && !lab) capacityLine(act, box, b)
+        val split = agendaEnd(b.ps.schedule, now)
+        if (!lab) {
+            if (mode == 1) timeline(act, box, b, sim, bb, lanes, now, zone) else agenda(act, box, b, sim, bb, lanes, split, now, zone)
+            working(act, box, bb, false, b, sim, ups, gd, labels, now, zone)
+            queue(act, box, b, sim, lanes, split, now, zone)
+        } else {
+            working(act, box, bb, true, b, sim, ups, gd, labels, now, zone)
+            if (mode == 1) timeline(act, box, b, sim, bb, lanes, now, zone) else labQueue(act, box, b, sim, bb, lanes, now, zone)
+            labProgress(act, box, b, bb)
+        }
     }
 
     private fun note(act: MainActivity, text: String, color: Int): View =
@@ -70,40 +111,6 @@ object PlanView {
         else -> "Max BH${b.village.bh}"
     }
 
-    /** "Max TH11 ±7 Feb 2027" + strategi & selisih dengan urutan lama. Ketuk = opsi desa. */
-    private fun targetCard(act: MainActivity, box: LinearLayout, b: PlanBundle, sim: SimResult, bb: Boolean, zone: ZoneId) {
-        val ps = b.ps
-        val t = Planner.target(sim, ps, bb).takeIf { it != Long.MAX_VALUE }
-        val info = if (bb) b.bbTarget else b.homeTarget
-        val card = Ui.panel(act, padH = 12, padV = 10, radiusDp = 14)
-        val row = Ui.hbox(act)
-        row.addView(Ui.icon(act, R.drawable.ic_target, 20, Ui.FREE_TEXT), LinearLayout.LayoutParams(Ui.dp(act, 20), Ui.dp(act, 20)).apply { marginEnd = Ui.dp(act, 10) })
-        val col = Ui.vbox(act)
-        col.addView(Ui.text(act, targetLabel(b, sim, bb) + if (t != null) " ±${Fmt.date(t, zone)}" else " · belum tercapai", Ui.BODY_M).apply {
-            textSize = 14f
-            setTypeface(typeface, Typeface.BOLD)
-            setTextColor(Ui.TEXT)
-        })
-        val strat = if (bb) (if (Store.bobDone(act, b.tag)) "Max" else ps.bbStrategy.label) else ps.strategy.label
-        val diff = if (t != null && info?.legacy != null) info.legacy - t else null
-        val sub = strat + if (diff != null && diff >= 3_600_000L) " · ${Fmt.dur(diff)} lebih cepat dari urutan lama" else ""
-        col.addView(Ui.muted(act, sub).apply { textSize = 12f })
-        row.addView(col, Ui.weight1())
-        row.addView(Help.button(act, Help.Topic.PLAN) {
-            val lanes = info?.policies?.keys?.filter { Planner.laneCount(b.village, it, ps) > 0 }?.sortedBy { it.ordinal }.orEmpty()
-            val how = lanes.groupBy { ps.policyFor(it) }.entries.joinToString("\n") { (p, ls) ->
-                "• " + ls.joinToString(" & ") { laneWord(it) } + ": " + p.label
-            }
-            (if (how.isNotEmpty()) "Urutan yang dipakai desa ini (dari ${info?.tried ?: 0} simulasi):\n$how\n\n" else "") +
-                "Dihitung ${Fmt.time(b.computedAt, zone)}. Ganti strategi lewat ikon opsi di atas."
-        })
-        card.addView(row)
-        card.isClickable = true
-        card.setOnClickListener { VillageOptions.sheet(act, b.tag, bb) }
-        Ui.ripple(card)
-        box.addView(card, Ui.matchWrap(12, act))
-    }
-
     // ---------------------------------------------------------------- agenda / timeline
 
     private fun pref(act: MainActivity, key: String) =
@@ -112,72 +119,292 @@ object PlanView {
     private fun setPref(act: MainActivity, key: String, v: Int) =
         act.getSharedPreferences("ui", android.content.Context.MODE_PRIVATE).edit().putInt(key, v).apply()
 
-    private fun modeRow(act: MainActivity, box: LinearLayout, mode: Int) {
-        val row = Ui.hbox(act).apply { setPadding(0, Ui.dp(act, 2), 0, Ui.dp(act, 10)) }
-        row.addView(Ui.segmentedWide(act, listOf("Agenda", "Timeline"), mode, heightDp = 38) {
-            setPref(act, "plan_mode", it)
-            act.renderBody()
-        }, Ui.weight1())
-        if (mode == 1) {
-            row.addView(Ui.segmentedWide(act, listOf("24 jam", "3 hari"), pref(act, "tl_range"), heightDp = 38) {
-                setPref(act, "tl_range", it)
-                act.renderBody()
-            }, Ui.weight1().apply { marginStart = Ui.dp(act, 8) })
-        }
-        row.addView(Help.button(act, if (mode == 1) Help.Topic.TIMELINE else Help.Topic.PLAN))
-        box.addView(row, Ui.matchWrap())
-    }
-
     private val dayFmt: DateTimeFormatter get() = DateTimeFormatter.ofPattern("EEEE d MMM", Fmt.locale)
 
-    private fun agenda(act: MainActivity, box: LinearLayout, b: PlanBundle, sim: SimResult, bb: Boolean, now: Long, zone: ZoneId) {
+    /** Batas Agenda: akhir jam tidur berikutnya (bangun), atau 24 jam bila jam tidur tidak diatur. */
+    private fun agendaEnd(schedule: id.clashtimer.core.OfflineSchedule, now: Long): Long {
+        val w = runCatching { schedule.windowsBetween(now, now + 2 * DAY) }.getOrDefault(emptyList())
+            .firstOrNull { it.last > now && Sessions.inSleep(schedule, it.first.coerceAtLeast(now)) }
+        return w?.let { it.last + 1 } ?: (now + DAY)
+    }
+
+    /** Sesi login sampai bangun berikutnya (yang sekarang sudah tampil sebagai kartu bebas). */
+    private fun agenda(
+        act: MainActivity, box: LinearLayout, b: PlanBundle, sim: SimResult, bb: Boolean, lanes: Set<Lane>,
+        until: Long, now: Long, zone: ZoneId,
+    ) {
         val schedule = b.ps.schedule
-        val until = now + 7 * DAY
-        val sessions = Sessions.build(sim, bb, now, until)
-        if (sessions.isEmpty()) {
-            box.addView(Ui.muted(act, "Tidak ada upgrade yang bisa direncanakan — semua sudah max atau menunggu syarat.", Ui.BODY_M).apply {
-                setPadding(Ui.dp(act, 4), Ui.dp(act, 16), 0, 0)
+        val sessions = Sessions.build(sim, bb, now, until, lanes).filter { !it.now && it.at < until }
+        val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+        val sleeps = runCatching { schedule.windowsBetween(now, until) }.getOrDefault(emptyList())
+            .filter { it.last > now && it.first < until && Sessions.inSleep(schedule, it.first.coerceAtLeast(now)) }
+        class Entry(val at: Long, val session: Session?, val sleep: LongRange?)
+        val entries = (sessions.map { Entry(it.at, it, null) } + sleeps.map { Entry(it.first.coerceAtLeast(now), null, it) }).sortedBy { it.at }
+        var lastDay: java.time.LocalDate? = null
+        var first = true
+        fun dayHead(d: java.time.LocalDate) {
+            val prefix = when (d) {
+                today -> "HARI INI · "
+                today.plusDays(1) -> "BESOK · "
+                else -> ""
+            }
+            val row = Ui.hbox(act).apply { setPadding(Ui.dp(act, 2), Ui.dp(act, if (first) 2 else 8), 0, Ui.dp(act, 6)) }
+            row.addView(Ui.text(act, prefix + dayFmt.format(d).uppercase(Fmt.locale), Ui.BODY_S).apply {
+                textSize = 12f
+                letterSpacing = 0.06f
+                setTypeface(typeface, Typeface.BOLD)
+                setTextColor(Ui.TEXT2)
+            }, Ui.weight1())
+            if (first) row.addView(Help.button(act, Help.Topic.PLAN))
+            box.addView(row, Ui.matchWrap())
+            first = false
+        }
+        if (entries.isEmpty()) {
+            dayHead(today)
+            box.addView(Ui.muted(act, "Tidak ada yang perlu dimulai sampai ${HomeView.short(until, now, zone)}.").apply {
+                textSize = 13f
+                setPadding(Ui.dp(act, 4), 0, 0, Ui.dp(act, 10))
             })
             return
         }
-        val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
-        // Sesi + jam tidur, berurutan.
-        val sleeps = schedule.windowsBetween(now, sessions.last().at).filter { it.first > now && Sessions.inSleep(schedule, it.first) }
-        class Entry(val at: Long, val session: Session?, val sleep: LongRange?)
-        val entries = (sessions.map { Entry(it.at, it, null) } + sleeps.map { Entry(it.first, null, it) }).sortedBy { it.at }
-        var lastDay: java.time.LocalDate? = null
-        var shown = 0
-        val limit = 40
         for (e in entries) {
-            if (shown >= limit) break
             val d = Instant.ofEpochMilli(e.at).atZone(zone).toLocalDate()
-            if (d != lastDay && e.session != null) {
+            if (d != lastDay && (e.session != null || lastDay == null)) {
                 lastDay = d
-                val prefix = when (d) {
-                    today -> "HARI INI · "
-                    today.plusDays(1) -> "BESOK · "
-                    else -> ""
-                }
-                box.addView(Ui.text(act, prefix + dayFmt.format(d).uppercase(Fmt.locale), Ui.BODY_S).apply {
-                    textSize = 12f
-                    letterSpacing = 0.06f
-                    setTypeface(typeface, Typeface.BOLD)
-                    setTextColor(Ui.TEXT2)
-                    setPadding(Ui.dp(act, 2), Ui.dp(act, if (shown == 0) 2 else 8), 0, Ui.dp(act, 8))
-                })
+                dayHead(d)
             }
-            if (e.sleep != null) box.addView(sleepBand(act, e.sleep, sim, bb, zone), Ui.matchWrap(10, act))
-            else {
-                box.addView(sessionRow(act, b, e.session!!, schedule, now, zone), Ui.matchWrap(10, act))
-                shown++
-            }
+            if (e.sleep != null) box.addView(sleepBand(act, e.sleep, sim, bb, lanes, zone), Ui.matchWrap(10, act))
+            else box.addView(sessionRow(act, b, e.session!!, schedule, now, zone), Ui.matchWrap(10, act))
         }
-        val rest = sessions.size - shown
-        if (rest > 0) box.addView(Ui.muted(act, "… $rest sesi lagi dalam 7 hari").apply { setPadding(Ui.dp(act, 4), 0, 0, Ui.dp(act, 8)) })
-        if (!bb && sim.builderIdle7d > 30 * 60_000L) box.addView(note(act, "Builder menganggur ±${Fmt.dur(sim.builderIdle7d)} dalam 7 hari ke depan", Ui.IDLE))
     }
 
-    private fun sleepBand(act: MainActivity, w: LongRange, sim: SimResult, bb: Boolean, zone: ZoneId): View {
+    /** Antrian besok dst: langkah rencana setelah Agenda, per hari. */
+    private fun queue(act: MainActivity, box: LinearLayout, b: PlanBundle, sim: SimResult, lanes: Set<Lane>, from: Long, now: Long, zone: ZoneId) {
+        val steps = sim.steps.filter { it.lane in lanes && !it.running && it.start >= from && it.start < now + 7 * DAY }.sortedBy { it.start }
+        if (steps.isEmpty()) return
+        box.addView(Ui.heading(act, "Antrian", "urutan tercepat ke target"))
+        val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+        val limit = 20
+        val shown = steps.take(limit)
+        for ((d, list) in shown.groupBy { Instant.ofEpochMilli(it.start).atZone(zone).toLocalDate() }) {
+            val card = Ui.panel(act, padH = 14, padV = 4)
+            val prefix = when (d) {
+                today -> "HARI INI · "
+                today.plusDays(1) -> "BESOK · "
+                else -> ""
+            }
+            card.addView(Ui.text(act, prefix + dayFmt.format(d).uppercase(Fmt.locale), Ui.BODY_S).apply {
+                textSize = 12f
+                letterSpacing = 0.06f
+                setTypeface(typeface, Typeface.BOLD)
+                setTextColor(Ui.TEXT2)
+                setPadding(0, Ui.dp(act, 10), 0, Ui.dp(act, 4))
+            })
+            for (s in list) {
+                card.addView(View(act).apply { setBackgroundColor(Ui.LINE) },
+                    LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(act, 1)))
+                val row = Ui.hbox(act).apply {
+                    minimumHeight = Ui.dp(act, 44)
+                    isClickable = true
+                    setOnClickListener { stepSheet(act, b, s, now, zone) }
+                }
+                ItemMenu.attach(act, row, b.tag, s.item?.id)
+                row.addView(Ui.monoText(act, Fmt.time(s.start, zone), 13f, bold = false).apply { setTextColor(Ui.TEXT2) },
+                    LinearLayout.LayoutParams(Ui.dp(act, 48), LinearLayout.LayoutParams.WRAP_CONTENT))
+                row.addView(stepLine(act, b, s, now, zone, clickable = false), Ui.weight1())
+                card.addView(row)
+            }
+            box.addView(card, Ui.matchWrap(10, act))
+        }
+        val rest = steps.size - shown.size
+        if (rest > 0) box.addView(Ui.muted(act, "… $rest langkah lagi dalam 7 hari").apply { setPadding(Ui.dp(act, 4), 0, 0, Ui.dp(act, 8)) })
+        if (lanes.contains(Lane.BUILDER) && sim.builderIdle7d > 30 * 60_000L) {
+            box.addView(note(act, "Builder menganggur ±${Fmt.dur(sim.builderIdle7d)} dalam 7 hari ke depan", Ui.IDLE))
+        }
+    }
+
+    /** Lab: antrian riset berikutnya dengan lonceng pengingat. */
+    private fun labQueue(act: MainActivity, box: LinearLayout, b: PlanBundle, sim: SimResult, bb: Boolean, lanes: Set<Lane>, now: Long, zone: ZoneId) {
+        val steps = sim.steps.filter { it.lane in lanes && !it.running && it.start > now + 60_000L }.sortedBy { it.start }
+        val name = if (bb) "Star Lab" else "Lab"
+        val head = Ui.heading(act, "Antrian $name", "urutan tercepat ke target", Help.Topic.PLAN)
+        box.addView(head)
+        if (steps.isEmpty()) {
+            box.addView(Ui.muted(act, "Tidak ada riset lagi yang bisa direncanakan.").apply { setPadding(Ui.dp(act, 4), 0, 0, Ui.dp(act, 10)) })
+            return
+        }
+        val schedule = b.ps.schedule
+        val panel = Ui.panel(act, padH = 14, padV = 4)
+        val limit = 10
+        steps.take(limit).forEachIndexed { i, s ->
+            if (i > 0) panel.addView(View(act).apply { setBackgroundColor(Ui.LINE) },
+                LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(act, 1)))
+            val row = Ui.hbox(act).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(0, Ui.dp(act, 8), 0, Ui.dp(act, 8))
+                isClickable = true
+                setOnClickListener { stepSheet(act, b, s, now, zone) }
+            }
+            ItemMenu.attach(act, row, b.tag, s.item?.id)
+            row.addView(Ui.monoText(act, HomeView.short(s.start, now, zone), 13f, bold = false).apply { setTextColor(Ui.TEXT) },
+                LinearLayout.LayoutParams(Ui.dp(act, 72), LinearLayout.LayoutParams.WRAP_CONTENT))
+            val col = Ui.vbox(act)
+            val t = Ui.hbox(act)
+            if (lanes.size > 1) t.addView(Sessions.badge(act, Sessions.label(s), true), LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = Ui.dp(act, 6) })
+            t.addView(Ui.text(act, short(s), Ui.BODY_M).apply {
+                textSize = 15f
+                setTypeface(typeface, Typeface.BOLD)
+                setTextColor(Ui.TEXT)
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            }, Ui.weight1())
+            col.addView(t)
+            val cost = if (s.cost > 0) " · ${Fmt.money(s.cost)} ${Fmt.resource(s.item?.resource ?: "")}" else ""
+            val (extra, color) = when {
+                s.idle > 30 * 60_000L -> " · menganggur ${Fmt.dur(s.idle)}" to Ui.IDLE
+                schedule.isOffline(s.finish) -> " · selesai saat tidur" to Ui.TEXT2
+                Sessions.mood(schedule, s.finish) == "bangun" -> " · pas bangun" to Ui.FREE_TEXT
+                else -> "" to Ui.TEXT2
+            }
+            col.addView(Ui.muted(act, "${Fmt.durSec(s.durationSec)}$cost · selesai ${HomeView.short(s.finish, now, zone)}$extra").apply {
+                textSize = 12f
+                setTextColor(color)
+            })
+            row.addView(col, Ui.weight1())
+            row.addView(bellIcon(act, b.tag, Session(s.start, listOf(s), false)))
+            panel.addView(row)
+        }
+        box.addView(panel, Ui.matchWrap(8, act))
+        val rest = steps.size - limit
+        if (rest > 0) box.addView(Ui.muted(act, "… lalu $rest riset lagi").apply { setPadding(Ui.dp(act, 4), 0, 0, Ui.dp(act, 8)) })
+    }
+
+    // ---------------------------------------------------------------- sedang dikerjakan
+
+    private fun working(
+        act: MainActivity, box: LinearLayout, bb: Boolean, lab: Boolean, b: PlanBundle?, sim: SimResult?,
+        ups: List<Upgrade>, gd: id.clashtimer.core.GameData, labels: Map<String, String>, now: Long, zone: ZoneId,
+    ) {
+        val kinds = lanes(bb, lab).map { Kind.of(it) }.toSet()
+        val running = ups.filter { it.kind in kinds && it.finishAt > now }.sortedBy { it.finishAt }
+        if (running.isEmpty()) return
+        val tag = running.first().tag
+        val sub = if (lab) "${running.size} berjalan" else act.builderCounts(tag, bb).let { (busy, total) -> "$busy/$total bekerja" }
+        box.addView(Ui.heading(act, (if (lab) "Sedang diriset" else "Sedang dikerjakan") + " · $sub", "tercepat di atas"))
+        for (u in running) box.addView(workCard(act, u, gd, labels[u.id], lab, b, sim, now, zone), Ui.matchWrap(10, act))
+    }
+
+    /** Kartu upgrade berjalan: ikon + label pekerja, hitung mundur, bar, dan apa yang terjadi setelahnya. */
+    private fun workCard(
+        act: MainActivity, u: Upgrade, gd: id.clashtimer.core.GameData, label: String?, lab: Boolean,
+        b: PlanBundle?, sim: SimResult?, now: Long, zone: ZoneId,
+    ): View {
+        val color = if (lab) Ui.LAB else Ui.BUSY
+        val card = Ui.panel(act, padH = 12, padV = 12)
+        card.isClickable = true
+        card.setOnClickListener { act.timerOptions(u) }
+        Ui.ripple(card)
+        ItemMenu.attach(act, card, u.tag, Repo.itemIdOf(u.id))
+        val row = Ui.hbox(act)
+        val badge = label?.let { Sessions.badge(act, it, lab) }
+        row.addView(HomeView.icon(act, u, gd, if (lab) 52 else 46, badge))
+        val col = Ui.vbox(act).apply { setPadding(Ui.dp(act, 12), 0, 0, 0) }
+        if (lab) {
+            val where = when (u.kind) {
+                Kind.PET -> "Pet House"
+                Kind.STAR_LAB -> "Star Laboratory"
+                else -> if (u.extra) "Goblin Researcher" else "Laboratory"
+            }
+            col.addView(Ui.muted(act, where).apply { textSize = 12f })
+        }
+        val t = Ui.hbox(act)
+        t.addView(Ui.text(act, Widgets.shortTitle(u), Ui.BODY_M).apply {
+            textSize = 15f
+            setTypeface(typeface, Typeface.BOLD)
+            setTextColor(Ui.TEXT)
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+        }, Ui.weight1())
+        val cd = Ui.monoText(act, act.countdown(u.finishAt - now), 15f).apply { if (lab) setTextColor(Ui.LAB) }
+        act.registerCountdown(cd, u.finishAt, clockStyle = false)
+        t.addView(cd)
+        col.addView(t)
+        col.addView(Ui.thinBar(act, HomeView.progress(u, gd, now) ?: 0.0, color))
+        val (txt, c) = afterNote(u, label, b, sim, now, zone)
+        col.addView(TextView(act).apply {
+            text = txt
+            textSize = 12f
+            setTextColor(c)
+            setPadding(0, Ui.dp(act, 5), 0, 0)
+        })
+        row.addView(col, Ui.weight1())
+        card.addView(row)
+        return card
+    }
+
+    /** "selesai 18:40 · lalu Air Sweeper → 6" atau "selesai Sel 02:05 · menganggur ±4j". */
+    private fun afterNote(u: Upgrade, label: String?, b: PlanBundle?, sim: SimResult?, now: Long, zone: ZoneId): Pair<String, Int> {
+        val done = "selesai ${HomeView.short(u.finishAt, now, zone)}"
+        if (u.extra) return "$done · Goblin (event)" to Ui.TEXT2
+        val lane = when (u.kind) {
+            Kind.BUILDER -> Lane.BUILDER
+            Kind.BB_BUILDER -> Lane.BB_BUILDER
+            Kind.LAB -> Lane.LAB
+            Kind.PET -> Lane.PET
+            Kind.STAR_LAB -> Lane.STAR_LAB
+            else -> return done to Ui.TEXT2
+        }
+        // Langkah berjalan di rencana yang sama (selesai paling dekat dengan timer ini).
+        val rs = sim?.running?.filter { it.lane == lane }?.minByOrNull { kotlin.math.abs(it.finish - u.finishAt) }
+            ?.takeIf { kotlin.math.abs(it.finish - u.finishAt) < 5 * 60_000L }
+        val idx = rs?.laneIndex ?: label?.drop(1)?.toIntOrNull()
+        val next = sim?.steps?.filter { it.lane == lane && !it.running && (lane != Lane.BUILDER && lane != Lane.BB_BUILDER || it.laneIndex == idx) && it.start >= u.finishAt - 60_000L }
+            ?.minByOrNull { it.start }
+        val wait = when {
+            rs != null -> rs.idle
+            next != null -> (next.start - u.finishAt).coerceAtLeast(0)
+            else -> 0L
+        }
+        return when {
+            wait > 30 * 60_000L -> "$done · menganggur ±${Fmt.dur(wait)}" to Ui.IDLE
+            next != null -> "$done · lalu ${short(next)}" to Ui.TEXT2
+            b != null && b.ps.schedule.isOffline(u.finishAt) -> "$done · saat tidur" to Ui.TEXT2
+            else -> done to Ui.TEXT2
+        }
+    }
+
+    // ---------------------------------------------------------------- lab: sisa riset
+
+    private fun labProgress(act: MainActivity, box: LinearLayout, b: PlanBundle, bb: Boolean) {
+        val p = (if (bb) b.bb else b.home) ?: return
+        val cats = p.categories.filter { it.lane == Lane.LAB || it.lane == Lane.PET || it.lane == Lane.STAR_LAB }
+        if (cats.isEmpty()) return
+        box.addView(Ui.heading(act, "Sisa riset", null, Help.Topic.PROGRESS))
+        val panel = Ui.panel(act, padH = 14, padV = 6)
+        for (c in cats) {
+            val pct = if (c.totalSec > 0) c.doneSec * 100.0 / c.totalSec else 100.0
+            val row = Ui.hbox(act).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                minimumHeight = Ui.dp(act, 40)
+            }
+            row.addView(Ui.text(act, c.title, Ui.BODY_M).apply { textSize = 13f; setTextColor(Ui.TEXT); maxLines = 1 },
+                LinearLayout.LayoutParams(Ui.dp(act, 96), LinearLayout.LayoutParams.WRAP_CONTENT))
+            row.addView(Ui.thinBar(act, pct / 100.0, Ui.LAB).apply {
+                layoutParams = LinearLayout.LayoutParams(0, Ui.dp(act, 6), 1f)
+            })
+            row.addView(Ui.monoText(act, if (c.remainingSec <= 0) "max" else Ui.pct(pct), 12f, bold = false).apply {
+                setTextColor(if (c.remainingSec <= 0) Ui.FREE_TEXT else Ui.TEXT2)
+                gravity = Gravity.END
+            }, LinearLayout.LayoutParams(Ui.dp(act, 48), LinearLayout.LayoutParams.WRAP_CONTENT))
+            panel.addView(row)
+        }
+        panel.isClickable = true
+        panel.setOnClickListener { act.openTab(MainActivity.Tab.PROGRESS) }
+        box.addView(panel, Ui.matchWrap(12, act))
+    }
+
+    private fun sleepBand(act: MainActivity, w: LongRange, sim: SimResult, bb: Boolean, lanes: Set<Lane>, zone: ZoneId): View {
         val band = Ui.hbox(act).apply {
             background = Ui.rounded(Ui.SURFACE2, Ui.dp(act, 12).toFloat())
             setPadding(Ui.dp(act, 12), Ui.dp(act, 10), Ui.dp(act, 12), Ui.dp(act, 10))
@@ -185,7 +412,7 @@ object PlanView {
         band.addView(Ui.icon(act, R.drawable.ic_moon, 16, Ui.TEXT2), LinearLayout.LayoutParams(Ui.dp(act, 16), Ui.dp(act, 16)).apply { marginEnd = Ui.dp(act, 8) })
         band.addView(Ui.muted(act, "Tidur ${Fmt.time(w.first, zone)}–${Fmt.time(w.last + 1, zone)}").apply { textSize = 13f }, Ui.weight1())
         // Pekerja yang selesai saat tidur dan menunggu lama.
-        val idle = (sim.running + sim.steps).filter { it.lane.bb == bb && it.finish in w && it.idle > 30 * 60_000L }
+        val idle = (sim.running + sim.steps).filter { it.lane.bb == bb && it.lane in lanes && it.finish in w && it.idle > 30 * 60_000L }
             .map { Sessions.label(it) }.distinct()
         band.addView(TextView(act).apply {
             textSize = 13f
@@ -233,7 +460,7 @@ object PlanView {
         return row
     }
 
-    private fun bellIcon(act: MainActivity, tag: String, s: Session): View {
+    fun bellIcon(act: MainActivity, tag: String, s: Session): View {
         val on = Repo.sessionReminderOn(act, tag, s.at)
         return Ui.icon(act, if (on) R.drawable.ic_bell else R.drawable.ic_bell_off, 20, if (on) Ui.FREE_TEXT else Ui.TEXT2,
             if (on) "Pengingat aktif" else "Ingatkan pukul ${Fmt.time(s.at, act.zoneId())}") {
@@ -247,12 +474,13 @@ object PlanView {
     }
 
     /** "B4 [ikon] Hidden Tesla → 8   14j". */
-    private fun stepLine(act: MainActivity, b: PlanBundle, s: PlannedStep, now: Long, zone: ZoneId): View {
-        val line = Ui.hbox(act).apply {
-            isClickable = true
-            setOnClickListener { stepSheet(act, b, s, now, zone) }
+    private fun stepLine(act: MainActivity, b: PlanBundle, s: PlannedStep, now: Long, zone: ZoneId, clickable: Boolean = true): View {
+        val line = Ui.hbox(act)
+        if (clickable) {
+            line.isClickable = true
+            line.setOnClickListener { stepSheet(act, b, s, now, zone) }
+            ItemMenu.attach(act, line, b.tag, s.item?.id)
         }
-        ItemMenu.attach(act, line, b.tag, s.item?.id)
         line.addView(Sessions.badge(act, Sessions.label(s), Sessions.isLab(s)), LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = Ui.dp(act, 8) })
         val name = s.item?.name ?: s.title
@@ -280,13 +508,20 @@ object PlanView {
         }
     }
 
-    private fun timeline(act: MainActivity, box: LinearLayout, b: PlanBundle, sim: SimResult, bb: Boolean, now: Long, zone: ZoneId) {
+    private fun timeline(act: MainActivity, box: LinearLayout, b: PlanBundle, sim: SimResult, bb: Boolean, lanes: Set<Lane>, now: Long, zone: ZoneId) {
+        val range = Ui.hbox(act).apply { setPadding(0, 0, 0, Ui.dp(act, 8)) }
+        range.addView(Ui.segmentedWide(act, listOf("24 jam", "3 hari"), pref(act, "tl_range"), heightDp = 36, lab = lanes.none { it == Lane.BUILDER || it == Lane.BB_BUILDER }) {
+            setPref(act, "tl_range", it)
+            act.renderBody()
+        }, Ui.weight1())
+        range.addView(Help.button(act, Help.Topic.TIMELINE))
+        box.addView(range, Ui.matchWrap())
         val long = pref(act, "tl_range") == 1
         val from = now - if (long) 2 * 3_600_000L else 30 * 60_000L
         val to = from + if (long) 3 * DAY else DAY
         val card = Ui.panel(act, padH = 6, padV = 10)
         val tv = TimelineView(act)
-        TimelineView.build(tv, sim.running, sim.steps, bb, from, to, now)
+        TimelineView.build(tv, sim.running.filter { it.lane in lanes }, sim.steps.filter { it.lane in lanes }, bb, from, to, now)
         tv.offline = runCatching { b.ps.schedule.windowsBetween(from, to) }.getOrDefault(emptyList())
         tv.zone = zone
         val detail = Ui.vbox(act)
@@ -298,17 +533,17 @@ object PlanView {
             card.addView(Ui.muted(act, "Tidak ada pekerja untuk ditampilkan.", Ui.BODY_M).apply { setPadding(Ui.dp(act, 8), Ui.dp(act, 8), 0, Ui.dp(act, 8)) })
         } else card.addView(tv, Ui.matchWrap())
         box.addView(card, Ui.matchWrap(8, act))
-        box.addView(legend(act), Ui.matchWrap(10, act))
+        box.addView(legend(act, lanes.none { it == Lane.BUILDER || it == Lane.BB_BUILDER }), Ui.matchWrap(10, act))
         val idle = tv.bars.filter { it.idle }.sumOf { (minOf(it.end, to) - maxOf(it.start, now)).coerceAtLeast(0) }
         if (idle > 30 * 60_000L) box.addView(note(act, "Menganggur ±${Fmt.dur(idle)} dalam ${if (long) "3 hari" else "24 jam"}", Ui.IDLE))
         box.addView(detail, Ui.matchWrap())
         if (tv.rows.isNotEmpty()) detail.addView(Ui.muted(act, "Ketuk batang untuk melihat detailnya.").apply {
             textSize = 12f
-            setPadding(Ui.dp(act, 4), 0, 0, 0)
+            setPadding(Ui.dp(act, 4), 0, 0, Ui.dp(act, 8))
         })
     }
 
-    private fun legend(act: MainActivity): View {
+    private fun legend(act: MainActivity, lab: Boolean): View {
         val row = Ui.hbox(act).apply { setPadding(Ui.dp(act, 6), 0, Ui.dp(act, 6), 0) }
         fun item(label: String, color: Int, alpha: Int, h: Int = 10) {
             row.addView(View(act).apply { background = Ui.tint(color, Ui.dp(act, 3).toFloat(), alpha) },
@@ -316,9 +551,9 @@ object PlanView {
             row.addView(Ui.muted(act, label).apply { textSize = 12f },
                 LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = Ui.dp(act, 14) })
         }
-        item("berjalan", Ui.BUSY, 0xFF)
-        item("rencana", Ui.BUSY, 0x55)
-        item("lab", Ui.LAB, 0xFF)
+        val c = if (lab) Ui.LAB else Ui.BUSY
+        item("berjalan", c, 0xFF)
+        item("rencana", c, 0x55)
         item("menganggur", Ui.IDLE, 0xCC, 4)
         item("offline", Ui.GREY, 0x40)
         return HorizontalScrollView(act).apply {
@@ -329,7 +564,7 @@ object PlanView {
 
     // ---------------------------------------------------------------- detail langkah
 
-    private fun stepSheet(act: MainActivity, b: PlanBundle, s: PlannedStep, now: Long, zone: ZoneId) {
+    fun stepSheet(act: MainActivity, b: PlanBundle, s: PlannedStep, now: Long, zone: ZoneId) {
         Sheets.open(act, null) { col, dismiss -> col.addView(stepBody(act, b, s, now, zone, dismiss)) }
     }
 
