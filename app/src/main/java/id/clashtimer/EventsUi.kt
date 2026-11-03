@@ -61,13 +61,15 @@ object EventsUi {
             if (!relevant) continue
             val text = when {
                 e.activeAt(now) ->
-                    "🎉 ${e.name} berlangsung sampai ${Fmt.at(e.end, zone)} · waktu −${e.timePct}%, biaya −${e.costPct}%. " +
-                        "Saran & rencana sudah memakai potongan ini."
+                    tr("🎉 ${e.name} berlangsung sampai ${Fmt.at(e.end, zone)} · waktu −${e.timePct}%, biaya −${e.costPct}%. " +
+                        "Saran & rencana sudah memakai potongan ini.", "🎉 ${e.name} runs until ${Fmt.at(e.end, zone)} · time −${e.timePct}%, cost −${e.costPct}%. " +
+                        "Suggestions & plan already use this discount.")
                 e.enabled && e.start > now && e.start - now < 3 * DAY ->
-                    "🎉 ${e.name} mulai ${Fmt.at(e.start, zone)} — upgrade panjang lebih hemat bila dimulai saat event."
+                    tr("🎉 ${e.name} mulai ${Fmt.at(e.start, zone)} — upgrade panjang lebih hemat bila dimulai saat event.", "🎉 ${e.name} starts ${Fmt.at(e.start, zone)} — long upgrades are cheaper if started during the event.")
                 !e.enabled && e.id.startsWith("hammer_") && now > e.start - 7 * DAY && now < e.end ->
-                    "🔨 Hammer Jam biasanya awal November (perkiraan ${Fmt.dateShort(e.start, zone)}–${Fmt.dateShort(e.end, zone)}). " +
-                        "Sudah muncul di game? Ketuk untuk mengaktifkan & mencocokkan tanggalnya."
+                    tr("🔨 Hammer Jam biasanya awal November (perkiraan ${Fmt.dateShort(e.start, zone)}–${Fmt.dateShort(e.end, zone)}). " +
+                        "Sudah muncul di game? Ketuk untuk mengaktifkan & mencocokkan tanggalnya.", "🔨 Hammer Jam is usually early November (estimate ${Fmt.dateShort(e.start, zone)}–${Fmt.dateShort(e.end, zone)}). " +
+                        "Already in the game? Tap to enable it & match the dates.")
                 else -> null
             } ?: continue
             box.addView(Ui.banner(act, text, Ui.VIOLET).apply {
@@ -85,9 +87,9 @@ object EventsUi {
             val (card, col) = Ui.card(act)
             val head = Ui.hbox(act)
             val state = when {
-                e.activeAt(now) -> " · berlangsung"
-                !e.enabled -> " · nonaktif"
-                e.end <= now -> " · sudah lewat"
+                e.activeAt(now) -> tr(" · berlangsung", " · running")
+                !e.enabled -> tr(" · nonaktif", " · off")
+                e.end <= now -> tr(" · sudah lewat", " · over")
                 else -> ""
             }
             head.addView(Ui.text(act, "🎉 ${e.name}$state", Ui.TITLE_S), Ui.weight1())

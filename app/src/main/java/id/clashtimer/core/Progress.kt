@@ -63,13 +63,13 @@ object ProgressCalc {
         Cat.TROOP -> "troop" to "Troop & Siege"
         Cat.SPELL -> "spell" to "Spell"
         Cat.PET -> "pet" to "Pet"
-        Cat.TRAP, Cat.BB_TRAP -> "trap" to "Jebakan"
+        Cat.TRAP, Cat.BB_TRAP -> "trap" to tr("Jebakan", "Traps")
         Cat.BB_TROOP -> "bbtroop" to "Troop (Star Lab)"
         Cat.BUILDING, Cat.BB_BUILDING -> when {
-            it.type == "Defense" -> "def" to "Pertahanan"
-            it.type == "Army" -> "army" to "Army & pendukung"
-            it.type == "Resource" -> "res" to "Sumber daya"
-            else -> "other" to "Lainnya"
+            it.type == "Defense" -> "def" to tr("Pertahanan", "Defense")
+            it.type == "Army" -> "army" to tr("Army & pendukung", "Army & support")
+            it.type == "Resource" -> "res" to tr("Sumber daya", "Resources")
+            else -> "other" to tr("Lainnya", "Other")
         }
     }
 
@@ -134,7 +134,11 @@ object ProgressCalc {
         for (id in itemIds) {
             if (id in exclude) continue
             val item = gd.item(id) ?: continue
-            val max = item.maxLevelFor(hall)
+            // Troop Builder Base dibatasi level Star Laboratory maksimal di Builder Hall ini (kolom hall-nya bukan BH).
+            val max = if (item.cat == Cat.BB_TROOP) {
+                val sl = gd.item(GameData.STAR_LAB)?.maxLevelFor(hall) ?: 0
+                item.levels.filter { it.req <= sl && it.time > 0 }.maxOfOrNull { it.level } ?: 0
+            } else item.maxLevelFor(hall)
             if (max <= 0) continue
             val first = firstCounted(item)
             // Kamp pasukan BB: bangunan yang sudah jadi = urutan awal, yang sedang dibangun = berikutnya.

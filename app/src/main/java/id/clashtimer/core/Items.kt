@@ -72,13 +72,13 @@ object ItemAdvisor {
             val (saved, busy) = potionValue(kind, runLanes, now)
             val maxPossible = kind.duration * kind.extra.toLong() * total
             val detail = when {
-                busy == 0 -> "Tidak ada yang sedang berjalan — simpan dulu."
-                busy < total -> "${total - busy} ${if (lane.bb) "Master Builder" else lane.label.lowercase()} masih menganggur; isi dulu supaya potion bernilai penuh."
-                saved >= maxPossible * 0.95 -> "Waktu yang bagus: semua sibuk dengan upgrade panjang."
-                else -> "Ada upgrade yang selesai < ${(kind.extra + 1).toInt()} jam lagi; nilai belum maksimal."
+                busy == 0 -> tr("Tidak ada yang sedang berjalan — simpan dulu.", "Nothing is running — keep it for later.")
+                busy < total -> "${total - busy} ${if (lane.bb) "Master Builder" else lane.label.lowercase()} " + tr("masih menganggur; isi dulu supaya potion bernilai penuh.", "still idle; fill them first so the potion is worth it.")
+                saved >= maxPossible * 0.95 -> tr("Waktu yang bagus: semua sibuk dengan upgrade panjang.", "Good timing: everyone is busy with long upgrades.")
+                else -> tr("Ada upgrade yang selesai < ${(kind.extra + 1).toInt()} jam lagi; nilai belum maksimal.", "Some upgrades finish in < ${(kind.extra + 1).toInt()} hours; not full value yet.")
             }
             if (busy == 0 && (owned[mi] ?: 0) == 0) continue
-            out += ItemTip(mi, owned[mi] ?: 0, "Sekarang hemat ${Fmt.dur(saved)} kerja", detail, saved)
+            out += ItemTip(mi, owned[mi] ?: 0, tr("Sekarang hemat ${Fmt.dur(saved)} kerja", "Saves ${Fmt.dur(saved)} of work now"), detail, saved)
         }
 
         // Book: selesaikan upgrade berjalan terlama yang cocok
@@ -87,11 +87,11 @@ object ItemAdvisor {
             if (n <= 0) continue
             val best = running.filter { mi.fits(it.first.item.cat) }.maxByOrNull { it.second }
             if (best == null) {
-                out += ItemTip(mi, n, "Belum ada upgrade yang cocok berjalan", "Pakai pada upgrade terpanjang supaya paling hemat.", 0)
+                out += ItemTip(mi, n, tr("Belum ada upgrade yang cocok berjalan", "No matching upgrade running yet"), tr("Pakai pada upgrade terpanjang supaya paling hemat.", "Use it on the longest upgrade to save the most."), 0)
             } else {
                 val (inst, fin) = best
                 val title = if (inst.gearing) "${inst.item.name} · Gear-up" else "${inst.item.name} → Lv ${inst.level + 1}"
-                out += ItemTip(mi, n, title, "Hemat ${Fmt.dur(fin - now)} — upgrade berjalan terlama yang cocok.", fin - now)
+                out += ItemTip(mi, n, title, tr("Hemat ${Fmt.dur(fin - now)} — upgrade berjalan terlama yang cocok.", "Saves ${Fmt.dur(fin - now)} — the longest matching running upgrade."), fin - now)
             }
         }
 
@@ -105,10 +105,10 @@ object ItemAdvisor {
                 .filter { !it.isNew && mi.fits(it.item.cat) }
             val best = cands.maxByOrNull { it.duration }
             if (best == null) {
-                out += ItemTip(mi, n, "Belum ada target", "Semua yang cocok sudah max atau sedang di-upgrade.", 0)
+                out += ItemTip(mi, n, tr("Belum ada target", "No target yet"), tr("Semua yang cocok sudah max atau sedang di-upgrade.", "Everything that fits is maxed or upgrading."), 0)
             } else {
                 out += ItemTip(mi, n, "${best.item.name} → Lv ${best.toLevel}",
-                    "Hemat ${Fmt.durSec(best.duration)} — upgrade tersedia paling lama.", best.duration * 1000)
+                    tr("Hemat ${Fmt.durSec(best.duration)} — upgrade tersedia paling lama.", "Saves ${Fmt.durSec(best.duration)} — the longest available upgrade."), best.duration * 1000)
             }
         }
         return out

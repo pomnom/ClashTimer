@@ -21,12 +21,15 @@ import id.clashtimer.core.Lane
 import id.clashtimer.core.Scored
 
 /** Jenis nada notifikasi yang bisa dipilih. */
-enum class ToneMode(val label: String, val desc: String) {
-    DEFAULT("Nada bawaan HP", "Suara notifikasi standar dengan volume notifikasi"),
-    CUSTOM("Pilih nada sendiri", "Pilih dari nada yang ada di HP"),
-    ALARM("Alarm keras", "Berbunyi berulang dengan volume alarm sampai dibuka, diusap, atau ditekan Matikan"),
-    VIBRATE("Getar saja", "Tanpa suara"),
-    SILENT("Senyap", "Hanya muncul di panel notifikasi"),
+enum class ToneMode(private val labelId: String, private val descId: String, private val labelEn: String, private val descEn: String) {
+    DEFAULT("Nada bawaan HP", "Suara notifikasi standar dengan volume notifikasi", "Phone default", "Standard notification sound at notification volume"),
+    CUSTOM("Pilih nada sendiri", "Pilih dari nada yang ada di HP", "Pick a sound", "Choose from the sounds on your phone"),
+    ALARM("Alarm keras", "Berbunyi berulang dengan volume alarm sampai dibuka, diusap, atau ditekan Matikan", "Loud alarm", "Rings repeatedly at alarm volume until opened, swiped, or Stop is pressed"),
+    VIBRATE("Getar saja", "Tanpa suara", "Vibrate only", "No sound"),
+    SILENT("Senyap", "Hanya muncul di panel notifikasi", "Silent", "Only appears in the notification panel");
+
+    val label: String get() = tr(labelId, labelEn)
+    val desc: String get() = tr(descId, descEn)
 }
 
 object Notifier {
@@ -130,11 +133,11 @@ object Notifier {
         if (pending.isEmpty() || isQuiet(ctx)) return
         Store.clearQuietPending(ctx)
         if (!Store.quietSummary(ctx)) return
-        val body = pending.takeLast(6).joinToString("\n") + if (pending.size > 6) "\n… dan ${pending.size - 6} lagi" else ""
+        val body = pending.takeLast(6).joinToString("\n") + if (pending.size > 6) tr("\n… dan ${pending.size - 6} lagi", "\n… and ${pending.size - 6} more") else ""
         val i = Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             .setAction("id.clashtimer.OPEN_VILLAGES").putExtra(Widgets.EXTRA_TAB, "VILLAGES")
         val pi = PendingIntent.getActivity(ctx, 7337, i, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        post(ctx, 7337, KEY_DONE, "Selama jam istirahat · ${pending.size} notifikasi", body, pi, allowQuiet = false)
+        post(ctx, 7337, KEY_DONE, tr("Selama jam istirahat · ${pending.size} notifikasi", "During rest hours · ${pending.size} notifications"), body, pi, allowQuiet = false)
     }
 
     fun channelId(ctx: Context, key: String): String = "${key}_v${Store.channelVersion(ctx, key)}"
@@ -166,15 +169,15 @@ object Notifier {
             if (nm.getNotificationChannel(id) == null) nm.createNotificationChannel(buildChannel(ctx, key, id))
         }
         if (nm.getNotificationChannel(QUIET_CHANNEL) == null) {
-            nm.createNotificationChannel(NotificationChannel(QUIET_CHANNEL, "Saat jam istirahat (senyap)", NotificationManager.IMPORTANCE_LOW).apply {
-                description = "Upgrade yang selesai saat jam tidur: masuk ke panel tanpa suara & getar"
+            nm.createNotificationChannel(NotificationChannel(QUIET_CHANNEL, tr("Saat jam istirahat (senyap)", "During rest hours (quiet)"), NotificationManager.IMPORTANCE_LOW).apply {
+                description = tr("Upgrade yang selesai saat jam tidur: masuk ke panel tanpa suara & getar", "Upgrades finishing during sleep hours: delivered without sound or vibration")
                 setSound(null, null)
                 enableVibration(false)
             })
         }
         if (nm.getNotificationChannel(INFO_CHANNEL) == null) {
-            nm.createNotificationChannel(NotificationChannel(INFO_CHANNEL, "Konfirmasi (tanpa suara)", NotificationManager.IMPORTANCE_LOW).apply {
-                description = "Mis. timer yang dipasang dari tombol di notifikasi"
+            nm.createNotificationChannel(NotificationChannel(INFO_CHANNEL, tr("Konfirmasi (tanpa suara)", "Confirmations (silent)"), NotificationManager.IMPORTANCE_LOW).apply {
+                description = tr("Mis. timer yang dipasang dari tombol di notifikasi", "E.g. timers set from a notification button")
                 setSound(null, null)
                 enableVibration(false)
             })
@@ -183,14 +186,14 @@ object Notifier {
 
     private fun buildChannel(ctx: Context, key: String, id: String): NotificationChannel {
         val mode = Store.toneMode(ctx, key)
-        val title = if (key == KEY_DONE) "Upgrade selesai" else "Pengingat sebelum selesai"
+        val title = if (key == KEY_DONE) tr("Upgrade selesai", "Upgrade done") else tr("Pengingat sebelum selesai", "Reminder before done")
         val importance = when (mode) {
             ToneMode.SILENT -> NotificationManager.IMPORTANCE_LOW
             else -> if (key == KEY_DONE || mode == ToneMode.ALARM) NotificationManager.IMPORTANCE_HIGH
             else NotificationManager.IMPORTANCE_DEFAULT
         }
         val ch = NotificationChannel(id, "$title · ${mode.label}", importance)
-        ch.description = if (key == KEY_DONE) "Builder, lab, pet, atau helper sudah bebas" else "Beberapa menit sebelum upgrade selesai"
+        ch.description = if (key == KEY_DONE) tr("Builder, lab, pet, atau helper sudah bebas", "A builder, lab, pet or helper is free") else tr("Beberapa menit sebelum upgrade selesai", "A few minutes before an upgrade finishes")
         val notifAttrs = AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
@@ -274,7 +277,7 @@ object Notifier {
         if (u.kind == Kind.REMINDER) {
             if (u.id.contains("|session|")) {
                 // Satu notifikasi per sesi login: siapa yang bebas + saran yang dimulai.
-                post(ctx, id, KEY_DONE, "Waktunya login · ${Store.villageName(ctx, u.tag)}", u.note, openApp(ctx, u.tag, false, id))
+                post(ctx, id, KEY_DONE, tr("Waktunya login · ${Store.villageName(ctx, u.tag)}", "Time to log in · ${Store.villageName(ctx, u.tag)}"), u.note, openApp(ctx, u.tag, false, id))
                 return
             }
             val where = if (u.tag.isNotBlank()) " · ${Store.villageName(ctx, u.tag)}" else ""
@@ -283,18 +286,18 @@ object Notifier {
         }
         val village = Store.villageName(ctx, u.tag)
         var body = when (u.kind) {
-            Kind.HELPER -> u.note.ifBlank { "Helper sudah bisa ditugaskan lagi" }
-            Kind.LAB, Kind.STAR_LAB -> "${u.kind.label} sekarang kosong"
-            Kind.PET -> "Pet House sekarang kosong"
-            Kind.BB_BUILDER -> "Master Builder sekarang bebas"
-            else -> "1 builder sekarang bebas"
+            Kind.HELPER -> u.note.ifBlank { tr("Helper sudah bisa ditugaskan lagi", "Helper can be assigned again") }
+            Kind.LAB, Kind.STAR_LAB -> tr("${u.kind.label} sekarang kosong", "${u.kind.label} is now idle")
+            Kind.PET -> tr("Pet House sekarang kosong", "Pet House is now idle")
+            Kind.BB_BUILDER -> tr("Master Builder sekarang bebas", "Master Builder is now free")
+            else -> tr("1 builder sekarang bebas", "1 builder is now free")
         } + " · $village"
         if (pick != null) {
             val c = pick.c
             val cost = if (pick.cost > 0) " · ${Fmt.money(pick.cost)} ${Fmt.resource(c.item.resource)}" else ""
-            body += "\n💡 Saran: ${c.title} · ${Fmt.durSec(pick.duration)}$cost"
+            body += tr("\n💡 Saran: ${c.title} · ${Fmt.durSec(pick.duration)}$cost", "\n💡 Suggestion: ${c.title} · ${Fmt.durSec(pick.duration)}$cost")
         }
-        if (u.helped && u.kind != Kind.HELPER) body += "\nWaktu ini perkiraan dengan bantuan helper — cek di game."
+        if (u.helped && u.kind != Kind.HELPER) body += tr("\nWaktu ini perkiraan dengan bantuan helper — cek di game.", "\nThis time is estimated with helper help — check in the game.")
         val actions = ArrayList<Pair<String, PendingIntent>>()
         if (pick != null) {
             val lane = laneOf(u.kind)
@@ -304,7 +307,7 @@ object Notifier {
                     .putExtra("notif", id).putExtra("tag", u.tag).putExtra("lane", lane.name)
                     .putExtra("item", pick.c.item.id).putExtra("from", pick.c.fromLevel).putExtra("gear", pick.c.gear)
                     .putExtra("title", pick.c.title)
-                actions += "Sudah dimulai" to PendingIntent.getBroadcast(
+                actions += tr("Sudah dimulai", "Started") to PendingIntent.getBroadcast(
                     ctx, id xor 0x1F1F, i, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
                 )
             }
@@ -343,18 +346,18 @@ object Notifier {
         post(
             ctx, u.id.hashCode() xor 0x5A5A, KEY_EARLY,
             "⏳ ${u.title()}",
-            "Selesai dalam $minutes menit · ${Store.villageName(ctx, u.tag)}",
+            tr("Selesai dalam $minutes menit · ${Store.villageName(ctx, u.tag)}", "Done in $minutes minutes · ${Store.villageName(ctx, u.tag)}"),
         )
     }
 
     fun test(ctx: Context, key: String = KEY_DONE) {
         val mode = Store.toneMode(ctx, key)
         val body = when (mode) {
-            ToneMode.ALARM -> "Alarm keras: berbunyi sampai notifikasi ini dibuka, diusap, atau ditekan Matikan."
-            ToneMode.SILENT -> "Mode senyap: notifikasi hanya muncul di panel."
-            else -> "Kalau ini muncul, notifikasi sudah berfungsi."
+            ToneMode.ALARM -> tr("Alarm keras: berbunyi sampai notifikasi ini dibuka, diusap, atau ditekan Matikan.", "Loud alarm: rings until this notification is opened, swiped, or Stop is pressed.")
+            ToneMode.SILENT -> tr("Mode senyap: notifikasi hanya muncul di panel.", "Silent mode: the notification only appears in the panel.")
+            else -> tr("Kalau ini muncul, notifikasi sudah berfungsi.", "If you see this, notifications work.")
         }
-        post(ctx, 4242 + key.length, key, "🔔 Tes: ${mode.label}", body, allowQuiet = false)
+        post(ctx, 4242 + key.length, key, tr("🔔 Tes: ${mode.label}", "🔔 Test: ${mode.label}"), body, allowQuiet = false)
     }
 
     private fun post(
@@ -402,7 +405,7 @@ object Notifier {
             .setContentIntent(content)
             .setWhen(System.currentTimeMillis())
         for ((label, pi) in actions) b.addAction(R.drawable.ic_notif, label, pi)
-        if (mode == ToneMode.ALARM) b.addAction(R.drawable.ic_notif, "Matikan", stopIntent(ctx, id))
+        if (mode == ToneMode.ALARM) b.addAction(R.drawable.ic_notif, tr("Matikan", "Stop"), stopIntent(ctx, id))
         val n = b.build()
         // Alarm keras: suara diulang terus sampai notifikasi dibuka / diusap / dimatikan.
         if (mode == ToneMode.ALARM) n.flags = n.flags or Notification.FLAG_INSISTENT
@@ -441,11 +444,11 @@ class NotifyActionReceiver : BroadcastReceiver() {
                 val u = runCatching { Repo.startById(app, tag, lane, item, from, gear) }.getOrNull()
                 val zone = java.time.ZoneId.systemDefault()
                 if (u != null) {
-                    Notifier.info(app, notif, "✅ Timer dipasang: ${u.title()}",
-                        "Selesai ${Fmt.at(u.finishAt, zone)} · ${Store.villageName(app, tag)}", tag, lane.bb)
+                    Notifier.info(app, notif, tr("✅ Timer dipasang: ${u.title()}", "✅ Timer set: ${u.title()}"),
+                        tr("Selesai ${Fmt.at(u.finishAt, zone)} · ${Store.villageName(app, tag)}", "Done ${Fmt.at(u.finishAt, zone)} · ${Store.villageName(app, tag)}"), tag, lane.bb)
                 } else {
-                    Notifier.info(app, notif, "Saran sudah berubah",
-                        "$title tidak bisa dipasang otomatis (mungkin sudah dimulai). Buka aplikasi untuk memilih.", tag, lane.bb)
+                    Notifier.info(app, notif, tr("Saran sudah berubah", "Suggestion changed"),
+                        tr("$title tidak bisa dipasang otomatis (mungkin sudah dimulai). Buka aplikasi untuk memilih.", "$title could not be set automatically (maybe already started). Open the app to choose."), tag, lane.bb)
                 }
             } finally {
                 pending.finish()

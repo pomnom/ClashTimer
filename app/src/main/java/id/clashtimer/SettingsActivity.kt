@@ -42,15 +42,15 @@ class SettingsActivity : AppCompatActivity() {
         }
         Notifier.changeTone(this, key, mode, uri?.toString())
         render()
-        Toast.makeText(this, "Nada disimpan · ${Notifier.toneTitle(this, key)}", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, tr("Nada disimpan · ", "Sound saved · ") + Notifier.toneTitle(this, key), Toast.LENGTH_SHORT).show()
     }
 
     private val saveFile = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri == null) return@registerForActivityResult
         runCatching {
             contentResolver.openOutputStream(uri)?.use { it.write(Backup.json(this).toString(1).toByteArray(Charsets.UTF_8)) }
-        }.onSuccess { Toast.makeText(this, "File cadangan disimpan", Toast.LENGTH_SHORT).show() }
-            .onFailure { Toast.makeText(this, "Gagal menyimpan: ${it.message}", Toast.LENGTH_LONG).show() }
+        }.onSuccess { Toast.makeText(this, tr("File cadangan disimpan", "Backup file saved"), Toast.LENGTH_SHORT).show() }
+            .onFailure { Toast.makeText(this, tr("Gagal menyimpan: ", "Could not save: ") + it.message, Toast.LENGTH_LONG).show() }
     }
 
     private val openFile = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -59,28 +59,58 @@ class SettingsActivity : AppCompatActivity() {
         confirmRestore(text)
     }
 
+    /** Halaman yang tampil: "main" = daftar kategori, selain itu satu kategori. */
+    private var page = "main"
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        title = "Pengaturan"
+        page = savedInstanceState?.getString("page") ?: "main"
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         Ui.init(this)
         box = Ui.vbox(this).apply { setPadding(Ui.dp(this@SettingsActivity, 16), 0, Ui.dp(this@SettingsActivity, 16), Ui.dp(this@SettingsActivity, 32)) }
-        setContentView(ScrollView(this).apply { setBackgroundColor(Ui.BG); addView(box) })
+        scroll = ScrollView(this).apply { setBackgroundColor(Ui.BG); addView(box) }
+        setContentView(scroll)
         render()
     }
 
+    private lateinit var scroll: ScrollView
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString("page", page)
+    }
+
     override fun onSupportNavigateUp(): Boolean {
-        finish()
+        back()
         return true
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        if (page != "main") back() else @Suppress("DEPRECATION") super.onBackPressed()
+    }
+
+    private fun back() {
+        if (page == "main") finish()
+        else {
+            page = if (page == "lang") "general" else "main"
+            render()
+            scroll.scrollTo(0, 0)
+        }
+    }
+
+    private fun open(p: String) {
+        page = p
+        render()
+        scroll.scrollTo(0, 0)
     }
 
     private fun note(text: String) {
         box.addView(Ui.muted(this, text).apply {
-            setPadding(Ui.dp(this@SettingsActivity, 4), 0, Ui.dp(this@SettingsActivity, 4), Ui.dp(this@SettingsActivity, 4))
+            setPadding(Ui.dp(this@SettingsActivity, 4), Ui.dp(this@SettingsActivity, 4), Ui.dp(this@SettingsActivity, 4), Ui.dp(this@SettingsActivity, 4))
         })
     }
 
-    /** Judul kecil di dalam satu bagian. */
     /** Judul kecil di dalam satu bagian; [help] = tombol "?" berisi penjelasannya. */
     private fun sub(title: String, subtitle: String? = null, help: Help.Topic? = null) {
         val col = Ui.vbox(this).apply { setPadding(Ui.dp(this@SettingsActivity, 4), Ui.dp(this@SettingsActivity, 16), Ui.dp(this@SettingsActivity, 4), Ui.dp(this@SettingsActivity, 6)) }
@@ -90,7 +120,7 @@ class SettingsActivity : AppCompatActivity() {
             letterSpacing = 0.06f
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             setTextColor(Ui.TEXT2)
-        })
+        }, Ui.weight1())
         if (help != null) head.addView(Help.button(this, help))
         col.addView(head)
         if (subtitle != null) col.addView(Ui.muted(this, subtitle).apply { textSize = 12f })
@@ -114,152 +144,306 @@ class SettingsActivity : AppCompatActivity() {
         return p
     }
 
+    private fun pageTitle(p: String): String = when (p) {
+        "general" -> tr("Umum", "General")
+        "lang" -> tr("Bahasa aplikasi", "App language")
+        "rest" -> tr("Jam istirahat", "Rest hours")
+        "notify" -> tr("Notifikasi & nada", "Notifications & sounds")
+        "events" -> tr("Event", "Events")
+        "data" -> tr("Data & akun", "Data & account")
+        "widget" -> tr("Widget & berjalan di latar", "Widget & background")
+        "about" -> tr("Tentang", "About")
+        else -> tr("Pengaturan", "Settings")
+    }
+
     private fun render() {
         box.removeAllViews()
-        val ps = Store.planSettings(this, null)
-        val s = ps.schedule
+        group = null
+        title = pageTitle(page)
+        when (page) {
+            "general" -> generalPage()
+            "lang" -> langPage()
+            "rest" -> restPage()
+            "notify" -> notifyPage()
+            "events" -> eventsPage()
+            "data" -> { apiSection(); backupSection() }
+            "widget" -> widgetPage()
+            "about" -> updateSection()
+            else -> mainPage()
+        }
+    }
 
-        box.addView(Ui.section(this, "🌐 Untuk semua desa", "Jam istirahat, API, event, ikon, nada & notifikasi"))
-        note("Opsi per desa (strategi, Gold Pass, CWL, collector) ada di ikon opsi di layar utama.")
+    // ---------------------------------------------------------------- halaman utama
 
-        apiSection()
-        backupSection()
+    private fun langName(): String = when (Prefs.lang(this)) {
+        Prefs.LANG_EN -> "English"
+        Prefs.LANG_ID -> "Bahasa Indonesia"
+        else -> tr("Ikuti sistem", "Follow system")
+    }
 
-        sub("😴 Jam istirahat", "Saran memilih upgrade yang selesai saat Anda bisa membuka game")
-        switchRow("Hitung jam tidur", s.sleep.enabled) { Store.putPlan(this, "sleep_on", it); render() }
+    private fun themeName(): String = when (Prefs.theme(this)) {
+        Prefs.THEME_DARK -> tr("gelap", "dark")
+        Prefs.THEME_LIGHT -> tr("terang", "light")
+        else -> tr("ikut sistem", "system")
+    }
+
+    private fun mainPage() {
+        val s = Store.planSettings(this, null).schedule
+        sub(tr("Untuk semua desa", "For all villages"))
+        category(R.drawable.ic_settings, Ui.TEXT2, Ui.SURFACE2, tr("Umum", "General"),
+            "${langName()} · ${tr("tema", "theme")} ${themeName()}") { open("general") }
+        val rest = if (s.sleep.enabled) tr("Tidur", "Sleep") + " ${Fmt.clock(s.sleep.startMin)}–${Fmt.clock(s.sleep.endMin)}" else tr("Jam tidur tidak dihitung", "Sleep hours not used")
+        val quiet = if (s.sleep.enabled && Store.quietSleep(this)) tr(" · senyap aktif", " · quiet on") else ""
+        category(R.drawable.ic_moon, Ui.TEXT2, Ui.SURFACE2, tr("Jam istirahat", "Rest hours"), rest + quiet) { open("rest") }
+        val early = Store.earlyMinutes(this)
+        category(R.drawable.ic_bell, Ui.BUSY, Ui.BUSY_BG, tr("Notifikasi & nada", "Notifications & sounds"),
+            Notifier.toneTitle(this, Notifier.KEY_DONE) + " · " + if (early == 0) tr("tanpa pengingat", "no reminder") else tr("pengingat $early menit", "$early min reminder")) { open("notify") }
+        val now = System.currentTimeMillis()
+        val ev = Store.planSettings(this, null).events.filter { it.enabled && it.end > now }
+        category(R.drawable.ic_star, Ui.LAB, Ui.LAB_BG, tr("Event", "Events"),
+            if (ev.isEmpty()) tr("Tidak ada event aktif", "No active events") else ev.joinToString(", ") { it.name }) { open("events") }
+        group = null
+        box.addView(android.view.View(this), LinearLayout.LayoutParams(1, Ui.dp(this, 4)))
+        val api = if (Store.apiKey(this).isBlank()) tr("API belum diisi", "API not set") else tr("API terhubung", "API connected")
+        category(R.drawable.ic_import, Ui.LAB, Ui.LAB_BG, tr("Data & akun", "Data & account"), api + tr(" · pindah data & cadangan", " · move data & backup")) { open("data") }
+        val bgOk = !Background.isXiaomi() && (getSystemService(android.os.PowerManager::class.java)?.isIgnoringBatteryOptimizations(packageName) == true)
+        category(R.drawable.ic_nav_dashboard, if (bgOk) Ui.TEXT2 else Ui.IDLE, Ui.SURFACE2, tr("Widget & berjalan di latar", "Widget & background"),
+            if (bgOk) tr("Berjalan tanpa batasan baterai", "Running without battery limits") else tr("Periksa izin berjalan di latar", "Check background permissions")) { open("widget") }
+        val avail = Updater.available(this)
+        category(R.drawable.ic_help, if (avail != null) Ui.FREE_TEXT else Ui.TEXT2, Ui.SURFACE2, tr("Tentang", "About"),
+            tr("Build", "Build") + " ${Updater.installedBuild(this)} · " + if (avail != null) tr("build ${avail.build} tersedia", "build ${avail.build} available") else tr("versi terbaru", "up to date")) { open("about") }
+        group = null
+        note(tr("Strategi, Gold Pass, CWL & collector diatur per desa: ketuk ringkasan strategi di Dashboard (atau ikon opsi di atas).",
+            "Strategy, Gold Pass, CWL & collectors are set per village: tap the strategy summary on the Dashboard (or the options icon at the top)."))
+    }
+
+    /** Baris kategori: ikon berwarna, judul, ringkasan isinya, panah. */
+    private fun category(icon: Int, color: Int, bg: Int, title: String, summary: String, onClick: () -> Unit) {
+        val line = Ui.hbox(this).apply {
+            minimumHeight = Ui.dp(this@SettingsActivity, 64)
+            setPadding(0, Ui.dp(this@SettingsActivity, 10), 0, Ui.dp(this@SettingsActivity, 10))
+            isClickable = true
+            setOnClickListener { onClick() }
+            Ui.ripple(this)
+        }
+        val tile = android.widget.FrameLayout(this).apply { background = Ui.rounded(bg, Ui.dp(this@SettingsActivity, 12).toFloat()) }
+        tile.addView(Ui.icon(this, icon, 22, color), android.widget.FrameLayout.LayoutParams(Ui.dp(this, 22), Ui.dp(this, 22), android.view.Gravity.CENTER))
+        line.addView(tile, LinearLayout.LayoutParams(Ui.dp(this, 40), Ui.dp(this, 40)).apply { marginEnd = Ui.dp(this@SettingsActivity, 14) })
+        val col = Ui.vbox(this)
+        col.addView(Ui.text(this, title, Ui.BODY_M).apply { textSize = 15f; setTypeface(typeface, android.graphics.Typeface.BOLD); setTextColor(Ui.TEXT) })
+        col.addView(Ui.muted(this, summary).apply { textSize = 13f; maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END })
+        line.addView(col, Ui.weight1())
+        line.addView(Ui.icon(this, R.drawable.ic_chevron_right, 18, Ui.TEXT2))
+        groupPanel().addView(line, Ui.matchWrap())
+    }
+
+    // ---------------------------------------------------------------- Umum & bahasa
+
+    private fun generalPage() {
+        sub(tr("Bahasa", "Language"))
+        row(tr("Bahasa aplikasi", "App language"), langName()) { open("lang") }
+        sub(tr("Tema", "Theme"))
+        val seg = Ui.segmentedWide(this, listOf(tr("Sistem", "System"), tr("Gelap", "Dark"), tr("Terang", "Light")),
+            when (Prefs.theme(this)) { Prefs.THEME_DARK -> 1; Prefs.THEME_LIGHT -> 2; else -> 0 }) {
+            Prefs.setTheme(this, when (it) { 1 -> Prefs.THEME_DARK; 2 -> Prefs.THEME_LIGHT; else -> Prefs.THEME_SYSTEM })
+            Widgets.updateAll(this)
+            recreate()
+        }
+        box.addView(seg, Ui.matchWrap(4, this))
+        note(tr("Sistem = gelap saat HP memakai mode gelap.", "System = dark when the phone uses dark mode."))
+        sub(tr("🖼️ Ikon", "🖼️ Icons"))
+        switchRow(tr("Tampilkan ikon bangunan & hero", "Show building & hero icons"), Store.iconsOn(this)) { Store.setIconsOn(this, it) }
+        val mb = Icons.cacheSize(this) / 1024.0 / 1024.0
+        box.addView(Ui.outlined(this, String.format(java.util.Locale.ROOT, tr("Hapus cache ikon (%.1f MB)", "Clear icon cache (%.1f MB)"), mb)) {
+            Icons.clearCache(this)
+            render()
+        }.apply { isAllCaps = false }, Ui.matchWrap())
+        note(tr("Ikon diunduh sekali dari ClashKing Assets (assets.clashk.ing — terima kasih!) lalu disimpan di HP. " +
+            "Gambar © Supercell. Clash Timer adalah fan content tidak resmi, tidak berafiliasi dengan dan tidak didukung oleh Supercell.",
+            "Icons are downloaded once from ClashKing Assets (assets.clashk.ing — thank you!) and stored on the phone. " +
+                "Images © Supercell. Clash Timer is unofficial fan content, not affiliated with or endorsed by Supercell."))
+    }
+
+    private fun langPage() {
+        val cur = Prefs.lang(this)
+        val sys = tr("Sekarang: ", "Now: ") + if (Prefs.systemIsIndonesian()) "Bahasa Indonesia" else "English"
+        val opts = listOf(
+            Triple(Prefs.LANG_SYSTEM, tr("Ikuti sistem", "Follow system"), sys),
+            Triple(Prefs.LANG_ID, "Bahasa Indonesia", "Indonesian"),
+            Triple(Prefs.LANG_EN, "English", "Bahasa Inggris"),
+        )
+        box.addView(android.view.View(this), LinearLayout.LayoutParams(1, Ui.dp(this, 8)))
+        for ((v, label, subLabel) in opts) {
+            val line = Ui.hbox(this).apply {
+                minimumHeight = Ui.dp(this@SettingsActivity, 60)
+                isClickable = true
+                setOnClickListener {
+                    if (v == cur) return@setOnClickListener
+                    Prefs.setLang(this@SettingsActivity, v)
+                    Widgets.updateAll(this@SettingsActivity)
+                    AlarmScheduler.schedule(this@SettingsActivity)
+                    render()
+                }
+                Ui.ripple(this)
+            }
+            val on = v == cur
+            line.addView(android.widget.FrameLayout(this).apply {
+                background = Ui.rounded(android.graphics.Color.TRANSPARENT, Ui.dp(this@SettingsActivity, 11).toFloat(), if (on) Ui.FREE else Ui.OUTLINE, Ui.dp(this@SettingsActivity, 2))
+                if (on) addView(android.view.View(this@SettingsActivity).apply { background = Ui.rounded(Ui.FREE, Ui.dp(this@SettingsActivity, 5).toFloat()) },
+                    android.widget.FrameLayout.LayoutParams(Ui.dp(this@SettingsActivity, 10), Ui.dp(this@SettingsActivity, 10), android.view.Gravity.CENTER))
+            }, LinearLayout.LayoutParams(Ui.dp(this, 22), Ui.dp(this, 22)).apply { marginEnd = Ui.dp(this@SettingsActivity, 14) })
+            val col = Ui.vbox(this)
+            col.addView(Ui.text(this, label, Ui.BODY_M).apply { textSize = 15f; setTextColor(Ui.TEXT) })
+            col.addView(Ui.muted(this, subLabel).apply { textSize = 12f })
+            line.addView(col, Ui.weight1())
+            groupPanel().addView(line, Ui.matchWrap())
+        }
+        note(tr("Nama bangunan, troop & hero tetap seperti di game. Teks bantuan (?) sebagian masih berbahasa Indonesia.",
+            "Building, troop & hero names stay as in the game. Some help texts (?) are still in Indonesian."))
+    }
+
+    // ---------------------------------------------------------------- jam istirahat
+
+    private fun restPage() {
+        val s = Store.planSettings(this, null).schedule
+        sub(tr("😴 Jam tidur & kerja", "😴 Sleep & work hours"), tr("Saran memilih upgrade yang selesai saat Anda bisa membuka game",
+            "Suggestions pick upgrades that finish when you can open the game"))
+        switchRow(tr("Hitung jam tidur", "Use sleep hours"), s.sleep.enabled) { Store.putPlan(this, "sleep_on", it); render() }
         if (s.sleep.enabled) {
-            row("Tidur", "${Fmt.clock(s.sleep.startMin)} – ${Fmt.clock(s.sleep.endMin)}") {
-                pickRange("Jam tidur", "sleep_start", "sleep_end", s.sleep.startMin, s.sleep.endMin)
+            row(tr("Tidur", "Sleep"), "${Fmt.clock(s.sleep.startMin)} – ${Fmt.clock(s.sleep.endMin)}") {
+                pickRange(tr("Jam tidur", "Sleep hours"), "sleep_start", "sleep_end", s.sleep.startMin, s.sleep.endMin)
             }
         }
-        switchRow("Hitung jam kerja / sekolah", s.work.enabled) { Store.putPlan(this, "work_on", it); render() }
+        switchRow(tr("Hitung jam kerja / sekolah", "Use work / school hours"), s.work.enabled) { Store.putPlan(this, "work_on", it); render() }
         if (s.work.enabled) {
-            row("Jam kerja", "${Fmt.clock(s.work.startMin)} – ${Fmt.clock(s.work.endMin)}") {
-                pickRange("Jam kerja", "work_start", "work_end", s.work.startMin, s.work.endMin)
+            row(tr("Jam kerja", "Work hours"), "${Fmt.clock(s.work.startMin)} – ${Fmt.clock(s.work.endMin)}") {
+                pickRange(tr("Jam kerja", "Work hours"), "work_start", "work_end", s.work.startMin, s.work.endMin)
             }
             val days = DayOfWeek.entries.filter { it in s.work.days }.joinToString(", ") { dayName(it) }
-            row("Hari kerja", days.ifBlank { "tidak ada" }) { pickDays() }
+            row(tr("Hari kerja", "Work days"), days.ifBlank { tr("tidak ada", "none") }) { pickDays() }
         }
         if (s.sleep.enabled || s.work.enabled) {
-            sub("🔕 Senyap saat jam istirahat", "Alarm & notifikasi tidak berbunyi; tetap masuk ke panel tanpa suara & getar", Help.Topic.NOTIFY)
-            if (s.sleep.enabled) switchRow("Senyap saat jam tidur", Store.quietSleep(this)) {
+            sub(tr("🔕 Senyap saat jam istirahat", "🔕 Quiet during rest hours"),
+                tr("Alarm & notifikasi tidak berbunyi; tetap masuk ke panel tanpa suara & getar", "Alarms & notifications stay silent; they still arrive without sound or vibration"), Help.Topic.NOTIFY)
+            if (s.sleep.enabled) switchRow(tr("Senyap saat jam tidur", "Quiet while sleeping"), Store.quietSleep(this)) {
                 Store.setQuietSleep(this, it); AlarmScheduler.schedule(this); render()
             }
-            if (s.work.enabled) switchRow("Senyap saat jam kerja / sekolah", Store.quietWork(this)) {
+            if (s.work.enabled) switchRow(tr("Senyap saat jam kerja / sekolah", "Quiet during work / school"), Store.quietWork(this)) {
                 Store.setQuietWork(this, it); AlarmScheduler.schedule(this); render()
             }
             if ((s.sleep.enabled && Store.quietSleep(this)) || (s.work.enabled && Store.quietWork(this))) {
-                switchRow("Ringkasan saat jam istirahat selesai", Store.quietSummary(this)) {
+                switchRow(tr("Ringkasan saat jam istirahat selesai", "Summary when rest hours end"), Store.quietSummary(this)) {
                     Store.setQuietSummary(this, it); AlarmScheduler.schedule(this)
                 }
             }
         }
+    }
 
-        sub("🎉 Event", "Hammer Jam, Builder Base Bonanza, dll.", Help.Topic.EVENTS)
-        EventsUi.renderList(this, box) { render() }
-        box.addView(Ui.outlined(this, "+ Tambah event") { EventsUi.addPreset(this) { render() } }.apply { isAllCaps = false }, Ui.matchWrap())
+    // ---------------------------------------------------------------- notifikasi & nada
 
-        sub("🖼️ Ikon")
-        switchRow("Tampilkan ikon bangunan & hero", Store.iconsOn(this)) { Store.setIconsOn(this, it) }
-        val mb = Icons.cacheSize(this) / 1024.0 / 1024.0
-        box.addView(Ui.outlined(this, String.format(java.util.Locale.ROOT, "Hapus cache ikon (%.1f MB)", mb)) {
-            Icons.clearCache(this)
-            render()
-        }.apply { isAllCaps = false }, Ui.matchWrap())
-        box.addView(Ui.muted(this, "Ikon diunduh sekali dari ClashKing Assets (assets.clashk.ing — terima kasih!) lalu disimpan di HP. " +
-            "Gambar © Supercell. Clash Timer adalah fan content tidak resmi, tidak berafiliasi dengan dan tidak didukung oleh Supercell.").apply {
-            setPadding(Ui.dp(this@SettingsActivity, 4), Ui.dp(this@SettingsActivity, 4), Ui.dp(this@SettingsActivity, 4), Ui.dp(this@SettingsActivity, 4))
-        })
-
-        sub("🎵 Nada notifikasi", help = Help.Topic.NOTIFY)
-        row("Upgrade selesai & helper", Notifier.toneTitle(this, Notifier.KEY_DONE)) { pickTone(Notifier.KEY_DONE) }
-        row("Pengingat sebelum selesai", Notifier.toneTitle(this, Notifier.KEY_EARLY)) { pickTone(Notifier.KEY_EARLY) }
+    private fun notifyPage() {
+        sub(tr("🎵 Nada notifikasi", "🎵 Notification sounds"), help = Help.Topic.NOTIFY)
+        row(tr("Upgrade selesai & helper", "Upgrade done & helpers"), Notifier.toneTitle(this, Notifier.KEY_DONE)) { pickTone(Notifier.KEY_DONE) }
+        row(tr("Pengingat sebelum selesai", "Reminder before done"), Notifier.toneTitle(this, Notifier.KEY_EARLY)) { pickTone(Notifier.KEY_EARLY) }
         val tests = Ui.hbox(this)
-        tests.addView(Ui.outlined(this, "Tes nada selesai") { testTone(Notifier.KEY_DONE) }.apply { isAllCaps = false }, Ui.weight1())
-        tests.addView(Ui.outlined(this, "Tes pengingat") { testTone(Notifier.KEY_EARLY) }.apply { isAllCaps = false },
+        tests.addView(Ui.outlined(this, tr("Tes nada selesai", "Test done sound")) { testTone(Notifier.KEY_DONE) }.apply { isAllCaps = false }, Ui.weight1())
+        tests.addView(Ui.outlined(this, tr("Tes pengingat", "Test reminder")) { testTone(Notifier.KEY_EARLY) }.apply { isAllCaps = false },
             Ui.weight1().apply { marginStart = Ui.dp(this@SettingsActivity, 8) })
         box.addView(tests)
-        box.addView(Ui.outlined(this, "Pengaturan notifikasi Android") {
+        box.addView(Ui.outlined(this, tr("Pengaturan notifikasi Android", "Android notification settings")) {
             runCatching {
                 startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName))
             }
         }.apply { isAllCaps = false }, Ui.matchWrap())
 
-        sub("🔔 Notifikasi", help = Help.Topic.NOTIFY)
+        sub(tr("🔔 Notifikasi", "🔔 Notifications"), help = Help.Topic.NOTIFY)
         val early = Store.earlyMinutes(this)
-        row("Pengingat sebelum selesai", if (early == 0) "Tidak ada" else "$early menit sebelumnya") { pickEarly() }
-        switchRow("Notifikasi helper", Store.notifyHelpers(this)) {
+        row(tr("Pengingat sebelum selesai", "Reminder before done"), if (early == 0) tr("Tidak ada", "None") else tr("$early menit sebelumnya", "$early min before")) { pickEarly() }
+        switchRow(tr("Notifikasi helper", "Helper notifications"), Store.notifyHelpers(this)) {
             Store.setNotifyHelpers(this, it)
             AlarmScheduler.schedule(this)
         }
-        switchRow("Mode alarm kuat (paling tepat waktu)", Store.strongAlarm(this)) {
+        switchRow(tr("Mode alarm kuat (paling tepat waktu)", "Strong alarm mode (most punctual)"), Store.strongAlarm(this)) {
             Store.setStrongAlarm(this, it)
             AlarmScheduler.schedule(this)
         }
+    }
 
-        sub("📱 Widget & berjalan di latar", help = Help.Topic.WIDGET)
-        box.addView(Ui.outlined(this, "Buka info aplikasi") { Background.openAppInfo(this) }.apply { isAllCaps = false }, Ui.matchWrap())
+    // ---------------------------------------------------------------- event, widget
 
-        updateSection()
+    private fun eventsPage() {
+        sub(tr("🎉 Event", "🎉 Events"), tr("Hammer Jam, Builder Base Bonanza, dll. Berlaku untuk semua desa.", "Hammer Jam, Builder Base Bonanza, etc. Applies to all villages."), Help.Topic.EVENTS)
+        EventsUi.renderList(this, box) { render() }
+        box.addView(Ui.outlined(this, tr("+ Tambah event", "+ Add event")) { EventsUi.addPreset(this) { render() } }.apply { isAllCaps = false }, Ui.matchWrap())
+    }
+
+    private fun widgetPage() {
+        sub(tr("📱 Widget & berjalan di latar", "📱 Widget & background"), help = Help.Topic.WIDGET)
+        note(if (Background.isXiaomi()) Background.TIP_BODY else tr(
+            "Bila widget atau notifikasi sering telat: izinkan aplikasi berjalan tanpa batasan baterai (dan Autostart bila HP punya).",
+            "If widgets or notifications are often late: let the app run without battery restrictions (and enable Autostart if your phone has it)."))
+        box.addView(Ui.outlined(this, tr("Buka info aplikasi", "Open app info")) { Background.openAppInfo(this) }.apply { isAllCaps = false }, Ui.matchWrap())
+        note(tr("Widget diperbarui saat data berubah, saat upgrade selesai, dan paling lambat tiap 30 menit.",
+            "The widget refreshes when data changes, when an upgrade finishes, and at least every 30 minutes."))
     }
 
     // ---------------------------------------------------------------- update aplikasi
 
     private fun updateSection() {
-        sub("🔄 Update aplikasi", "github.com/${Updater.REPO}", Help.Topic.UPDATE)
+        sub(tr("🔄 Update aplikasi", "🔄 App updates"), "github.com/${Updater.REPO}", Help.Topic.UPDATE)
         val zone = java.time.ZoneId.systemDefault()
         val installed = Updater.installedBuild(this)
         val latest = Updater.latest(this)
         val avail = Updater.available(this)
         val status = when {
-            avail != null -> "build ${avail.build} tersedia (${Updater.mb(avail.size)})"
-            latest != null -> "sudah versi terbaru"
-            else -> "belum dicek"
+            avail != null -> tr("build ${avail.build} tersedia", "build ${avail.build} available") + " (${Updater.mb(avail.size)})"
+            latest != null -> tr("sudah versi terbaru", "already up to date")
+            else -> tr("belum dicek", "not checked yet")
         }
-        val checked = Updater.lastChecked(this).takeIf { it > 0 }?.let { " · dicek ${Fmt.at(it, zone)}" } ?: ""
-        val err = Updater.lastError(this)?.let { "\nCek terakhir gagal: $it" } ?: ""
-        note("Terpasang: build $installed (versi ${Updater.installedName(this)}) · $status$checked$err")
+        val checked = Updater.lastChecked(this).takeIf { it > 0 }?.let { tr(" · dicek ", " · checked ") + Fmt.at(it, zone) } ?: ""
+        val err = Updater.lastError(this)?.let { tr("\nCek terakhir gagal: ", "\nLast check failed: ") + it } ?: ""
+        note(tr("Terpasang: build $installed (versi ${Updater.installedName(this)})", "Installed: build $installed (version ${Updater.installedName(this)})") + " · $status$checked$err")
         if (avail != null) {
-            box.addView(Ui.filled(this, "⬆️ Unduh & pasang build ${avail.build}") { UpdateUi.start(this, avail) }
+            box.addView(Ui.filled(this, tr("⬆️ Unduh & pasang build ${avail.build}", "⬆️ Download & install build ${avail.build}")) { UpdateUi.start(this, avail) }
                 .apply { isAllCaps = false }, Ui.matchWrap())
         }
-        box.addView(Ui.outlined(this, "Cek update sekarang") { UpdateUi.checkNow(this) { render() } }
+        box.addView(Ui.outlined(this, tr("Cek update sekarang", "Check for updates now")) { UpdateUi.checkNow(this) { render() } }
             .apply { isAllCaps = false }, Ui.matchWrap())
-        switchRow("Cek otomatis saat aplikasi dibuka", Updater.autoCheck(this)) { Updater.setAutoCheck(this, it) }
+        switchRow(tr("Cek otomatis saat aplikasi dibuka", "Check automatically when the app opens"), Updater.autoCheck(this)) { Updater.setAutoCheck(this, it) }
         if (avail != null && avail.notes.isNotBlank()) {
-            row("Perubahan build ${avail.build}", "lihat") { UpdateUi.notes(this, "Yang baru di build ${avail.build}", avail.notes.lines().filter { it.isNotBlank() }) }
+            row(tr("Perubahan build ${avail.build}", "Changes in build ${avail.build}"), tr("lihat", "view")) { UpdateUi.notes(this, tr("Yang baru di build ${avail.build}", "New in build ${avail.build}"), avail.notes.lines().filter { it.isNotBlank() }) }
         }
         Updater.bundledNotes(this)?.let { (title, lines) ->
-            row("Yang baru di build $installed", title) { UpdateUi.notes(this, "Yang baru · build $installed", listOf(title) + lines) }
+            row(tr("Yang baru di build $installed", "New in build $installed"), title) { UpdateUi.notes(this, tr("Yang baru · build $installed", "What's new · build $installed"), listOf(title) + lines) }
         }
     }
 
     // ---------------------------------------------------------------- pindah data
 
     private fun backupSection() {
-        sub("📦 Pindah data & cadangan", "HP ↔ tablet: semua desa, timer, opsi, riwayat & API key", Help.Topic.BACKUP)
+        sub(tr("📦 Pindah data & cadangan", "📦 Move data & backup"), tr("HP ↔ tablet: semua desa, timer, opsi, riwayat & API key", "Phone ↔ tablet: all villages, timers, options, history & API key"), Help.Topic.BACKUP)
         val dp8 = Ui.dp(this, 8)
         val r = Ui.hbox(this)
-        r.addView(Ui.outlined(this, "Salin semua data") { copyAll() }.apply { isAllCaps = false }, Ui.weight1())
-        r.addView(Ui.outlined(this, "Tempel data") { pasteAll() }.apply { isAllCaps = false }, Ui.weight1().apply { marginStart = dp8 })
+        r.addView(Ui.outlined(this, tr("Salin semua data", "Copy all data")) { copyAll() }.apply { isAllCaps = false }, Ui.weight1())
+        r.addView(Ui.outlined(this, tr("Tempel data", "Paste data")) { pasteAll() }.apply { isAllCaps = false }, Ui.weight1().apply { marginStart = dp8 })
         box.addView(r)
         val r2 = Ui.hbox(this)
-        r2.addView(Ui.outlined(this, "Simpan file") {
+        r2.addView(Ui.outlined(this, tr("Simpan file", "Save file")) {
             val day = java.time.LocalDate.now().toString().replace("-", "")
             runCatching { saveFile.launch("clashtimer-$day.json") }
         }.apply { isAllCaps = false }, Ui.weight1())
-        r2.addView(Ui.outlined(this, "Buka file") {
+        r2.addView(Ui.outlined(this, tr("Buka file", "Open file")) {
             runCatching { openFile.launch(arrayOf("application/json", "text/plain", "application/octet-stream", "*/*")) }
         }.apply { isAllCaps = false }, Ui.weight1().apply { marginStart = dp8 })
         box.addView(r2)
-        note("Isinya termasuk API key — jangan dibagikan ke orang lain.")
+        note(tr("Isinya termasuk API key — jangan dibagikan ke orang lain.", "It includes your API key — do not share it with anyone."))
     }
 
     private fun copyAll() {
         val text = Backup.text(this)
         val cm = getSystemService(android.content.ClipboardManager::class.java)
         cm?.setPrimaryClip(android.content.ClipData.newPlainText("Clash Timer", text))
-        Toast.makeText(this, "Data disalin (${text.length / 1024} KB). Tempel di Clash Timer perangkat lain.", Toast.LENGTH_LONG).show()
+        Toast.makeText(this, tr("Data disalin (${text.length / 1024} KB). Tempel di Clash Timer perangkat lain.", "Data copied (${text.length / 1024} KB). Paste it in Clash Timer on the other device."), Toast.LENGTH_LONG).show()
     }
 
     private fun pasteAll() {
@@ -272,53 +456,58 @@ class SettingsActivity : AppCompatActivity() {
         val o = text?.let { Backup.parse(it) }
         if (o == null) {
             MaterialAlertDialogBuilder(this)
-                .setTitle("Bukan data Clash Timer")
-                .setMessage("Di perangkat asal buka Pengaturan → Salin semua data (atau Simpan file), lalu coba lagi di sini.")
+                .setTitle(tr("Bukan data Clash Timer", "Not Clash Timer data"))
+                .setMessage(tr("Di perangkat asal buka Pengaturan → Salin semua data (atau Simpan file), lalu coba lagi di sini.", "On the other device open Settings → Copy all data (or Save file), then try again here."))
                 .setPositiveButton("OK", null)
                 .show()
             return
         }
         MaterialAlertDialogBuilder(this)
-            .setTitle("Ganti semua data di perangkat ini?")
-            .setMessage(Backup.describe(o) + "\n\nSemua desa, timer, opsi, riwayat dan API key di perangkat ini diganti dengan data tersebut.")
-            .setPositiveButton("Ganti") { _, _ ->
+            .setTitle(tr("Ganti semua data di perangkat ini?", "Replace all data on this device?"))
+            .setMessage(Backup.describe(o) + tr("\n\nSemua desa, timer, opsi, riwayat dan API key di perangkat ini diganti dengan data tersebut.", "\n\nAll villages, timers, options, history and the API key on this device will be replaced."))
+            .setPositiveButton(tr("Ganti", "Replace")) { _, _ ->
                 Backup.restore(this, o)
-                Toast.makeText(this, "Data dipulihkan", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, tr("Data dipulihkan", "Data restored"), Toast.LENGTH_SHORT).show()
                 render()
             }
-            .setNegativeButton("Batal", null)
+            .setNegativeButton(tr("Batal", "Cancel"), null)
             .show()
     }
 
     // ---------------------------------------------------------------- API resmi
 
     private fun apiSection() {
-        sub("🔑 API resmi Clash of Clans", "Otomatis: nama akun & clan, ikut CWL & jadwal aslinya, akhir Gold Pass, upgrade yang selesai lebih cepat, cek export ketinggalan")
+        sub(tr("🔑 API resmi Clash of Clans", "🔑 Official Clash of Clans API"), tr("Otomatis: nama akun & clan, ikut CWL & jadwal aslinya, akhir Gold Pass, upgrade yang selesai lebih cepat, cek export ketinggalan", "Automatic: account & clan name, CWL participation & real schedule, Gold Pass end, upgrades finished early, outdated export check"))
         val key = Store.apiKey(this)
-        row("API key", if (key.isBlank()) "Belum diisi — ketuk untuk menempel" else "•••• ${key.takeLast(6)}") { askApiKey() }
+        row("API key", if (key.isBlank()) tr("Belum diisi — ketuk untuk menempel", "Not set — tap to paste") else "•••• ${key.takeLast(6)}") { askApiKey() }
         val status = Store.apiStatus(this)
         if (status.isNotBlank()) {
             note("Status: $status · ${Fmt.at(Store.apiTried(this), java.time.ZoneId.systemDefault())}")
         }
         val r = Ui.hbox(this)
-        r.addView(Ui.outlined(this, "Tes & perbarui") { syncNow() }.apply { isAllCaps = false }, Ui.weight1())
-        r.addView(Ui.outlined(this, "Salin IP proxy") {
+        r.addView(Ui.outlined(this, tr("Tes & perbarui", "Test & refresh")) { syncNow() }.apply { isAllCaps = false }, Ui.weight1())
+        r.addView(Ui.outlined(this, tr("Salin IP proxy", "Copy proxy IP")) {
             val cm = getSystemService(android.content.ClipboardManager::class.java)
             cm?.setPrimaryClip(android.content.ClipData.newPlainText("IP", CocApi.PROXY_IP))
-            Toast.makeText(this, "Disalin: ${CocApi.PROXY_IP}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, tr("Disalin: ", "Copied: ") + CocApi.PROXY_IP, Toast.LENGTH_SHORT).show()
         }.apply { isAllCaps = false }, Ui.weight1().apply { marginStart = Ui.dp(this@SettingsActivity, 8) })
         box.addView(r)
-        box.addView(Ui.outlined(this, "Buka developer.clashofclans.com") {
+        box.addView(Ui.outlined(this, tr("Buka developer.clashofclans.com", "Open developer.clashofclans.com")) {
             runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(CocApi.DEV_SITE))) }
         }.apply { isAllCaps = false }, Ui.matchWrap())
-        note("Cara membuat key: masuk ke developer.clashofclans.com → My Account → Create New Key → nama & deskripsi bebas → " +
+        note(if (!id.clashtimer.core.Lang.en) "Cara membuat key: masuk ke developer.clashofclans.com → My Account → Create New Key → nama & deskripsi bebas → " +
             "IP address: ${CocApi.PROXY_IP} → Create Key → salin Token, lalu tempel di sini. Permintaan dikirim lewat proxy RoyaleAPI " +
             "(cocproxy.royaleapi.dev); key hanya disimpan di HP ini. Data diperbarui otomatis setiap desa ditambah / di-update dan saat aplikasi dibuka " +
             "(paling sering tiap 30 menit): CWL dihitung hanya bila akun ini ada di roster CWL clan (atau war preference IN sebelum CWL mulai), " +
             "dan upgrade hero, lab, pet, Star Lab, TH/BH yang di game sudah naik level (book, gem, potion) langsung ditandai selesai. " +
-            "Data event seperti Hammer Jam tidak tersedia di API resmi.")
+            "Data event seperti Hammer Jam tidak tersedia di API resmi." else "How to create a key: sign in at developer.clashofclans.com → My Account → Create New Key → any name & description → " +
+            "IP address: ${CocApi.PROXY_IP} → Create Key → copy the Token and paste it here. Requests go through the RoyaleAPI proxy " +
+            "(cocproxy.royaleapi.dev); the key is stored on this phone only. Data refreshes automatically whenever a village is added / updated and when the app opens " +
+            "(at most every 30 minutes): CWL counts only if this account is on the clan's CWL roster (or war preference IN before CWL starts), " +
+            "and hero, lab, pet, Star Lab, TH/BH upgrades that already levelled up in the game (book, gems, potion) are marked done right away. " +
+            "Event data such as Hammer Jam is not available in the official API.")
         if (key.isNotBlank()) {
-            box.addView(Ui.flat(this, "Hapus API key") {
+            box.addView(Ui.flat(this, tr("Hapus API key", "Remove API key")) {
                 Store.setApiKey(this, "")
                 render()
             }.apply { isAllCaps = false })
@@ -341,28 +530,28 @@ class SettingsActivity : AppCompatActivity() {
         MaterialAlertDialogBuilder(this)
             .setTitle("API key (Token)")
             .setView(wrap)
-            .setPositiveButton("Simpan & tes") { _, _ ->
+            .setPositiveButton(tr("Simpan & tes", "Save & test")) { _, _ ->
                 Store.setApiKey(this, input.text.toString().replace("\\s".toRegex(), ""))
                 render()
                 syncNow()
             }
-            .setNeutralButton("Tempel") { _, _ ->
+            .setNeutralButton(tr("Tempel", "Paste")) { _, _ ->
                 val cm = getSystemService(android.content.ClipboardManager::class.java)
                 val text = cm?.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString().orEmpty()
                 Store.setApiKey(this, text.replace("\\s".toRegex(), ""))
                 render()
                 syncNow()
             }
-            .setNegativeButton("Batal", null)
+            .setNegativeButton(tr("Batal", "Cancel"), null)
             .show()
     }
 
     private fun syncNow() {
         if (Store.apiKey(this).isBlank()) {
-            Toast.makeText(this, "Isi API key dulu", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, tr("Isi API key dulu", "Enter the API key first"), Toast.LENGTH_SHORT).show()
             return
         }
-        Toast.makeText(this, "Menghubungi API…", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, tr("Menghubungi API…", "Contacting the API…"), Toast.LENGTH_SHORT).show()
         ApiSync.syncAsync(this) { msg ->
             Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
             render()
@@ -370,7 +559,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun testTone(key: String) {
-        if (!Notifier.canNotify(this)) Toast.makeText(this, "Izinkan notifikasi dulu", Toast.LENGTH_SHORT).show()
+        if (!Notifier.canNotify(this)) Toast.makeText(this, tr("Izinkan notifikasi dulu", "Allow notifications first"), Toast.LENGTH_SHORT).show()
         else Notifier.test(this, key)
     }
 
@@ -379,7 +568,7 @@ class SettingsActivity : AppCompatActivity() {
         val cur = Store.toneMode(this, key)
         val labels = all.map { "${it.label}\n${it.desc}" as CharSequence }.toTypedArray()
         MaterialAlertDialogBuilder(this)
-            .setTitle(if (key == Notifier.KEY_DONE) "Nada upgrade selesai" else "Nada pengingat")
+            .setTitle(if (key == Notifier.KEY_DONE) tr("Nada upgrade selesai", "Upgrade done sound") else tr("Nada pengingat", "Reminder sound"))
             .setSingleChoiceItems(labels, all.indexOf(cur)) { d, w ->
                 d.dismiss()
                 val mode = all[w]
@@ -387,14 +576,14 @@ class SettingsActivity : AppCompatActivity() {
                     ToneMode.CUSTOM -> openPicker(key, mode, RingtoneManager.TYPE_NOTIFICATION or RingtoneManager.TYPE_RINGTONE or RingtoneManager.TYPE_ALARM)
                     ToneMode.ALARM -> {
                         MaterialAlertDialogBuilder(this)
-                            .setTitle("Alarm keras")
-                            .setMessage("Berbunyi berulang dengan volume alarm (biasanya tetap bunyi saat HP senyap/getar) sampai notifikasi dibuka, diusap, atau ditekan Matikan.\n\nPakai nada alarm bawaan HP, atau pilih nada lain?")
-                            .setPositiveButton("Nada alarm bawaan") { _, _ ->
+                            .setTitle(tr("Alarm keras", "Loud alarm"))
+                            .setMessage(tr("Berbunyi berulang dengan volume alarm (biasanya tetap bunyi saat HP senyap/getar) sampai notifikasi dibuka, diusap, atau ditekan Matikan.\n\nPakai nada alarm bawaan HP, atau pilih nada lain?", "Rings repeatedly at alarm volume (usually even when the phone is silent/vibrate) until the notification is opened, swiped, or Stop is pressed.\n\nUse the phone's default alarm sound, or pick another?"))
+                            .setPositiveButton(tr("Nada alarm bawaan", "Default alarm sound")) { _, _ ->
                                 Notifier.changeTone(this, key, mode, null)
                                 render()
                             }
-                            .setNeutralButton("Pilih nada") { _, _ -> openPicker(key, mode, RingtoneManager.TYPE_ALARM or RingtoneManager.TYPE_RINGTONE) }
-                            .setNegativeButton("Batal", null)
+                            .setNeutralButton(tr("Pilih nada", "Pick a sound")) { _, _ -> openPicker(key, mode, RingtoneManager.TYPE_ALARM or RingtoneManager.TYPE_RINGTONE) }
+                            .setNegativeButton(tr("Batal", "Cancel"), null)
                             .show()
                     }
                     else -> {
@@ -412,7 +601,7 @@ class SettingsActivity : AppCompatActivity() {
         val existing = Store.toneUri(this, key)?.let { runCatching { Uri.parse(it) }.getOrNull() }
         val i = Intent(RingtoneManager.ACTION_RINGTONE_PICKER)
             .putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, type)
-            .putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, if (mode == ToneMode.ALARM) "Nada alarm keras" else "Nada notifikasi")
+            .putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, if (mode == ToneMode.ALARM) tr("Nada alarm keras", "Loud alarm sound") else tr("Nada notifikasi", "Notification sound"))
             .putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
             .putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
         if (existing != null) i.putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, existing)
@@ -421,7 +610,7 @@ class SettingsActivity : AppCompatActivity() {
         } catch (_: Exception) {
             pendingKey = null
             pendingMode = null
-            Toast.makeText(this, "Pemilih nada tidak tersedia di HP ini", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, tr("Pemilih nada tidak tersedia di HP ini", "No sound picker on this phone"), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -470,44 +659,44 @@ class SettingsActivity : AppCompatActivity() {
                 Store.putPlan(this, startKey, newStart)
                 Store.putPlan(this, endKey, h2 * 60 + m2)
                 render()
-            }, end / 60, end % 60, true).apply { setTitle("$title: selesai") }.show()
-        }, start / 60, start % 60, true).apply { setTitle("$title: mulai") }.show()
+            }, end / 60, end % 60, true).apply { setTitle(title + tr(": selesai", ": end")) }.show()
+        }, start / 60, start % 60, true).apply { setTitle(title + tr(": mulai", ": start")) }.show()
     }
 
     private fun dayName(d: DayOfWeek): String = when (d) {
-        DayOfWeek.MONDAY -> "Sen"
-        DayOfWeek.TUESDAY -> "Sel"
-        DayOfWeek.WEDNESDAY -> "Rab"
-        DayOfWeek.THURSDAY -> "Kam"
-        DayOfWeek.FRIDAY -> "Jum"
-        DayOfWeek.SATURDAY -> "Sab"
-        DayOfWeek.SUNDAY -> "Min"
+        DayOfWeek.MONDAY -> tr("Sen", "Mon")
+        DayOfWeek.TUESDAY -> tr("Sel", "Tue")
+        DayOfWeek.WEDNESDAY -> tr("Rab", "Wed")
+        DayOfWeek.THURSDAY -> tr("Kam", "Thu")
+        DayOfWeek.FRIDAY -> tr("Jum", "Fri")
+        DayOfWeek.SATURDAY -> tr("Sab", "Sat")
+        DayOfWeek.SUNDAY -> tr("Min", "Sun")
     }
 
     private fun pickDays() {
         val all = DayOfWeek.entries
         val mask = Store.getInt(this, "work_days", Store.DEFAULT_WORK_DAYS)
         val checked = BooleanArray(7) { mask and (1 shl it) != 0 }
-        val labels = arrayOf<CharSequence>("Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu")
+        val labels = if (id.clashtimer.core.Lang.en) arrayOf<CharSequence>("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday") else arrayOf<CharSequence>("Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu")
         MaterialAlertDialogBuilder(this)
-            .setTitle("Hari kerja / sekolah")
+            .setTitle(tr("Hari kerja / sekolah", "Work / school days"))
             .setMultiChoiceItems(labels, checked) { _, which, isChecked -> checked[which] = isChecked }
-            .setPositiveButton("Simpan") { _, _ ->
+            .setPositiveButton(tr("Simpan", "Save")) { _, _ ->
                 var m = 0
                 for (i in all.indices) if (checked[i]) m = m or (1 shl i)
                 Store.putPlan(this, "work_days", m)
                 render()
             }
-            .setNegativeButton("Batal", null)
+            .setNegativeButton(tr("Batal", "Cancel"), null)
             .show()
     }
 
     private fun pickEarly() {
         val options = intArrayOf(0, 5, 10, 15, 30, 60)
-        val labels = options.map { (if (it == 0) "Tidak ada (hanya saat selesai)" else "$it menit sebelumnya") as CharSequence }.toTypedArray()
+        val labels = options.map { (if (it == 0) tr("Tidak ada (hanya saat selesai)", "None (only when done)") else tr("$it menit sebelumnya", "$it min before")) as CharSequence }.toTypedArray()
         val current = options.indexOf(Store.earlyMinutes(this)).coerceAtLeast(0)
         MaterialAlertDialogBuilder(this)
-            .setTitle("Pengingat tambahan")
+            .setTitle(tr("Pengingat tambahan", "Extra reminder"))
             .setSingleChoiceItems(labels, current) { d, which ->
                 val min = options[which]
                 Store.setEarlyMinutes(this, min)

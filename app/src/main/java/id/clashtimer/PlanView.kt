@@ -43,7 +43,7 @@ object PlanView {
         val acc = Store.accounts(act).firstOrNull { it.tag == tag } ?: return
         val ups = Store.upgrades(act).filter { it.tag == tag }
         if (bb && acc.bh == 0 && ups.none { it.kind.builderBase }) {
-            box.addView(Ui.muted(act, "Belum ada data Builder Base di export desa ini.", Ui.BODY_M).apply {
+            box.addView(Ui.muted(act, tr("Belum ada data Builder Base di export desa ini.", "No Builder Base data in this village export yet."), Ui.BODY_M).apply {
                 setPadding(Ui.dp(act, 4), Ui.dp(act, 24), Ui.dp(act, 4), 0)
             })
             return
@@ -58,8 +58,8 @@ object PlanView {
         // Pekerja yang bebas sekarang: kartu saran (Sudah dimulai / Opsi lain).
         val free = if (showFree) HomeView.freeCards(act, tag, bb, b, sim, ups, labels, now, lanes) else emptyList()
         if (free.isNotEmpty()) {
-            val target = b?.let { if (bb) "urutan tercepat: ${it.ps.bbStrategy.label}" else "urutan tercepat ke ${it.ps.strategy.target}" }
-            box.addView(Ui.heading(act, HomeView.countTitle("Bebas sekarang", free.size), target, Help.Topic.HOME))
+            val target = b?.let { if (bb) tr("urutan tercepat: ${it.ps.bbStrategy.label}", "fastest order: ${it.ps.bbStrategy.label}") else tr("urutan tercepat ke ${it.ps.strategy.target}", "fastest order to ${it.ps.strategy.target}") }
+            box.addView(Ui.heading(act, HomeView.countTitle(tr("Bebas sekarang", "Free now"), free.size), target, Help.Topic.HOME))
             for (c in free) box.addView(HomeView.freeCard(act, tag, b, c, bb, now, zone, hasExport), Ui.matchWrap(12, act))
         }
 
@@ -70,7 +70,7 @@ object PlanView {
         }
         if (!bb && !lab && sim.cwlDeferred.isNotEmpty() && b.ps.cwl.enabled) {
             val w = b.ps.cwl.next(now)
-            box.addView(note(act, "CWL sampai ${Fmt.dateShort(w.last + 1, zone)}: ${sim.cwlDeferred.joinToString(", ")} ditunda", Ui.BUSY))
+            box.addView(note(act, tr("CWL sampai ", "CWL until ") + Fmt.dateShort(w.last + 1, zone) + ": " + sim.cwlDeferred.joinToString(", ") + tr(" ditunda", " paused"), Ui.BUSY))
         }
         if (bb && !lab) capacityLine(act, box, b)
         val split = agendaEnd(b.ps.schedule, now)
@@ -107,7 +107,7 @@ object PlanView {
         !bb && b.ps.strategy == id.clashtimer.core.Strategy.MAX -> "Max TH${b.village.th}"
         !bb && b.ps.strategy == id.clashtimer.core.Strategy.RUSH -> "TH${b.village.th + 1}"
         !bb -> "Hero max TH${b.village.th}"
-        b.ps.bbStrategy == BBStrategy.SIXTH && sim?.sixth != null -> "B.O.B terbuka"
+        b.ps.bbStrategy == BBStrategy.SIXTH && sim?.sixth != null -> tr("B.O.B terbuka", "B.O.B unlocked")
         else -> "Max BH${b.village.bh}"
     }
 
@@ -144,8 +144,8 @@ object PlanView {
         var first = true
         fun dayHead(d: java.time.LocalDate) {
             val prefix = when (d) {
-                today -> "HARI INI · "
-                today.plusDays(1) -> "BESOK · "
+                today -> tr("HARI INI · ", "TODAY · ")
+                today.plusDays(1) -> tr("BESOK · ", "TOMORROW · ")
                 else -> ""
             }
             val row = Ui.hbox(act).apply { setPadding(Ui.dp(act, 2), Ui.dp(act, if (first) 2 else 8), 0, Ui.dp(act, 6)) }
@@ -161,7 +161,7 @@ object PlanView {
         }
         if (entries.isEmpty()) {
             dayHead(today)
-            box.addView(Ui.muted(act, "Tidak ada yang perlu dimulai sampai ${HomeView.short(until, now, zone)}.").apply {
+            box.addView(Ui.muted(act, tr("Tidak ada yang perlu dimulai sampai ${HomeView.short(until, now, zone)}.", "Nothing to start until ${HomeView.short(until, now, zone)}.")).apply {
                 textSize = 13f
                 setPadding(Ui.dp(act, 4), 0, 0, Ui.dp(act, 10))
             })
@@ -182,15 +182,15 @@ object PlanView {
     private fun queue(act: MainActivity, box: LinearLayout, b: PlanBundle, sim: SimResult, lanes: Set<Lane>, from: Long, now: Long, zone: ZoneId) {
         val steps = sim.steps.filter { it.lane in lanes && !it.running && it.start >= from && it.start < now + 7 * DAY }.sortedBy { it.start }
         if (steps.isEmpty()) return
-        box.addView(Ui.heading(act, "Antrian", "urutan tercepat ke target"))
+        box.addView(Ui.heading(act, tr("Antrian", "Queue"), tr("urutan tercepat ke target", "fastest order to target")))
         val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
         val limit = 20
         val shown = steps.take(limit)
         for ((d, list) in shown.groupBy { Instant.ofEpochMilli(it.start).atZone(zone).toLocalDate() }) {
             val card = Ui.panel(act, padH = 14, padV = 4)
             val prefix = when (d) {
-                today -> "HARI INI · "
-                today.plusDays(1) -> "BESOK · "
+                today -> tr("HARI INI · ", "TODAY · ")
+                today.plusDays(1) -> tr("BESOK · ", "TOMORROW · ")
                 else -> ""
             }
             card.addView(Ui.text(act, prefix + dayFmt.format(d).uppercase(Fmt.locale), Ui.BODY_S).apply {
@@ -217,9 +217,9 @@ object PlanView {
             box.addView(card, Ui.matchWrap(10, act))
         }
         val rest = steps.size - shown.size
-        if (rest > 0) box.addView(Ui.muted(act, "… $rest langkah lagi dalam 7 hari").apply { setPadding(Ui.dp(act, 4), 0, 0, Ui.dp(act, 8)) })
+        if (rest > 0) box.addView(Ui.muted(act, tr("… $rest langkah lagi dalam 7 hari", "… $rest more steps within 7 days")).apply { setPadding(Ui.dp(act, 4), 0, 0, Ui.dp(act, 8)) })
         if (lanes.contains(Lane.BUILDER) && sim.builderIdle7d > 30 * 60_000L) {
-            box.addView(note(act, "Builder menganggur ±${Fmt.dur(sim.builderIdle7d)} dalam 7 hari ke depan", Ui.IDLE))
+            box.addView(note(act, tr("Builder menganggur ±${Fmt.dur(sim.builderIdle7d)} dalam 7 hari ke depan", "Builders idle ±${Fmt.dur(sim.builderIdle7d)} over the next 7 days"), Ui.IDLE))
         }
     }
 
@@ -227,10 +227,10 @@ object PlanView {
     private fun labQueue(act: MainActivity, box: LinearLayout, b: PlanBundle, sim: SimResult, bb: Boolean, lanes: Set<Lane>, now: Long, zone: ZoneId) {
         val steps = sim.steps.filter { it.lane in lanes && !it.running && it.start > now + 60_000L }.sortedBy { it.start }
         val name = if (bb) "Star Lab" else "Lab"
-        val head = Ui.heading(act, "Antrian $name", "urutan tercepat ke target", Help.Topic.PLAN)
+        val head = Ui.heading(act, tr("Antrian $name", "$name queue"), tr("urutan tercepat ke target", "fastest order to target"), Help.Topic.PLAN)
         box.addView(head)
         if (steps.isEmpty()) {
-            box.addView(Ui.muted(act, "Tidak ada riset lagi yang bisa direncanakan.").apply { setPadding(Ui.dp(act, 4), 0, 0, Ui.dp(act, 10)) })
+            box.addView(Ui.muted(act, tr("Tidak ada riset lagi yang bisa direncanakan.", "No more research can be planned.")).apply { setPadding(Ui.dp(act, 4), 0, 0, Ui.dp(act, 10)) })
             return
         }
         val schedule = b.ps.schedule
@@ -262,12 +262,12 @@ object PlanView {
             col.addView(t)
             val cost = if (s.cost > 0) " · ${Fmt.money(s.cost)} ${Fmt.resource(s.item?.resource ?: "")}" else ""
             val (extra, color) = when {
-                s.idle > 30 * 60_000L -> " · menganggur ${Fmt.dur(s.idle)}" to Ui.IDLE
-                schedule.isOffline(s.finish) -> " · selesai saat tidur" to Ui.TEXT2
-                Sessions.mood(schedule, s.finish) == "bangun" -> " · pas bangun" to Ui.FREE_TEXT
+                s.idle > 30 * 60_000L -> tr(" · menganggur ${Fmt.dur(s.idle)}", " · idle ${Fmt.dur(s.idle)}") to Ui.IDLE
+                schedule.isOffline(s.finish) -> tr(" · selesai saat tidur", " · done while asleep") to Ui.TEXT2
+                Sessions.mood(schedule, s.finish) == "bangun" -> tr(" · pas bangun", " · right at wake-up") to Ui.FREE_TEXT
                 else -> "" to Ui.TEXT2
             }
-            col.addView(Ui.muted(act, "${Fmt.durSec(s.durationSec)}$cost · selesai ${HomeView.short(s.finish, now, zone)}$extra").apply {
+            col.addView(Ui.muted(act, tr("${Fmt.durSec(s.durationSec)}$cost · selesai ${HomeView.short(s.finish, now, zone)}$extra", "${Fmt.durSec(s.durationSec)}$cost · done ${HomeView.short(s.finish, now, zone)}$extra")).apply {
                 textSize = 12f
                 setTextColor(color)
             })
@@ -277,7 +277,7 @@ object PlanView {
         }
         box.addView(panel, Ui.matchWrap(8, act))
         val rest = steps.size - limit
-        if (rest > 0) box.addView(Ui.muted(act, "… lalu $rest riset lagi").apply { setPadding(Ui.dp(act, 4), 0, 0, Ui.dp(act, 8)) })
+        if (rest > 0) box.addView(Ui.muted(act, tr("… lalu $rest riset lagi", "… then $rest more research")).apply { setPadding(Ui.dp(act, 4), 0, 0, Ui.dp(act, 8)) })
     }
 
     // ---------------------------------------------------------------- sedang dikerjakan
@@ -290,8 +290,8 @@ object PlanView {
         val running = ups.filter { it.kind in kinds && it.finishAt > now }.sortedBy { it.finishAt }
         if (running.isEmpty()) return
         val tag = running.first().tag
-        val sub = if (lab) "${running.size} berjalan" else act.builderCounts(tag, bb).let { (busy, total) -> "$busy/$total bekerja" }
-        box.addView(Ui.heading(act, (if (lab) "Sedang diriset" else "Sedang dikerjakan") + " · $sub", "tercepat di atas"))
+        val sub = if (lab) tr("${running.size} berjalan", "${running.size} running") else act.builderCounts(tag, bb).let { (busy, total) -> tr("$busy/$total bekerja", "$busy/$total working") }
+        box.addView(Ui.heading(act, (if (lab) tr("Sedang diriset", "Researching") else tr("Sedang dikerjakan", "In progress")) + " · $sub", tr("tercepat di atas", "soonest first")))
         for (u in running) box.addView(workCard(act, u, gd, labels[u.id], lab, b, sim, now, zone), Ui.matchWrap(10, act))
     }
 
@@ -345,7 +345,7 @@ object PlanView {
 
     /** "selesai 18:40 · lalu Air Sweeper → 6" atau "selesai Sel 02:05 · menganggur ±4j". */
     private fun afterNote(u: Upgrade, label: String?, b: PlanBundle?, sim: SimResult?, now: Long, zone: ZoneId): Pair<String, Int> {
-        val done = "selesai ${HomeView.short(u.finishAt, now, zone)}"
+        val done = tr("selesai ${HomeView.short(u.finishAt, now, zone)}", "done ${HomeView.short(u.finishAt, now, zone)}")
         if (u.extra) return "$done · Goblin (event)" to Ui.TEXT2
         val lane = when (u.kind) {
             Kind.BUILDER -> Lane.BUILDER
@@ -367,9 +367,9 @@ object PlanView {
             else -> 0L
         }
         return when {
-            wait > 30 * 60_000L -> "$done · menganggur ±${Fmt.dur(wait)}" to Ui.IDLE
-            next != null -> "$done · lalu ${short(next)}" to Ui.TEXT2
-            b != null && b.ps.schedule.isOffline(u.finishAt) -> "$done · saat tidur" to Ui.TEXT2
+            wait > 30 * 60_000L -> tr("$done · menganggur ±${Fmt.dur(wait)}", "$done · idle ±${Fmt.dur(wait)}") to Ui.IDLE
+            next != null -> tr("$done · lalu ${short(next)}", "$done · then ${short(next)}") to Ui.TEXT2
+            b != null && b.ps.schedule.isOffline(u.finishAt) -> tr("$done · saat tidur", "$done · while asleep") to Ui.TEXT2
             else -> done to Ui.TEXT2
         }
     }
@@ -380,7 +380,7 @@ object PlanView {
         val p = (if (bb) b.bb else b.home) ?: return
         val cats = p.categories.filter { it.lane == Lane.LAB || it.lane == Lane.PET || it.lane == Lane.STAR_LAB }
         if (cats.isEmpty()) return
-        box.addView(Ui.heading(act, "Sisa riset", null, Help.Topic.PROGRESS))
+        box.addView(Ui.heading(act, tr("Sisa riset", "Research left"), null, Help.Topic.PROGRESS))
         val panel = Ui.panel(act, padH = 14, padV = 6)
         for (c in cats) {
             val pct = if (c.totalSec > 0) c.doneSec * 100.0 / c.totalSec else 100.0
@@ -410,14 +410,14 @@ object PlanView {
             setPadding(Ui.dp(act, 12), Ui.dp(act, 10), Ui.dp(act, 12), Ui.dp(act, 10))
         }
         band.addView(Ui.icon(act, R.drawable.ic_moon, 16, Ui.TEXT2), LinearLayout.LayoutParams(Ui.dp(act, 16), Ui.dp(act, 16)).apply { marginEnd = Ui.dp(act, 8) })
-        band.addView(Ui.muted(act, "Tidur ${Fmt.time(w.first, zone)}–${Fmt.time(w.last + 1, zone)}").apply { textSize = 13f }, Ui.weight1())
+        band.addView(Ui.muted(act, tr("Tidur ${Fmt.time(w.first, zone)}–${Fmt.time(w.last + 1, zone)}", "Sleep ${Fmt.time(w.first, zone)}–${Fmt.time(w.last + 1, zone)}")).apply { textSize = 13f }, Ui.weight1())
         // Pekerja yang selesai saat tidur dan menunggu lama.
         val idle = (sim.running + sim.steps).filter { it.lane.bb == bb && it.lane in lanes && it.finish in w && it.idle > 30 * 60_000L }
             .map { Sessions.label(it) }.distinct()
         band.addView(TextView(act).apply {
             textSize = 13f
-            if (idle.isEmpty()) { text = "semua tetap bekerja"; setTextColor(Ui.FREE_TEXT) }
-            else { text = idle.joinToString(", ") + " menganggur"; setTextColor(Ui.IDLE) }
+            if (idle.isEmpty()) { text = tr("semua tetap bekerja", "everyone keeps working"); setTextColor(Ui.FREE_TEXT) }
+            else { text = idle.joinToString(", ") + tr(" menganggur", " idle"); setTextColor(Ui.IDLE) }
         })
         return band
     }
@@ -427,7 +427,13 @@ object PlanView {
         val left = Ui.vbox(act).apply { setPadding(0, Ui.dp(act, 10), 0, 0) }
         val timeColor = if (s.now) Ui.FREE else Ui.TEXT
         left.addView(Ui.monoText(act, if (s.now) Fmt.time(now, zone) else Fmt.time(s.at, zone), 15f).apply { setTextColor(timeColor) })
-        val mood = if (s.now) "sekarang" else Sessions.mood(schedule, s.at) ?: "${s.steps.size} bebas"
+        val moodKey = if (s.now) null else Sessions.mood(schedule, s.at)
+        val mood = when {
+            s.now -> tr("sekarang", "now")
+            moodKey == "bangun" -> tr("bangun", "wake-up")
+            moodKey == "sblm tidur" -> tr("sblm tidur", "before bed")
+            else -> tr("${s.steps.size} bebas", "${s.steps.size} free")
+        }
         left.addView(TextView(act).apply {
             text = mood
             textSize = 11f
@@ -438,12 +444,12 @@ object PlanView {
         val card = Ui.panel(act, padH = 12, padV = 10, stroke = if (s.now) Ui.FREE_LINE else null, radiusDp = 14)
         val inner = Ui.hbox(act).apply { gravity = Gravity.TOP }
         val list = Ui.vbox(act)
-        val sleepSoon = mood == "sblm tidur"
+        val sleepSoon = moodKey == "sblm tidur"
         s.steps.forEachIndexed { i, st ->
             list.addView(stepLine(act, b, st, now, zone), Ui.matchWrap().apply { if (i > 0) topMargin = Ui.dp(act, 8) })
             val o = when {
-                st.idle > 30 * 60_000L -> "selesai ${HomeView.short(st.finish, st.start, zone)} · menganggur ${Fmt.dur(st.idle)}" to Ui.IDLE
-                sleepSoon && schedule.isOffline(st.finish) || (sleepSoon && st.idle > 0) -> "selesai ${HomeView.short(st.finish, st.start, zone)} — pas bangun" to Ui.FREE_TEXT
+                st.idle > 30 * 60_000L -> tr("selesai ${HomeView.short(st.finish, st.start, zone)} · menganggur ${Fmt.dur(st.idle)}", "done ${HomeView.short(st.finish, st.start, zone)} · idle ${Fmt.dur(st.idle)}") to Ui.IDLE
+                sleepSoon && schedule.isOffline(st.finish) || (sleepSoon && st.idle > 0) -> tr("selesai ${HomeView.short(st.finish, st.start, zone)} — pas bangun", "done ${HomeView.short(st.finish, st.start, zone)} — right at wake-up") to Ui.FREE_TEXT
                 else -> null
             }
             if (o != null) list.addView(TextView(act).apply {
@@ -463,10 +469,10 @@ object PlanView {
     fun bellIcon(act: MainActivity, tag: String, s: Session): View {
         val on = Repo.sessionReminderOn(act, tag, s.at)
         return Ui.icon(act, if (on) R.drawable.ic_bell else R.drawable.ic_bell_off, 20, if (on) Ui.FREE_TEXT else Ui.TEXT2,
-            if (on) "Pengingat aktif" else "Ingatkan pukul ${Fmt.time(s.at, act.zoneId())}") {
+            if (on) tr("Pengingat aktif", "Reminder on") else tr("Ingatkan pukul ${Fmt.time(s.at, act.zoneId())}", "Remind me at ${Fmt.time(s.at, act.zoneId())}")) {
             val nowOn = Repo.toggleSessionReminder(act, tag, s.at, Sessions.note(s))
             act.renderBody()
-            act.snack(if (nowOn) "Pengingat ${Fmt.time(s.at, act.zoneId())} dipasang" else "Pengingat dimatikan")
+            act.snack(if (nowOn) tr("Pengingat ${Fmt.time(s.at, act.zoneId())} dipasang", "Reminder ${Fmt.time(s.at, act.zoneId())} set") else tr("Pengingat dimatikan", "Reminder off"))
         }.apply {
             if (on) background = Ui.rounded(Ui.FREE_BG, Ui.dp(act, 10).toFloat())
             (layoutParams as LinearLayout.LayoutParams).marginStart = Ui.dp(act, 4)
@@ -502,15 +508,15 @@ object PlanView {
         val name = s.item?.name ?: s.title
         return when {
             s.gear -> "$name · Gear-up"
-            s.isNew && s.fromLevel == 0 -> "Bangun $name"
-            s.isNew -> "Buka $name"
+            s.isNew && s.fromLevel == 0 -> tr("Bangun $name", "Build $name")
+            s.isNew -> tr("Buka $name", "Unlock $name")
             else -> "$name → ${s.toLevel}"
         }
     }
 
     private fun timeline(act: MainActivity, box: LinearLayout, b: PlanBundle, sim: SimResult, bb: Boolean, lanes: Set<Lane>, now: Long, zone: ZoneId) {
         val range = Ui.hbox(act).apply { setPadding(0, 0, 0, Ui.dp(act, 8)) }
-        range.addView(Ui.segmentedWide(act, listOf("24 jam", "3 hari"), pref(act, "tl_range"), heightDp = 36, lab = lanes.none { it == Lane.BUILDER || it == Lane.BB_BUILDER }) {
+        range.addView(Ui.segmentedWide(act, listOf(tr("24 jam", "24 hours"), tr("3 hari", "3 days")), pref(act, "tl_range"), heightDp = 36, lab = lanes.none { it == Lane.BUILDER || it == Lane.BB_BUILDER }) {
             setPref(act, "tl_range", it)
             act.renderBody()
         }, Ui.weight1())
@@ -530,14 +536,14 @@ object PlanView {
             detail.addView(stepCard(act, b, s, now, zone) { detail.removeAllViews() }, Ui.matchWrap())
         }
         if (tv.rows.isEmpty()) {
-            card.addView(Ui.muted(act, "Tidak ada pekerja untuk ditampilkan.", Ui.BODY_M).apply { setPadding(Ui.dp(act, 8), Ui.dp(act, 8), 0, Ui.dp(act, 8)) })
+            card.addView(Ui.muted(act, tr("Tidak ada pekerja untuk ditampilkan.", "No workers to show."), Ui.BODY_M).apply { setPadding(Ui.dp(act, 8), Ui.dp(act, 8), 0, Ui.dp(act, 8)) })
         } else card.addView(tv, Ui.matchWrap())
         box.addView(card, Ui.matchWrap(8, act))
         box.addView(legend(act, lanes.none { it == Lane.BUILDER || it == Lane.BB_BUILDER }), Ui.matchWrap(10, act))
         val idle = tv.bars.filter { it.idle }.sumOf { (minOf(it.end, to) - maxOf(it.start, now)).coerceAtLeast(0) }
-        if (idle > 30 * 60_000L) box.addView(note(act, "Menganggur ±${Fmt.dur(idle)} dalam ${if (long) "3 hari" else "24 jam"}", Ui.IDLE))
+        if (idle > 30 * 60_000L) box.addView(note(act, tr("Menganggur ±", "Idle ±") + Fmt.dur(idle) + tr(" dalam ", " within ") + if (long) tr("3 hari", "3 days") else tr("24 jam", "24 hours"), Ui.IDLE))
         box.addView(detail, Ui.matchWrap())
-        if (tv.rows.isNotEmpty()) detail.addView(Ui.muted(act, "Ketuk batang untuk melihat detailnya.").apply {
+        if (tv.rows.isNotEmpty()) detail.addView(Ui.muted(act, tr("Ketuk batang untuk melihat detailnya.", "Tap a bar to see its details.")).apply {
             textSize = 12f
             setPadding(Ui.dp(act, 4), 0, 0, Ui.dp(act, 8))
         })
@@ -552,10 +558,10 @@ object PlanView {
                 LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = Ui.dp(act, 14) })
         }
         val c = if (lab) Ui.LAB else Ui.BUSY
-        item("berjalan", c, 0xFF)
-        item("rencana", c, 0x55)
-        item("menganggur", Ui.IDLE, 0xCC, 4)
-        item("offline", Ui.GREY, 0x40)
+        item(tr("berjalan", "running"), c, 0xFF)
+        item(tr("rencana", "planned"), c, 0x55)
+        item(tr("menganggur", "idle"), Ui.IDLE, 0xCC, 4)
+        item(tr("offline", "offline"), Ui.GREY, 0x40)
         return HorizontalScrollView(act).apply {
             isHorizontalScrollBarEnabled = false
             addView(row)
@@ -584,7 +590,7 @@ object PlanView {
         val tc = Ui.vbox(act).apply { setPadding(Ui.dp(act, 12), 0, 0, 0) }
         tc.addView(Ui.text(act, Sessions.title(s), Ui.TITLE_S).apply { textSize = 16f; setTypeface(typeface, Typeface.BOLD); setTextColor(Ui.TEXT) })
         val cost = if (s.cost > 0) " · ${Fmt.money(s.cost)} ${Fmt.resource(s.item?.resource ?: "")}" else ""
-        tc.addView(Ui.muted(act, (if (s.running) "berjalan" else "rencana") + cost).apply { textSize = 13f })
+        tc.addView(Ui.muted(act, (if (s.running) tr("berjalan", "running") else tr("rencana", "planned")) + cost).apply { textSize = 13f })
         head.addView(tc, Ui.weight1())
         col.addView(head)
 
@@ -592,18 +598,18 @@ object PlanView {
         fun add(label: String, value: String) {
             grid.addView(Sheets.stat(act, label, value).first, Ui.weight1().apply { if (grid.childCount > 0) marginStart = Ui.dp(act, 8) })
         }
-        if (!s.running) add("Mulai", if (s.start <= now + 60_000L) "sekarang" else HomeView.short(s.start, now, zone))
-        add("Lama", Fmt.durSec(s.durationSec))
-        add("Selesai", HomeView.short(s.finish, now, zone))
+        if (!s.running) add(tr("Mulai", "Start"), if (s.start <= now + 60_000L) "sekarang" else HomeView.short(s.start, now, zone))
+        add(tr("Lama", "Duration"), Fmt.durSec(s.durationSec))
+        add(tr("Selesai", "Done"), HomeView.short(s.finish, now, zone))
         col.addView(grid, Ui.matchWrap())
 
         val why = ArrayList<Pair<String, Int>>()
-        if (!s.running && s.idle > 30 * 60_000L) why += "Selesai saat Anda offline; pekerja menunggu ±${Fmt.dur(s.idle)}." to Ui.IDLE
-        else if (!s.running && b.ps.schedule.isOffline(s.finish)) why += "Selesai saat Anda offline — langsung diisi lagi begitu bangun." to Ui.FREE_TEXT
-        s.event?.let { why += "Dimulai saat $it — waktu & biaya sudah dipotong." to Ui.LAB }
+        if (!s.running && s.idle > 30 * 60_000L) why += tr("Selesai saat Anda offline; pekerja menunggu ±${Fmt.dur(s.idle)}.", "Finishes while you are offline; the worker waits ±${Fmt.dur(s.idle)}.") to Ui.IDLE
+        else if (!s.running && b.ps.schedule.isOffline(s.finish)) why += tr("Selesai saat Anda offline — langsung diisi lagi begitu bangun.", "Finishes while you are offline — refill it right when you wake up.") to Ui.FREE_TEXT
+        s.event?.let { why += tr("Dimulai saat $it — waktu & biaya sudah dipotong.", "Starts during $it — time & cost already reduced.") to Ui.LAB }
         s.note?.let { why += it to Ui.TEXT2 }
-        if (s.tier > 0) why += "Langkah menuju builder ke-6." to Ui.BUSY
-        if (s.gear) why += "Gear-up memakai Master Builder dari Builder Base dan bekerja di Home Village." to Ui.TEXT2
+        if (s.tier > 0) why += tr("Langkah menuju builder ke-6.", "Step toward the 6th builder.") to Ui.BUSY
+        if (s.gear) why += tr("Gear-up memakai Master Builder dari Builder Base dan bekerja di Home Village.", "Gear-ups use a Master Builder from the Builder Base and work in the Home Village.") to Ui.TEXT2
         for ((t, c) in why) col.addView(TextView(act).apply {
             text = t
             textSize = 13f
@@ -617,15 +623,15 @@ object PlanView {
                 .firstOrNull { it.c.item.id == s.item?.id && it.c.fromLevel == s.fromLevel && it.c.gear == s.gear }
         } else null
         if (pick != null) {
-            col.addView(Ui.primary(act, "Sudah dimulai") { done(); act.startPick(b.tag, pick) }, Ui.matchWrap().apply { topMargin = Ui.dp(act, 12) })
+            col.addView(Ui.primary(act, tr("Sudah dimulai", "Started")) { done(); act.startPick(b.tag, pick) }, Ui.matchWrap().apply { topMargin = Ui.dp(act, 12) })
         } else if (!s.running && s.start > now) {
             val on = Repo.sessionReminderOn(act, b.tag, s.start)
-            col.addView(Ui.tonal(act, if (on) "Pengingat ${Fmt.time(s.start, zone)} aktif · matikan" else "Ingatkan pukul ${Fmt.time(s.start, zone)}") {
+            col.addView(Ui.tonal(act, if (on) tr("Pengingat ${Fmt.time(s.start, zone)} aktif · matikan", "Reminder ${Fmt.time(s.start, zone)} on · turn off") else tr("Ingatkan pukul ${Fmt.time(s.start, zone)}", "Remind me at ${Fmt.time(s.start, zone)}")) {
                 val sess = Session(s.start, listOf(s), false)
                 val nowOn = Repo.toggleSessionReminder(act, b.tag, s.start, Sessions.note(sess))
                 done()
                 act.renderBody()
-                act.snack(if (nowOn) "Pengingat ${Fmt.time(s.start, zone)} dipasang" else "Pengingat dimatikan")
+                act.snack(if (nowOn) tr("Pengingat ${Fmt.time(s.start, zone)} dipasang", "Reminder ${Fmt.time(s.start, zone)} set") else tr("Pengingat dimatikan", "Reminder off"))
             }, Ui.matchWrap().apply { topMargin = Ui.dp(act, 12) })
         }
         return col
@@ -643,9 +649,9 @@ object PlanView {
             val cap = id.clashtimer.core.Capacity.of(v, res) ?: return@firstOrNull false
             s.cost > cap
         }
-        val text = StringBuilder("Gudang: ${Fmt.money(gold)} Gold BB · ${Fmt.money(elixir)} Elixir BB")
+        val text = StringBuilder(tr("Gudang: ", "Storage: ") + "${Fmt.money(gold)} ${Fmt.resource("Builder Gold")} · ${Fmt.money(elixir)} ${Fmt.resource("Builder Elixir")}")
         if (over != null) {
-            text.append(" — ${over.title} butuh ${Fmt.money(over.cost)} ${Fmt.resource(over.item?.resource ?: "")}, storage dinaikkan dulu")
+            text.append(" — ${over.title} " + tr("butuh", "needs") + " ${Fmt.money(over.cost)} ${Fmt.resource(over.item?.resource ?: "")}" + tr(", storage dinaikkan dulu", ", upgrade storage first"))
         }
         box.addView(note(act, text.toString(), if (over != null) Ui.BUSY else Ui.TEXT2))
     }

@@ -19,7 +19,7 @@ object VillagesUi {
     fun options(act: MainActivity, tag: String) {
         val name = Store.villageName(act, tag)
         val opts = arrayOf<CharSequence>(
-            "✏️ Ganti nama", "⚙️ Opsi desa (strategi, Gold Pass, CWL)", "📋 Update dari clipboard", "🗑️ Hapus desa",
+            tr("✏️ Ganti nama", "✏️ Rename"), tr("⚙️ Opsi desa (strategi, Gold Pass, CWL)", "⚙️ Village options (strategy, Gold Pass, CWL)"), tr("📋 Update dari clipboard", "📋 Update from clipboard"), tr("🗑️ Hapus desa", "🗑️ Delete village"),
         )
         MaterialAlertDialogBuilder(act)
             .setTitle(name)
@@ -31,14 +31,14 @@ object VillagesUi {
                     else -> confirmDelete(act, tag)
                 }
             }
-            .setNegativeButton("Tutup", null)
+            .setNegativeButton(tr("Tutup", "Close"), null)
             .show()
     }
 
     fun rename(act: MainActivity, tag: String) {
         val input = EditText(act).apply {
             setText(Store.villageName(act, tag).takeIf { it != tag } ?: "")
-            hint = "mis. Akun utama"
+            hint = tr("mis. Akun utama", "e.g. Main account")
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
             setSingleLine(true)
         }
@@ -47,30 +47,30 @@ object VillagesUi {
             addView(input, Ui.matchWrap())
         }
         MaterialAlertDialogBuilder(act)
-            .setTitle("Nama desa $tag")
+            .setTitle(tr("Nama desa $tag", "Village name $tag"))
             .setView(box)
-            .setPositiveButton("Simpan") { _, _ ->
+            .setPositiveButton(tr("Simpan", "Save")) { _, _ ->
                 Store.setVillageName(act, tag, input.text.toString().take(30))
                 act.dataChanged()
             }
-            .setNeutralButton("Pakai tag") { _, _ ->
+            .setNeutralButton(tr("Pakai tag", "Use tag")) { _, _ ->
                 Store.setVillageName(act, tag, "")
                 act.dataChanged()
             }
-            .setNegativeButton("Batal", null)
+            .setNegativeButton(tr("Batal", "Cancel"), null)
             .show()
     }
 
     fun confirmDelete(act: MainActivity, tag: String) {
         MaterialAlertDialogBuilder(act)
-            .setTitle("Hapus ${Store.villageName(act, tag)}?")
-            .setMessage("Semua timer, catatan item, dan notifikasi desa ini akan dihapus dari aplikasi.")
-            .setPositiveButton("Hapus") { _, _ ->
+            .setTitle(tr("Hapus ${Store.villageName(act, tag)}?", "Delete ${Store.villageName(act, tag)}?"))
+            .setMessage(tr("Semua timer, catatan item, dan notifikasi desa ini akan dihapus dari aplikasi.", "All timers, item records and notifications for this village will be removed from the app."))
+            .setPositiveButton(tr("Hapus", "Delete")) { _, _ ->
                 Store.removeAccount(act, tag)
                 AlarmScheduler.schedule(act)
                 act.dataChanged()
             }
-            .setNegativeButton("Batal", null)
+            .setNegativeButton(tr("Batal", "Cancel"), null)
             .show()
     }
 }

@@ -165,7 +165,7 @@ object Widgets {
         for (id in ids) {
             val layout = nextLayout(ctx, id)
             val rv = (if (rows != null) runCatching { compose(ctx, mgr, id, layout, rows, now) }.getOrNull() else null)
-                ?: runCatching { message(ctx, layout, now, "Buka Clash Timer sekali untuk memperbarui widget.") }.getOrNull()
+                ?: runCatching { message(ctx, layout, now, tr("Buka Clash Timer sekali untuk memperbarui widget.", "Open Clash Timer once to refresh the widget.")) }.getOrNull()
                 ?: continue
             runCatching {
                 mgr.updateAppWidget(id, rv)
@@ -349,7 +349,7 @@ object Widgets {
         rv.setInt(ids.box, "setBackgroundResource", if (c.free > 0) R.drawable.widget_tile_free else R.drawable.widget_tile)
         when {
             c.free > 0 -> {
-                showText(ctx, rv, ids, if (c.free > 1) "${c.free} bebas" else "bebas", R.color.widget_green)
+                showText(ctx, rv, ids, if (c.free > 1) tr("${c.free} bebas", "${c.free} free") else "bebas", R.color.widget_green)
                 c.tip?.let {
                     sub = "💡 " + keep(it)
                     subColor = R.color.widget_accent
@@ -370,7 +370,7 @@ object Widgets {
             c.total > 0 -> showText(ctx, rv, ids, "max", R.color.widget_text2)
             else -> {
                 showText(ctx, rv, ids, "–", R.color.widget_text2)
-                sub = "belum ada"
+                sub = tr("belum ada", "not built")
             }
         }
         rv.setTextViewText(ids.sub, sub)
@@ -409,7 +409,7 @@ object Widgets {
      * maksimum, mendatar tinggi minimum. Bila jumlah baris yang muat berbeda, kirim dua versi.
      */
     private fun compose(ctx: Context, mgr: AppWidgetManager, id: Int, layout: Int, rows: List<VRow>, now: Long): RemoteViews {
-        if (rows.isEmpty()) return message(ctx, layout, now, "Belum ada desa · buka Clash Timer lalu import Export village data.")
+        if (rows.isEmpty()) return message(ctx, layout, now, tr("Belum ada desa · buka Clash Timer lalu import Export village data.", "No village yet · open Clash Timer and import Export village data."))
         val m = if (isLarge(ctx)) TABLET else PHONE
         val o = runCatching { mgr.getAppWidgetOptions(id) }.getOrNull()
         val tall = o?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT) ?: 0
@@ -433,8 +433,8 @@ object Widgets {
             val at = runCatching { Store.planSettings(ctx, r.tag).schedule.nextOnline(first.finishAt) }.getOrDefault(first.finishAt)
             r.name to at
         }.minByOrNull { it.second }
-        val head = if (login != null) "Login ${short(login.second, now, zone)} · ${login.first}" else "$freeTotal bebas"
-        rv.setTextViewText(R.id.a_summary, (if (hidden > 0) "${shown.size}/${rows.size} desa · " else "") + head)
+        val head = if (login != null) "Login ${short(login.second, now, zone)} · ${login.first}" else tr("$freeTotal bebas", "$freeTotal free")
+        rv.setTextViewText(R.id.a_summary, (if (hidden > 0) tr("${shown.size}/${rows.size} desa · ", "${shown.size}/${rows.size} villages · ") else "") + head)
         rv.setTextColor(R.id.a_summary, color(ctx, if (freeTotal > 0) R.color.widget_green else R.color.widget_text2))
         // Semua bagian diatur tegas setiap kali (tidak bergantung pada keadaan tampilan sebelumnya).
         rv.setViewVisibility(R.id.a_cols, View.VISIBLE)
@@ -450,15 +450,15 @@ object Widgets {
         val free = rows.firstNotNullOfOrNull { r -> r.cells.firstOrNull { it.free > 0 }?.let { r to it } }
         if (free != null) {
             val (r, c) = free
-            val what = c.tip?.let { ": $it" } ?: " bebas"
+            val what = c.tip?.let { ": $it" } ?: tr(" bebas", " free")
             rv.setTextViewText(R.id.a_footer, "💡 ${r.name} · ${laneName(c.lane)}$what")
             rv.setTextColor(R.id.a_footer, color(ctx, R.color.widget_accent))
         } else {
             val next = rows.flatMap { r -> r.cells.mapNotNull { c -> c.next?.let { r to it } } }
                 .minByOrNull { it.second.finishAt }
             rv.setTextViewText(R.id.a_footer, next?.let { (r, u) ->
-                "⏱️ Berikutnya: ${r.name} · ${u.title()}, ${short(u.finishAt, now, zone)}"
-            } ?: "Tidak ada upgrade berjalan")
+                tr("⏱️ Berikutnya: ${r.name} · ${u.title()}, ${short(u.finishAt, now, zone)}", "⏱️ Next: ${r.name} · ${u.title()}, ${short(u.finishAt, now, zone)}")
+            } ?: tr("Tidak ada upgrade berjalan", "No upgrades running"))
             rv.setTextColor(R.id.a_footer, color(ctx, R.color.widget_text2))
         }
         return rv
@@ -504,6 +504,7 @@ object Widgets {
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         rv.setOnClickPendingIntent(R.id.a_title, PendingIntent.getActivity(ctx, 5995, villages, FLAGS))
         rv.setTextViewText(R.id.a_refresh, "↻ " + Fmt.time(now, ZoneId.systemDefault()))
+        rv.setTextViewText(R.id.a_title, tr("🏰 Semua desa", "🏰 All villages"))
         val refresh = Intent(ctx, AllVillagesWidget::class.java).setAction(ACTION_REFRESH)
         rv.setOnClickPendingIntent(R.id.a_refresh, PendingIntent.getBroadcast(ctx, 5997, refresh, FLAGS))
         return rv

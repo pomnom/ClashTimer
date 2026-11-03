@@ -29,9 +29,9 @@ object ItemMenu {
         val pinned = itemId in pins
         val hidden = itemId in hides
         val opts = arrayOf<CharSequence>(
-            if (pinned) "📌 Lepas prioritas" else "📌 Prioritaskan — didahulukan di saran & rencana",
-            if (hidden) "👁️ Tampilkan lagi di saran" else "🙈 Sembunyikan dari saran & rencana",
-            "⚙️ Kelola semua prioritas & item tersembunyi",
+            if (pinned) tr("📌 Lepas prioritas", "📌 Unprioritize") else tr("📌 Prioritaskan — didahulukan di saran & rencana", "📌 Prioritize — first in suggestions & plan"),
+            if (hidden) tr("👁️ Tampilkan lagi di saran", "👁️ Show in suggestions again") else tr("🙈 Sembunyikan dari saran & rencana", "🙈 Hide from suggestions & plan"),
+            tr("⚙️ Kelola semua prioritas & item tersembunyi", "⚙️ Manage all prioritized & hidden items"),
         )
         MaterialAlertDialogBuilder(act)
             .setTitle("$name · ${Store.villageName(act, tag)}")
@@ -40,18 +40,18 @@ object ItemMenu {
                     0 -> {
                         Store.setPins(act, tag, if (pinned) pins - itemId else pins + itemId)
                         if (!pinned) Store.setHides(act, tag, hides - itemId)
-                        toast(act, if (pinned) "$name tidak lagi diprioritaskan" else "📌 $name didahulukan")
+                        toast(act, if (pinned) tr("$name tidak lagi diprioritaskan", "$name no longer prioritized") else tr("📌 $name didahulukan", "📌 $name prioritized"))
                     }
                     1 -> {
                         Store.setHides(act, tag, if (hidden) hides - itemId else hides + itemId)
                         if (!hidden) Store.setPins(act, tag, pins - itemId)
-                        toast(act, if (hidden) "$name tampil lagi di saran" else "🙈 $name disembunyikan (tetap dihitung di progres)")
+                        toast(act, if (hidden) tr("$name tampil lagi di saran", "$name shown in suggestions again") else tr("🙈 $name disembunyikan (tetap dihitung di progres)", "🙈 $name hidden (still counted in progress)"))
                     }
                     else -> { manage(act, tag); return@setItems }
                 }
                 act.dataChanged()
             }
-            .setNegativeButton("Tutup", null)
+            .setNegativeButton(tr("Tutup", "Close"), null)
             .show()
     }
 
@@ -61,24 +61,24 @@ object ItemMenu {
         val hides = Store.hides(act, tag).sortedBy { nameOf(act, it) }
         if (pins.isEmpty() && hides.isEmpty()) {
             MaterialAlertDialogBuilder(act)
-                .setTitle("📌 Prioritas & tersembunyi")
-                .setMessage("Belum ada. Tahan lama sebuah upgrade di Dashboard, Tukang, Lab, atau Progres untuk " +
-                    "mendahulukannya atau menyembunyikannya dari saran desa ${Store.villageName(act, tag)}.")
+                .setTitle(tr("📌 Prioritas & tersembunyi", "📌 Prioritized & hidden"))
+                .setMessage(tr("Belum ada. Tahan lama sebuah upgrade di Dashboard, Tukang, Lab, atau Progres untuk ", "None yet. Long-press an upgrade on the Dashboard, Builders, Lab or Progress to ") +
+                    tr("mendahulukannya atau menyembunyikannya dari saran desa ${Store.villageName(act, tag)}.", "prioritize or hide it from suggestions for ${Store.villageName(act, tag)}."))
                 .setPositiveButton("OK", null)
                 .show()
             return
         }
-        val labels = pins.map { "📌 ${nameOf(act, it)} — lepas prioritas" as CharSequence } +
-            hides.map { "🙈 ${nameOf(act, it)} — tampilkan lagi" as CharSequence }
+        val labels = pins.map { tr("📌 ${nameOf(act, it)} — lepas prioritas", "📌 ${nameOf(act, it)} — unprioritize") as CharSequence } +
+            hides.map { tr("🙈 ${nameOf(act, it)} — tampilkan lagi", "🙈 ${nameOf(act, it)} — show again") as CharSequence }
         MaterialAlertDialogBuilder(act)
-            .setTitle("📌 Prioritas & tersembunyi · ${Store.villageName(act, tag)}")
+            .setTitle(tr("📌 Prioritas & tersembunyi · ${Store.villageName(act, tag)}", "📌 Prioritized & hidden · ${Store.villageName(act, tag)}"))
             .setItems(labels.toTypedArray()) { _, w ->
                 if (w < pins.size) Store.setPins(act, tag, Store.pins(act, tag) - pins[w])
                 else Store.setHides(act, tag, Store.hides(act, tag) - hides[w - pins.size])
                 act.dataChanged()
                 manage(act, tag)
             }
-            .setNegativeButton("Tutup", null)
+            .setNegativeButton(tr("Tutup", "Close"), null)
             .show()
     }
 

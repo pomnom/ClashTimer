@@ -169,6 +169,53 @@ object ApiSync {
         return st
     }
 
+    /** Anggota [me] di sisi clan [clanTag] pada war CWL [w], atau null bila tidak ikut lineup. */
+    private fun cwlMember(w: Map<String, Any?>, clanTag: String, me: String): Map<String, Any?>? =
+        cwlSide(w, clanTag)?.get("members").arr().orEmpty().mapNotNull { it.obj() }
+            .firstOrNull { it["tag"].str().equals(me, ignoreCase = true) }
+
+    private fun cwlSide(w: Map<String, Any?>, clanTag: String): Map<String, Any?>? =
+        listOfNotNull(w["clan"].obj(), w["opponent"].obj()).firstOrNull { it["tag"].str().equals(clanTag, true) }
+
+    /**
+     * Status serangan CWL akun [me]: apakah serangan hari ini sudah dipakai, dan kapan serangan
+     * berikutnya yang masih dibutuhkan berakhir (hari besok bila ikut lineup; lusa bila tidak; 0 bila
+     * tidak ada lagi). [ours] = (indeks ronde, war) dua ronde terakhir.
+     */
+    fun cwlWarState(ours: List<Pair<Int, Map<String, Any?>>>, totalRounds: Int, clanTag: String, me: String): Store.WarState? {
+        val cur = ours.lastOrNull { it.second["state"].str() == "inWar" }
+        val nxt = ours.lastOrNull { it.second["state"].str() == "preparation" }
+        if (cur == null && nxt == null) return null
+        fun last(ri: Int) = ri >= totalRounds - 1
+        val curMe = cur?.let { cwlMember(it.second, clanTag, me) }
+        val curEnd = cur?.let { CocApi.time(it.second["endTime"].str()) } ?: 0L
+        val left = if (curMe != null && curMe["attacks"].arr().isNullOrEmpty()) 1 else 0
+        val needEnd = when {
+            cur != null && left > 0 -> curEnd
+            nxt != null -> {
+                val nEnd = CocApi.time(nxt.second["endTime"].str())
+                // Lineup besok belum terlihat → dianggap ikut.
+                val known = cwlSide(nxt.second, clanTag)?.get("members").arr().orEmpty().isNotEmpty()
+                val inNext = !known || cwlMember(nxt.second, clanTag, me) != null
+                when {
+                    inNext -> nEnd
+                    last(nxt.first) -> 0L
+                    else -> nEnd + DAY
+                }
+            }
+            cur != null && last(cur.first) -> 0L
+            else -> curEnd + DAY
+        }
+        return if (cur != null) {
+            Store.WarState("cwl", "inWar", curEnd, left, curMe != null, needEnd, cur.first + 1, totalRounds, System.currentTimeMillis())
+        } else {
+            val n = nxt!!
+            val inN = cwlMember(n.second, clanTag, me) != null
+            Store.WarState("cwl", "preparation", CocApi.time(n.second["endTime"].str()), if (inN) 1 else 0, inN, needEnd,
+                n.first + 1, totalRounds, System.currentTimeMillis())
+        }
+    }
+
     /** Ambil semua data (thread latar). Kembalian: pesan status untuk ditampilkan. */
     fun sync(ctx: Context): String {
         val key = Store.apiKey(ctx).trim()
@@ -232,23 +279,30 @@ object ApiSync {
                     // Pengingat serangan CWL: war clan ini pada dua ronde terakhir yang sudah punya war tag.
                     val lgState = lg?.get("state").str()
                     cwlActive = lg != null && (lgState == "preparation" || lgState == "inWar")
+                    var warState: Store.WarState? = null
                     if (cwlActive && cwlState == "roster") {
-                        val rounds = lg?.get("rounds").arr().orEmpty().mapNotNull { r ->
-                            r.obj()?.get("warTags").arr()?.map { it.str() }?.filter { it.isNotBlank() && it != "#0" }
-                        }.filter { it.isNotEmpty() }
-                        for (tags in rounds.takeLast(2)) {
+                        val allRounds = lg?.get("rounds").arr().orEmpty().map { r ->
+                            r.obj()?.get("warTags").arr()?.map { it.str() }?.filter { it.isNotBlank() && it != "#0" }.orEmpty()
+                        }
+                        val rounds = allRounds.withIndex().filter { it.value.isNotEmpty() }
+                        // Ronde → war clan ini (dua ronde terakhir: hari perang sekarang & persiapan besok).
+                        val ours = ArrayList<Pair<Int, Map<String, Any?>>>()
+                        for ((ri, tags) in rounds.takeLast(2)) {
                             for (wt in tags) {
                                 val w = runCatching { CocApi.get(key, "/clanwarleagues/wars/${CocApi.enc(wt)}") }.getOrNull() ?: continue
-                                val ours = w["clan"].obj()?.get("tag").str().equals(clanTag, true) ||
+                                val isOurs = w["clan"].obj()?.get("tag").str().equals(clanTag, true) ||
                                     w["opponent"].obj()?.get("tag").str().equals(clanTag, true)
-                                if (!ours) continue
+                                if (!isOurs) continue
                                 val ws = w["state"].str()
                                 val end = CocApi.time(w["endTime"].str())
                                 if ((ws == "inWar" || ws == "preparation") && end > 0) cwlWars[wt] = end
+                                ours += ri to w
                                 break
                             }
                         }
+                        warState = cwlWarState(ours, allRounds.size.coerceAtLeast(1), clanTag, acc.tag)
                     }
+                    Store.setWarState(ctx, acc.tag, warState)
                     val firstTag = lg?.get("rounds").arr()?.firstOrNull()?.obj()?.get("warTags").arr()
                         ?.map { it.str() }?.firstOrNull { it.isNotBlank() && it != "#0" }
                     if (firstTag != null) {

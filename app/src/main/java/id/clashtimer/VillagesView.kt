@@ -17,7 +17,7 @@ import java.time.ZoneId
 object VillagesView {
 
     fun sheet(act: MainActivity) {
-        val dialog = Sheets.open(act, "Desa anda", "ketuk untuk membuka · tahan untuk ganti nama / hapus", Help.Topic.VILLAGES) { col, dismiss ->
+        val dialog = Sheets.open(act, tr("Desa anda", "Your villages"), tr("ketuk untuk membuka · tahan untuk ganti nama / hapus", "tap to open · hold to rename / delete"), Help.Topic.VILLAGES) { col, dismiss ->
             fun fill() {
                 col.removeAllViews()
                 render(act, col, act.villageRows(), dismiss)
@@ -33,7 +33,7 @@ object VillagesView {
         val zone = ZoneId.systemDefault()
         val current = act.currentTag()
         if (rows == null) {
-            box.addView(Ui.muted(act, "Memuat semua desa…", Ui.BODY_M).apply { setPadding(Ui.dp(act, 4), Ui.dp(act, 12), 0, Ui.dp(act, 12)) })
+            box.addView(Ui.muted(act, tr("Memuat semua desa…", "Loading all villages…"), Ui.BODY_M).apply { setPadding(Ui.dp(act, 4), Ui.dp(act, 12), 0, Ui.dp(act, 12)) })
         } else {
             val ups = Store.upgrades(act)
             if (rows.size > 1) nextLogins(act, box, rows, ups, now, zone)
@@ -43,8 +43,8 @@ object VillagesView {
             for (r in sorted) box.addView(card(act, r, r.tag == current, ups, now, zone, dismiss), Ui.matchWrap(12, act))
         }
         val actions = Ui.hbox(act).apply { setPadding(0, Ui.dp(act, 4), 0, 0) }
-        actions.addView(Ui.tonal(act, "Tambah / update desa") { dismiss(); ImportUi.show(act) }, Ui.weight1())
-        actions.addView(Ui.icon(act, R.drawable.ic_settings, 22, Ui.TEXT2, "Pengaturan") { dismiss(); act.openSettings() },
+        actions.addView(Ui.tonal(act, tr("Tambah / update desa", "Add / update village")) { dismiss(); ImportUi.show(act) }, Ui.weight1())
+        actions.addView(Ui.icon(act, R.drawable.ic_settings, 22, Ui.TEXT2, tr("Pengaturan", "Settings")) { dismiss(); act.openSettings() },
             LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginStart = Ui.dp(act, 8) })
         box.addView(actions, Ui.matchWrap())
     }
@@ -59,7 +59,7 @@ object VillagesView {
             val labels = Sessions.labels(ups.filter { it.tag == r.tag }, now)
             val free = home.filter { it.free > 0 }
             if (free.isNotEmpty()) {
-                list += Next(r.name, now, free.joinToString(" & ") { c -> if (c.lane == Lane.BUILDER) "${c.free} builder" else laneShort(c.lane) } + " bebas")
+                list += Next(r.name, now, free.joinToString(" & ") { c -> if (c.lane == Lane.BUILDER) "${c.free} builder" else laneShort(c.lane) } + tr(" bebas", " free"))
                 continue
             }
             val nexts = home.mapNotNull { it.next }
@@ -71,7 +71,7 @@ object VillagesView {
         }
         if (list.isEmpty()) return
         val card = Ui.panel(act, padH = 14, padV = 12, color = Ui.SURFACE2)
-        card.addView(Ui.muted(act, "Login berikutnya (semua desa)").apply { textSize = 13f; setPadding(0, 0, 0, Ui.dp(act, 4)) })
+        card.addView(Ui.muted(act, tr("Login berikutnya (semua desa)", "Next login (all villages)")).apply { textSize = 13f; setPadding(0, 0, 0, Ui.dp(act, 4)) })
         list.sortedBy { it.at }.take(4).forEachIndexed { i, n ->
             val line = Ui.hbox(act).apply { setPadding(0, Ui.dp(act, 4), 0, Ui.dp(act, 4)) }
             val t = Ui.monoText(act, if (n.at <= now) "kini" else HomeView.short(n.at, now, zone), 20f).apply {
@@ -118,7 +118,7 @@ object VillagesView {
             maxLines = 1
             ellipsize = TextUtils.TruncateAt.END
         })
-        val pct = Store.lastPct(act, r.tag).takeIf { it >= 0 }?.let { "${Ui.pct(it.toDouble())} menuju max" }
+        val pct = Store.lastPct(act, r.tag).takeIf { it >= 0 }?.let { tr("${Ui.pct(it.toDouble())} menuju max", "${Ui.pct(it.toDouble())} to max") }
         val hall = listOfNotNull(
             r.acc.th.takeIf { it > 0 }?.let { "TH$it" },
             r.acc.bh.takeIf { it > 0 }?.let { "BH$it" },
@@ -128,7 +128,7 @@ object VillagesView {
         head.addView(hc, Ui.weight1())
         val freeAll = r.cells.sumOf { it.free }
         head.addView(android.widget.TextView(act).apply {
-            text = if (open) "dibuka" else if (freeAll > 0) "$freeAll bebas" else "semua sibuk"
+            text = if (open) tr("dibuka", "open") else if (freeAll > 0) tr("$freeAll bebas", "$freeAll free") else tr("semua sibuk", "all busy")
             textSize = 12f
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(if (open) Ui.FREE_TEXT else if (freeAll > 0) Ui.ON_FREE else Ui.TEXT2)
@@ -139,7 +139,7 @@ object VillagesView {
 
         if (r.cells.isEmpty()) {
             val free = act.freeBuilders(r.tag, false)
-            card.addView(Ui.text(act, if (free > 0) "$free builder bebas" else "semua builder sibuk", Ui.BODY_M).apply {
+            card.addView(Ui.text(act, if (free > 0) tr("$free builder bebas", "$free builders free") else tr("semua builder sibuk", "all builders busy"), Ui.BODY_M).apply {
                 setTextColor(if (free > 0) Ui.FREE_TEXT else Ui.TEXT2)
                 setPadding(0, Ui.dp(act, 8), 0, 0)
             })
@@ -159,7 +159,7 @@ object VillagesView {
 
         val age = now - r.acc.exportedAt
         if (r.acc.exportedAt > 0 && age > DAY) {
-            card.addView(Ui.muted(act, "export ${Fmt.dur(age)} lalu · update supaya akurat").apply {
+            card.addView(Ui.muted(act, tr("export ${Fmt.dur(age)} lalu · update supaya akurat", "export ${Fmt.dur(age)} old · update for accuracy")).apply {
                 textSize = 12f
                 setTextColor(Ui.IDLE)
                 setPadding(0, Ui.dp(act, 8), 0, 0)
@@ -188,13 +188,13 @@ object VillagesView {
         }
         v.addView(Ui.muted(act, laneShort(c.lane)).apply { textSize = 12f; maxLines = 1 })
         val main = when {
-            free -> Ui.text(act, "${c.free} bebas", Ui.TITLE_S).apply { setTextColor(Ui.FREE_TEXT); setTypeface(typeface, Typeface.BOLD) }
+            free -> Ui.text(act, tr("${c.free} bebas", "${c.free} free"), Ui.TITLE_S).apply { setTextColor(Ui.FREE_TEXT); setTypeface(typeface, Typeface.BOLD) }
             next != null -> Ui.monoText(act, act.countdown(next.finishAt - now), 15f).apply {
                 setTextColor(if (lab) Ui.LAB else Ui.BUSY)
                 Sheets.live(this, next.finishAt) { left -> act.countdown(left) }
             }
             c.total == 0 -> Ui.text(act, "—", Ui.TITLE_S).apply { setTextColor(Ui.TEXT2) }
-            else -> Ui.text(act, "Menganggur", Ui.TITLE_S).apply { setTextColor(Ui.IDLE) }
+            else -> Ui.text(act, tr("Menganggur", "Idle"), Ui.TITLE_S).apply { setTextColor(Ui.IDLE) }
         }
         v.addView(main.apply { textSize = 15f; maxLines = 1; setPadding(0, Ui.dp(act, 2), 0, Ui.dp(act, 3)) })
         if ((c.lane == Lane.BUILDER || c.lane == Lane.BB_BUILDER) && c.total > 1) {
@@ -207,10 +207,10 @@ object VillagesView {
         } else {
             val sub = when {
                 goblin != null -> "+ Goblin ${act.countdown(goblin.finishAt - now)}"
-                free -> c.tip ?: "siap diisi"
+                free -> c.tip ?: tr("siap diisi", "ready to fill")
                 next != null -> Widgets.shortTitle(next)
-                c.total == 0 -> "belum ada"
-                else -> "tidak ada saran"
+                c.total == 0 -> tr("belum ada", "not built")
+                else -> tr("tidak ada saran", "no suggestion")
             }
             v.addView(Ui.muted(act, sub).apply {
                 textSize = 12f

@@ -101,6 +101,12 @@ class CwlRule(
     val days: Int = 11,
     /** Jadwal CWL asli dari API (menggantikan perkiraan bulan yang sama). */
     val known: List<LongRange> = emptyList(),
+    /**
+     * Dari API: serangan CWL berikutnya yang masih perlu dipakai harus sudah bisa dilakukan sebelum
+     * waktu ini (akhir hari perang itu − 3 jam). Hero yang selesai sebelumnya tidak bentrok; 0 = tidak tahu.
+     * Bila tidak ada serangan lagi, nilainya = akhir CWL (hero bebas).
+     */
+    val freeUntil: Long = 0L,
 ) {
     private fun windowForMonth(year: Int, month: Int): LongRange {
         val day = startDay.coerceIn(1, 28)
@@ -132,8 +138,15 @@ class CwlRule(
     /** Jendela CWL yang bertabrakan dengan [start, end), atau null. */
     fun overlap(start: Long, end: Long): LongRange? {
         if (!enabled) return null
-        val ws = windowsAround(start) + windowsAround(end)
+        val ws = (windowsAround(start) + windowsAround(end)).mapNotNull { effective(it) }
         return ws.firstOrNull { it.first < end && it.last + 1 > start }
+    }
+
+    /** Bagian jendela [w] yang masih membuat hero tidak boleh sedang upgrade (setelah [freeUntil]). */
+    private fun effective(w: LongRange): LongRange? = when {
+        freeUntil <= w.first -> w
+        freeUntil > w.last -> null
+        else -> freeUntil..w.last
     }
 
     /** Jendela CWL berikutnya yang belum selesai pada [t]. */

@@ -1,9 +1,18 @@
 package id.clashtimer.core
 
 /** Strategi untuk Builder Base. */
-enum class BBStrategy(val label: String, val desc: String) {
+enum class BBStrategy(private val labelId: String, private val descId: String) {
     SIXTH("Builder ke-6", "Target: B.O.B (builder ke-6) secepatnya — hero, Builder Hall 9, gear-up, troop Lv18 & pertahanan Lv9"),
-    MAX("Max", "Target: semua bangunan, hero & troop Builder Base di Builder Hall sekarang selesai secepatnya"),
+    MAX("Max", "Target: semua bangunan, hero & troop Builder Base di Builder Hall sekarang selesai secepatnya (di BH9: B.O.B dibuka dulu karena builder ke-6 mempercepat sisanya)");
+
+    val label: String get() = if (!Lang.en) labelId else when (this) {
+        SIXTH -> "6th builder"
+        MAX -> "Max"
+    }
+    val desc: String get() = if (!Lang.en) descId else when (this) {
+        SIXTH -> "Target: B.O.B (6th builder) as soon as possible — heroes, Builder Hall 9, gear-ups, troop Lv18 & defense Lv9"
+        MAX -> "Target: every Builder Base building, hero & troop at the current Builder Hall done as soon as possible (at BH9: B.O.B first, since the 6th builder speeds up the rest)"
+    }
 }
 
 /** Hasil simulasi jalur builder ke-6. */
@@ -39,11 +48,14 @@ object Sixth {
     private const val MULTI_MORTAR = 1000045
 
     // Urutan (kecil = lebih dulu). Hero adalah rantai terpanjang, jadi selalu dijalankan.
+    /** Membuka pekerja lain yang sedang menunggu (Star Lab tertahan level / gudang): paling dulu. */
+    const val T_UNBLOCK = 5
+    /** Urutan syarat menurut jalur kritis: T_CRIT … T_CRIT+4. */
+    const val T_CRIT = 6
     const val T_HERO = 8
     const val T_PLACE = 9
     const val T_HALL = 10
     const val T_BOB = 11
-    const val T_STARLAB_BLOCK = 12
     const val T_GEAR = 13
     const val T_PREP = 14
     const val T_DEF9 = 15
@@ -98,24 +110,24 @@ object Sixth {
         val gearDetail = rules.joinToString(" · ") { r ->
             when {
                 gearDone(v, r) -> "${r.name} ✓"
-                gearRunning(v, r) -> "${r.name} berjalan"
+                gearRunning(v, r) -> tr("${r.name} berjalan", "${r.name} running")
                 else -> r.name
             }
         }
         val hallDetail = when {
-            c >= 1 -> "B.O.B Control sudah dibangun"
-            bh >= 9 -> "BH9 ✓ · tinggal bangun B.O.B Control"
-            else -> "BH$bh dari 9"
+            c >= 1 -> tr("B.O.B Control sudah dibangun", "B.O.B Control already built")
+            bh >= 9 -> tr("BH9 ✓ · tinggal bangun B.O.B Control", "BH9 ✓ · just build B.O.B Control")
+            else -> tr("BH$bh dari 9", "BH$bh of 9")
         }
         val troopName = focusTroop(v)?.item?.name
         return listOf(
             Req("hall", "Builder Hall 9 + B.O.B Control", c >= 1, hallDetail, if (c >= 1) 1.0 else bh / 9.0),
-            Req("gears", "Tiga gear-up di Home Village", gears >= 3 || c >= 2, "$gears/3 · $gearDetail", gears / 3.0),
-            Req("troop", "Satu troop BB di Lv18", troop >= 18 || c >= 3,
-                "tertinggi Lv$troop" + (troopName?.let { " · fokus $it" } ?: ""), troop / 18.0),
-            Req("defense", "Satu pertahanan BB di Lv9", def >= 9 || c >= 4, "tertinggi Lv$def (tanpa tembok & jebakan)", def / 9.0),
+            Req("gears", tr("Tiga gear-up di Home Village", "Three gear-ups in the Home Village"), gears >= 3 || c >= 2, "$gears/3 · $gearDetail", gears / 3.0),
+            Req("troop", tr("Satu troop BB di Lv18", "One BB troop at Lv18"), troop >= 18 || c >= 3,
+                tr("tertinggi Lv$troop", "highest Lv$troop") + (troopName?.let { tr(" · fokus $it", " · focus $it") } ?: ""), troop / 18.0),
+            Req("defense", tr("Satu pertahanan BB di Lv9", "One BB defense at Lv9"), def >= 9 || c >= 4, tr("tertinggi Lv$def (tanpa tembok & jebakan)", "highest Lv$def (walls & traps excluded)"), def / 9.0),
             Req("heroes", "Battle Machine + Battle Copter = 45", bm + bcl >= 45 || c >= 5, "$bm + $bcl = ${bm + bcl}", (bm + bcl) / 45.0),
-            Req("control", "B.O.B Control Lv5", c >= 5, "Lv$c dari 5 · klaim tiap syarat di B.O.B Control", c / 5.0),
+            Req("control", "B.O.B Control Lv5", c >= 5, tr("Lv$c dari 5 · klaim tiap syarat di B.O.B Control", "Lv$c of 5 · claim each requirement at B.O.B Control"), c / 5.0),
         )
     }
 
@@ -158,6 +170,85 @@ object Sixth {
     private fun remainingTo9(i: Inst): Long =
         i.item.levels.filter { it.level > i.level && it.level <= 9 }.sumOf { it.time }
 
+    /**
+     * Jalur kritis: perkiraan sisa waktu kerja (detik) tiap syarat bila dikerjakan terus mulai sekarang.
+     * Syarat yang paling lama didahulukan supaya semua syarat selesai berdekatan.
+     */
+    fun remainingByReq(v: Village, gd: GameData, gold: GoldPass): Map<String, Long> {
+        val st = status(v)
+        val out = HashMap<String, Long>()
+        val bbLane = Lane.BB_BUILDER
+        // Hero: level berikutnya dibagi ke dua rantai (BM & BC), yang lebih pendek diisi dulu.
+        if (!isDone(st, "heroes")) {
+            var need = 45 - heroTotal(v, planned = true)
+            val bm = v.insts.firstOrNull { it.item.id == GameData.BATTLE_MACHINE }
+            val bc = v.insts.firstOrNull { it.item.id == GameData.BATTLE_COPTER }
+            var lb = (bm?.level ?: 0) + if (bm?.upgrading == true) 1 else 0
+            var lc = (bc?.level ?: 0) + if (bc?.upgrading == true) 1 else 0
+            var tb = 0L; var tc = 0L
+            while (need > 0) {
+                val nb = bm?.item?.lv(lb + 1)?.time?.let { gold.apply(it, bbLane) }
+                val nc = bc?.item?.lv(lc + 1)?.time?.let { gold.apply(it, bbLane) }
+                if (nb == null && nc == null) break
+                if (nc == null || (nb != null && tb + nb <= tc + nc)) { tb += nb!!; lb++ } else { tc += nc; lc++ }
+                need--
+            }
+            out["heroes"] = maxOf(tb, tc)
+        }
+        if (!isDone(st, "troop")) {
+            val f = focusTroop(v)
+            var sum = 0L
+            var needLab = v.starLab
+            if (f != null) {
+                val from = f.level + if (f.upgrading) 1 else 0
+                for (l in from + 1..18) {
+                    val lv = f.item.lv(l) ?: break
+                    sum += gold.apply(lv.time, Lane.STAR_LAB)
+                    needLab = maxOf(needLab, lv.req)
+                }
+            }
+            val sl = v.insts.firstOrNull { it.item.id == GameData.STAR_LAB }
+            if (sl != null) for (l in (sl.level + if (sl.upgrading) 2 else 1)..needLab) sl.item.lv(l)?.let { sum += gold.apply(it.time, bbLane) }
+            out["troop"] = sum
+        }
+        if (!isDone(st, "gears")) {
+            var worst = 0L
+            for (r in rules) {
+                if (gearDone(v, r) || gearRunning(v, r)) continue
+                val b = v.insts.filter { it.item.id == r.bbId }.maxByOrNull { it.level }
+                var prep = 0L
+                if (b != null) for (l in (b.level + if (b.upgrading) 2 else 1)..r.bbLevel) b.item.lv(l)?.let { prep += gold.apply(it.time, bbLane) }
+                worst = maxOf(worst, prep + r.durationSec)
+            }
+            out["gears"] = worst
+        }
+        if (!isDone(st, "defense")) {
+            val mm = bbDefenses(v).filter { it.item.id == MULTI_MORTAR }.maxByOrNull { it.level }
+            val d = (mm ?: bbDefenses(v).filter { it.level < 9 }.minByOrNull { remainingTo9(it) })
+            out["defense"] = d?.let { remainingTo9(it) } ?: 0L
+        }
+        if (!isDone(st, "hall")) {
+            val hall = v.insts.firstOrNull { it.item.id == GameData.BUILDER_HALL }
+            var sum = 0L
+            if (hall != null) for (l in (hall.level + if (hall.upgrading) 2 else 1)..9) hall.item.lv(l)?.let { sum += it.time }
+            out["hall"] = sum + 3600
+        }
+        return out
+    }
+
+    /** Urutan tiap syarat: yang sisa waktunya paling lama = urutan terkecil. */
+    private fun reqTiers(v: Village, gd: GameData, gold: GoldPass): Map<String, Int> {
+        val rem = remainingByReq(v, gd, gold)
+        return rem.entries.sortedByDescending { it.value }.mapIndexed { i, e -> e.key to (T_CRIT + i) }.toMap()
+    }
+
+    /** Star Lab bebas tetapi tidak ada riset yang bisa dimulai di levelnya sekarang. */
+    private fun labStarved(v: Village, gd: GameData, ps: PlanSettings): Boolean {
+        if (v.starLab <= 0 || v.insts.any { it.upgrading && it.lane == Lane.STAR_LAB }) return false
+        if (v.insts.any { it.item.id == GameData.STAR_LAB && it.upgrading }) return false
+        return Planner.candidates(v, gd, Lane.STAR_LAB, ps.gold, includeHall = false, skip = ps.planSkip).isEmpty()
+    }
+
     /** Kandidat + urutan (kecil = lebih dulu) untuk jalur builder ke-6. */
     fun options(v: Village, gd: GameData, lane: Lane, ps: PlanSettings): List<Pair<Candidate, Int>> {
         if (done(v)) return emptyList()
@@ -166,24 +257,30 @@ object Sixth {
         val out = ArrayList<Pair<Candidate, Int>>()
 
         if (lane == Lane.STAR_LAB) {
-            if (isDone(st, "troop")) return out
-            val focus = focusTroop(v) ?: return out
-            if (focus.upgrading) return out
-            val next = focus.item.lv(focus.level + 1) ?: return out
-            if (next.req > v.starLab || next.time <= 0) return out
-            out += Candidate(lane, focus.item, focus, focus.level, focus.level + 1, gold.apply(next.time, lane), next.cost, false,
-                baseDuration = next.time) to T_TROOP
+            val focus = focusTroop(v)
+            val next = focus?.takeIf { !isDone(st, "troop") && !it.upgrading }?.item?.lv(focus.level + 1)
+            if (focus != null && next != null && next.req <= v.starLab && next.time > 0) {
+                out += Candidate(lane, focus.item, focus, focus.level, focus.level + 1, gold.apply(next.time, lane), next.cost, false,
+                    baseDuration = next.time) to T_TROOP
+            }
+            // Star Lab tidak boleh menganggur: riset lain sambil menunggu troop fokus.
+            Planner.candidates(v, gd, lane, gold, includeHall = false, skip = ps.planSkip)
+                .filter { it.inst !== focus }.forEach { out += it to T_FILL }
             return out
         }
         if (lane != Lane.BB_BUILDER) return out
 
         val all = Planner.candidates(v, gd, lane, gold, includeHall = true, skip = ps.planSkip)
         val bh = v.bh
+        // Jalur kritis: syarat yang paling lama sisanya didahulukan (urutan tetap lama bila tidak dipilih).
+        val critical = ps.policyFor(Lane.BB_BUILDER) == Policy.CRITICAL
+        val tiers = if (critical) reqTiers(v, gd, gold) else emptyMap()
+        fun tierOf(key: String, old: Int) = tiers[key] ?: old
         fun add(c: Candidate, tier: Int) { out += c to tier }
 
         // Hero: rantai terpanjang (Battle Machine dari Lv1, Battle Copter dari Lv15), jalankan terus.
         if (!isDone(st, "heroes") && heroTotal(v, planned = true) < 45) {
-            all.filter { it.item.cat == Cat.BB_HERO }.forEach { add(it, T_HERO) }
+            all.filter { it.item.cat == Cat.BB_HERO }.forEach { add(it, tierOf("heroes", T_HERO)) }
         }
         // Builder Hall 9. Bangunan & jebakan baru harus dipasang dulu sebelum Builder Hall bisa naik.
         if (bh < 9 && control(v) == 0) {
@@ -191,8 +288,8 @@ object Sixth {
                 it.isNew && (it.item.cat == Cat.BB_BUILDING || it.item.cat == Cat.BB_TRAP) && it.item.id != GameData.BOB_CONTROL &&
                     it.item.instances.isEmpty() // kamp pasukan tidak dibutuhkan untuk naik hall
             }
-                .forEach { add(it, T_PLACE) }
-            all.firstOrNull { it.item.id == GameData.BUILDER_HALL }?.let { add(it, T_HALL) }
+                .forEach { add(it, tierOf("hall", T_PLACE)) }
+            all.firstOrNull { it.item.id == GameData.BUILDER_HALL }?.let { add(it, tierOf("hall", T_HALL)) }
         }
         if (bh >= 9 && control(v) == 0) {
             all.firstOrNull { it.item.id == GameData.BOB_CONTROL && it.isNew }?.let { add(it, T_BOB) }
@@ -202,20 +299,22 @@ object Sixth {
             val f = focusTroop(v)
             val nextReq = f?.item?.lv(f.level + if (f.upgrading) 2 else 1)?.req ?: 0
             all.firstOrNull { it.item.id == GameData.STAR_LAB && it.toLevel <= 9 }?.let {
-                add(it, if (nextReq > v.starLab) T_STARLAB_BLOCK else T_STARLAB)
+                add(it, if (nextReq > v.starLab) T_UNBLOCK else tierOf("troop", T_STARLAB))
             }
         }
+        // Star Lab yang tidak punya riset lagi di levelnya: upgrade Star Laboratory paling didahulukan.
+        if (labStarved(v, gd, ps)) all.firstOrNull { it.item.id == GameData.STAR_LAB }?.let { add(it, T_UNBLOCK) }
         // Gear-up dan bangunan Builder Base yang menjadi syaratnya
         for (r in rules) {
             if (gearDone(v, r) || gearRunning(v, r)) continue
             if (homeLevel(v, r.bbId) < r.bbLevel) {
                 all.filter { it.item.id == r.bbId && !it.isNew && it.toLevel <= r.bbLevel }
-                    .maxByOrNull { it.fromLevel }?.let { add(it, T_PREP) }
+                    .maxByOrNull { it.fromLevel }?.let { add(it, tierOf("gears", T_PREP)) }
                 continue
             }
             val home = v.insts.filter { it.item.id == r.homeId && !it.upgrading && !it.geared && it.level >= r.homeLevel }
                 .maxByOrNull { it.level } ?: continue
-            add(Candidate(Lane.BB_BUILDER, home.item, home, home.level, home.level, r.durationSec, r.cost, false, gear = true), T_GEAR)
+            add(Candidate(Lane.BB_BUILDER, home.item, home, home.level, home.level, r.durationSec, r.cost, false, gear = true), tierOf("gears", T_GEAR))
         }
         // Satu pertahanan Lv9 (Multi Mortar: sekalian syarat gear-up Mortar)
         if (!isDone(st, "defense")) {
@@ -225,7 +324,7 @@ object Sixth {
             val chosen = if (mm != null && (mortarPending || mm.level >= 8)) mm
             else defs.filter { it.level < 9 && it.item.maxLevelFor(gd.maxBH) >= 9 }.minByOrNull { remainingTo9(it) }
             if (chosen != null && !chosen.upgrading && chosen.level < 9) {
-                all.firstOrNull { it.inst === chosen }?.let { add(it, T_DEF9) }
+                all.firstOrNull { it.inst === chosen }?.let { add(it, tierOf("defense", T_DEF9)) }
             }
         }
         // Pengisi saat tidak ada langkah wajib: Clock Tower (boost lebih lama), army camp, gudang.

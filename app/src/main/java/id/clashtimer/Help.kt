@@ -14,7 +14,9 @@ object Help {
         HOME(
             "Dashboard",
             "• Dashboard hanya untuk desa yang dipilih; ganti desa dengan mengetuk namanya di atas (lembar Desa anda).\n" +
+                "• Paling atas: kartu hijau \"siap dipakai\" untuk Builder's Apprentice, Lab Assistant, Alchemist dan boost gratis Clock Tower begitu bisa dipakai. Ketuk setelah memakainya di game (helper: pilih upgrade yang dibantu) supaya cooldown & pengingatnya ikut.\n" +
                 "• Kartu teratas = strategi & target, plus Gold Pass, event, CWL dan boost yang aktif. Ketuk untuk membuka Opsi desa.\n" +
+                "• Dengan API key: kartu War / CWL menunjukkan serangan sudah dipakai atau belum. Setelah menyerang, upgrade hero yang selesai paling lambat 3 jam sebelum hari perang berikutnya berakhir ikut disarankan (tidak masuk lineup besok → batasnya lusa; hari terakhir CWL → hero bebas). Ketuk kartu untuk cek ulang API.\n" +
                 "• Dua hitung mundur = tukang dan lab yang paling cepat selesai. Ketuk untuk membuka halaman Tukang / Lab.\n" +
                 "• Pekerja bebas mendapat satu saran (B1… = builder, Lab, Pet, M = Master Builder). Saran teratas = urutan tercepat menuju target strategi.\n" +
                 "• \"Sudah dimulai\" langsung memasang timer & notifikasi tanpa import ulang; salah pencet? ketuk Batalkan di pesan bawah.\n" +
@@ -29,6 +31,10 @@ object Help {
                 "• Antrian = langkah berikutnya menurut rencana (Tukang: besok dan seterusnya, Lab: riset berikutnya).\n" +
                 "• Rencana = perkiraan bila setiap pekerja langsung diisi saran teratas saat Anda online. Jam tidur/kerja, helper, Gold Pass, event, CWL & kapasitas gudang ikut dihitung.\n" +
                 "• Target tiap strategi: Seimbang = semua upgrade di TH sekarang selesai · Rush TH = Town Hall naik · Hero dulu = semua hero max · Builder ke-6 = B.O.B terbuka · Max BB = Builder Base selesai. Ganti strategi di ikon opsi.\n" +
+                "• Urutan prioritas rencana: (1) tercepat ke target strategi; bila sama cepat, (2) jeda menganggur terlama paling pendek, lalu (3) total jam menganggur paling sedikit — untuk semua pekerja, Home Village & Builder Base.\n" +
+                "• Pekerja tidak dibiarkan menunggu pekerja lain: bila Lab / Star Lab tertahan gudang atau level lab, upgrade builder yang membukanya didahulukan.\n" +
+                "• Semua hero dijalankan bersamaan. Seimbang: begitu builder kehabisan pekerjaan sementara lab masih jalan, Town Hall berikutnya dimulai lebih awal.\n" +
+                "• Builder ke-6: syarat yang paling lama sisanya dikerjakan dulu (jalur kritis). Max BB di BH9 membuka B.O.B dulu karena Master Builder ke-4 mempercepat sisanya.\n" +
                 "• Hero yang bentrok dengan CWL ditunda dan tidak dimasukkan ke antrean selama CWL.\n" +
                 "• Ketuk sebuah langkah untuk detail; lonceng = pengingat untuk sesi itu. Saat lonceng sesi aktif, notifikasi \"selesai\" per upgrade di sesi itu masuk tanpa suara.",
         ),
@@ -85,6 +91,8 @@ object Help {
         PROGRESS(
             "Progres",
             "• Persentase menuju max TH/BH dihitung dari waktu upgrade yang tersisa (bukan jumlah bangunan).\n" +
+                "• Hari kerja = total lama upgrade yang tersisa (Gold Pass ikut), dikurangi bantuan Builder's Apprentice & Lab Assistant. Builder dibagi ke semua builder, jadi waktu nyatanya lebih pendek.\n" +
+                "• Perkiraan tidak memakai boost Clock Tower berikutnya (hanya yang terbaca dari export).\n" +
                 "• Tanggal selesai mengikuti rencana (urutan tercepat ke target, jam tidur, helper, Gold Pass).\n" +
                 "• Ketuk sebuah kategori untuk melihat itemnya; tahan lama item untuk prioritaskan / sembunyikan.",
         ),

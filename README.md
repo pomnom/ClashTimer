@@ -12,11 +12,17 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
 - **Desa anda** (lembar pemilih desa, menggantikan tab Desa): login berikutnya semua desa, lalu kartu tiap
   desa dengan kotak Tukang, Lab, Builder Base & Star Lab (hitung mundur / bebas). Ketuk desa = buka,
   ketuk kotak = langsung ke halaman Tukang / Lab-nya, tahan = ganti nama / opsi / hapus
-- Tema gelap yang tenang (dan terang), satu sistem warna: hijau = bebas / tindakan, kuning = builder,
+- Tema **ikut sistem / gelap / terang** (Pengaturan → Umum), satu sistem warna: hijau = bebas / tindakan, kuning = builder,
   ungu = lab, oranye = menganggur / peringatan. Angka & hitung mundur memakai huruf lebar tetap
 - Satu tombol utama per kartu; detail & aksi lain di **lembar bawah**. Penjelasan & tutorial di tombol **?**
 - Changelog: kartu update menampilkan catatan rilis GitHub (bila ada), dan "Yang baru" tampil sekali
   setelah update (juga di Pengaturan → Update aplikasi)
+
+**🌐 Bahasa** — Bahasa Indonesia (bawaan) atau **English** di Pengaturan → Umum → Bahasa. Halaman utama,
+  rencana, notifikasi & widget sudah diterjemahkan; teks bantuan dan sebagian layar lain masih berbahasa Indonesia.
+
+**⚙️ Pengaturan** — dirombak per kategori: Umum (bahasa, tema, ikon), Jam istirahat, Notifikasi, Event,
+  Data & API, Widget & latar, Tentang & update. Strategi, Gold Pass & CWL tetap per desa (Opsi desa).
 
 **🔕 Senyap saat jam istirahat** (Pengaturan → Jam istirahat)
 - Upgrade yang selesai di jam tidur masuk ke panel **tanpa suara, getar, maupun alarm**; pengingat
@@ -27,6 +33,12 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
 **🏠 Dashboard**
 - **Ringkasan strategi**: strategi & target ("Seimbang · Max TH11 ±7 Feb 2027"), tukang vs lab mana yang
   **penentu**, lalu pil Gold Pass (+ kenaikan berikutnya), event, CWL dan boost yang aktif. Ketuk = opsi desa
+- **Siap dipakai** (paling atas, seperti "Data desa ketinggalan"): Builder's Apprentice, Lab Assistant, Alchemist dan
+  boost gratis Clock Tower begitu bisa dipakai — dengan saran upgrade yang dibantu (terlama). Ketuk setelah memakainya
+  di game: cooldown 23 jam & pengingatnya dihitung dari situ. Helper yang otomatis membantu upgrade yang sama tidak muncul
+- **War / CWL** (butuh API key): serangan hari ini sudah dipakai atau belum. Setelah menyerang (atau tidak masuk
+  lineup), upgrade hero yang selesai ≥ 3 jam sebelum hari perang berikutnya berakhir ikut saran & rencana; hari
+  terakhir CWL sudah diserang → hero bebas. Ketuk kartu = cek ulang API
 - **Hitung mundur** tukang & lab yang paling cepat selesai (jam:menit:detik), dengan pekerja yang bebas
 - **Tukang** dan **Lab** yang sedang bekerja + **satu saran**: kartu saran untuk pekerja yang bebas
   (**Sudah dimulai** / **Opsi lain**, dengan **Batalkan** di pesan bawah), atau "saran berikutnya" saat
@@ -63,6 +75,16 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
   (nilai ÷ √(lama × biaya)) — untuk tiap jenis pekerja, menguji gabungan terbaiknya, lalu memakai yang paling
   cepat mencapai target. Jam tidur/kerja, Gold Pass, event, CWL, helper & kapasitas gudang ikut dihitung;
   Laboratory / Pet House / Hero Hall / Star Lab didahulukan karena membuka level berikutnya
+- **Urutan prioritas**: (1) tercepat ke target; bila sama cepat, (2) jeda menganggur terpanjang paling pendek,
+  lalu (3) total menganggur paling sedikit — untuk semua builder, lab, pet, Master Builder & Star Lab.
+  Menganggur karena semua sudah max atau menunggu syarat tidak dihitung. Ada cara baru **"pas jam tidur"**:
+  memilih upgrade yang selesainya pas saat bangun
+- **Lab & Star Lab tidak menunggu builder**: gudang atau upgrade Laboratory/Star Lab yang membuka riset
+  berikutnya didahulukan, dan Star Lab mengisi riset lain bila riset fokus belum bisa
+- **Semua hero jalan bersamaan**; saat builder kehabisan pekerjaan tetapi lab/pet masih jalan, strategi
+  Seimbang/Max memulai **Town Hall berikutnya lebih awal**
+- Builder ke-6 memakai **jalur kritis** (syarat dengan sisa waktu terpanjang dulu). Max BB di BH9: buka
+  B.O.B dulu, lalu lanjut dengan 4 Master Builder
 - Saran di Dashboard, Tukang, Lab, widget & notifikasi memakai urutan yang sama
 - Cara lama tetap ikut dicoba: hero yang menganggur didahulukan dan biaya Dark Elixir disetarakan
   (1 DE ≈ 100 Gold/Elixir)
@@ -75,7 +97,8 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
   selama CWL — cukup disebut di ringkasan (Dashboard) & Tukang, lalu dilanjutkan setelah CWL selesai
 
 **📊 Progres**
-- Persentase menuju max TH/BH, perkiraan bulan selesai builder & lab, hari kerja tersisa; syarat
+- Persentase menuju max TH/BH, perkiraan bulan selesai builder & lab, **hari kerja** builder & lab (helper ikut
+  dihitung; Clock Tower di masa depan tidak diasumsikan), progres troop Star Lab sampai level max BH; syarat
   **Builder ke-6 (B.O.B)** di Builder Base
 - Per kategori: persen, sisa biaya, daftar item (ketuk untuk membuka)
 

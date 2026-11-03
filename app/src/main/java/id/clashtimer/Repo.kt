@@ -203,14 +203,19 @@ object Repo {
 
         // Cooldown helper
         for (h in v.helpers) {
-            if (h.cooldown <= 0 || "$tag|helpers|${h.id}" in cancelled) continue
-            val at = v.exportAt + h.cooldown * 1000
+            // Ditugaskan dari Dashboard setelah export ini: cooldown dihitung dari saat itu.
+            val rec = Store.helperUsed(ctx, tag, h.id)?.takeIf { it.first > v.exportAt }
+            if (rec == null && (h.cooldown <= 0 || "$tag|helpers|${h.id}" in cancelled)) continue
+            if (rec != null && (cancelled["$tag|helpers|${h.id}"] ?: 0L) > rec.first) continue
+            val at = rec?.let { it.first + id.clashtimer.core.HELPER_CYCLE } ?: (v.exportAt + h.cooldown * 1000)
             val lane = when (h.id) {
                 GameData.APPRENTICE -> Lane.BUILDER
                 GameData.LAB_ASSISTANT -> Lane.LAB
                 else -> null
             }
-            val target = if (lane == null) null else v.timers.firstOrNull { it.helped && it.lane == lane && it.uid !in cancelled }
+            val target = if (lane == null) null
+            else if (rec != null) v.timers.firstOrNull { it.uid == rec.second && it.uid !in cancelled }
+            else v.timers.firstOrNull { it.helped && it.lane == lane && it.uid !in cancelled }
             val targetFinish = target?.let { finishes[it.uid] }
             val name = gameData(ctx).name(h.id)
             val (title, note) = if (target != null && targetFinish != null && targetFinish > at) {
@@ -506,7 +511,7 @@ object Repo {
 
         // Urutan tercepat ke target strategi: dicari ulang bila data / pengaturan berubah (atau tiap 6 jam),
         // selain itu memakai hasil terakhir (satu simulasi saja).
-        val sig = listOf(Store.planVersion(ctx), v.exportAt, fin.size, fin.values.sum(), ps0.strategy, ps0.bbStrategy,
+        val sig = listOf("v3", Store.planVersion(ctx), v.exportAt, fin.size, fin.values.sum(), ps0.strategy, ps0.bbStrategy,
             ps0.gold.builderPct, ps0.gold.researchPct, ps0.gold.steps.joinToString(",") { "${it.at / 3_600_000L}" }, bb != null).joinToString("|")
         val cached = Store.optCache(ctx, tag)?.takeIf { it.sig == sig && now - it.at in 0..6 * 3_600_000L }
         val ps: PlanSettings
@@ -533,7 +538,7 @@ object Repo {
         }
         val slots = Planner.suggest(v, gd, ps, now, fin)
         val tips = ItemAdvisor.tips(v, gd, ps, now, fin, Store.items(ctx, tag))
-        val simBBMax = if (simBB?.sixth != null) Planner.simulate(v, gd, ps.withBB(BBStrategy.MAX), now, fin, bbLanes, keepSteps = 10) else simBB
+        val simBBMax = if (simBB?.sixth != null && ps.bbStrategy == id.clashtimer.core.BBStrategy.SIXTH) Planner.simulate(v, gd, ps.withBB(BBStrategy.MAX), now, fin, bbLanes, keepSteps = 10) else simBB
         Store.setLastPct(ctx, tag, home.pct.toFloat())
         runCatching { History.snapshot(ctx, tag, home.pct, bb?.pct) }
         return PlanBundle(tag, v, ps, slots, tips, home, bb, simHome, simBB, now, Store.planVersion(ctx), simBBMax, homeTarget, bbTarget)

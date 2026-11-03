@@ -69,6 +69,7 @@ object Attacks {
         val now = System.currentTimeMillis()
         val keep = checks(ctx).filter { it.tag != tag && it.end > now }
         val out = ArrayList<Check>(keep)
+        if (clanTag.isBlank()) Store.setWarState(ctx, tag, null)
         if (clanTag.isNotBlank()) {
             for ((warTag, end) in cwlWars) if (end - BEFORE > now - 60_000) out += Check("$tag|cwl|$warTag", tag, "cwl", warTag, end - BEFORE, end)
             if (!cwlActive) {
@@ -78,6 +79,15 @@ object Attacks {
                     if ((state == "inWar" || state == "preparation") && end - BEFORE > now - 60_000) {
                         out += Check("$tag|war|$end", tag, "war", clanTag, end - BEFORE, end)
                     }
+                    // Status serangan war biasa untuk Dashboard (hero boleh upgrade setelah serangan habis).
+                    val me = w["clan"].obj()?.get("members").arr().orEmpty().mapNotNull { it.obj() }
+                        .firstOrNull { it["tag"].str().equals(tag, ignoreCase = true) }
+                    val per = (w["attacksPerMember"] as? Number)?.toInt() ?: 2
+                    val left = if (me == null) 0 else (per - me["attacks"].arr().orEmpty().size).coerceAtLeast(0)
+                    Store.setWarState(ctx, tag,
+                        if ((state == "inWar" || state == "preparation") && end > now)
+                            Store.WarState("war", state, end, left, me != null, if (left > 0) end else 0L, 0, 0, now)
+                        else null)
                 }
             }
             val raid = runCatching { CocApi.get(key, "/clans/${CocApi.enc(clanTag)}/capitalraidseasons?limit=1", allow404 = true) }.getOrNull()

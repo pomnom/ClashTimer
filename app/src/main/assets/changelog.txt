@@ -1,6 +1,9 @@
-# Navigasi baru: Dashboard · Tukang · Lab · Progres
-- Dashboard (desa yang dipilih saja): ringkasan strategi, Gold Pass, event & boost, hitung mundur tukang dan lab tercepat, lalu yang bekerja + satu saran.
-- Tukang: Agenda sampai bangun atau Timeline, kartu yang sedang dikerjakan, dan antrian besok dst.
-- Lab: riset berjalan, antrian riset dengan lonceng pengingat atau Timeline, dan sisa riset.
-- Tab Desa digabung ke lembar Desa anda (ketuk nama desa di atas); ketuk kotak Tukang/Lab untuk langsung ke halamannya.
-- Pengaturan kini ada di lembar Desa anda dan di Opsi desa.
+# Rencana lebih pintar, Pengaturan baru & English
+- Lab dan Star Lab tidak lagi menunggu builder: gudang / upgrade lab yang membuka riset didahulukan (B.O.B PomNom maju ±2 minggu).
+- Builder ke-6 memakai jalur kritis; Max BB di BH9 membuka B.O.B dulu lalu lanjut dengan 4 Master Builder.
+- Semua hero jalan bersamaan; strategi Seimbang memulai Town Hall berikutnya saat builder kehabisan pekerjaan.
+- Prioritas rencana: tercepat ke target, lalu paling sedikit menganggur (cara baru "pas jam tidur").
+- CWL & war: cek serangan dari API; setelah menyerang, hero yang sempat selesai sebelum hari perang berikutnya ikut disarankan (hari terakhir CWL → hero bebas).
+- Dashboard: kartu "siap dipakai" paling atas untuk helper & boost Clock Tower.
+- Pengaturan dirombak per kategori, tambah tema (sistem/gelap/terang) dan bahasa English.
+- Progres: hari kerja builder & lab (helper ikut dihitung); progres troop Star Lab kini sampai level max BH.

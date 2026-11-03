@@ -53,14 +53,14 @@ object Logins {
     fun workers(session: Session): String {
         val l = session.steps.map { label(it) }.distinct()
         val joined = if (l.size <= 1) l.joinToString() else l.dropLast(1).joinToString(", ") + " & " + l.last()
-        return "$joined bebas"
+        return tr("$joined bebas", "$joined free")
     }
 
     fun title(s: PlannedStep): String = s.title.substringBefore("  ×").substringBefore(" (sisa")
 
     /** Isi pengingat: siapa yang bebas + saran yang dimulai. */
     fun note(session: Session): String =
-        workers(session) + "\nSaran: " + session.steps.take(3).joinToString(" · ") { title(it) }
+        workers(session) + tr("\nSaran: ", "\nSuggestion: ") + session.steps.take(3).joinToString(" · ") { title(it) }
 
     /** "sblm tidur" bila tidur dimulai ≤ 2 jam setelah sesi, "bangun" bila sesi tepat setelah jam tidur. */
     fun mood(schedule: OfflineSchedule, at: Long): String? {
@@ -83,16 +83,16 @@ object Logins {
      * atau "bisa diisi lagi sebelum tidur" / hanya jam selesai (0). [fmt] = format jam selesai.
      */
     fun outcome(p: Scored, schedule: OfflineSchedule, now: Long, fmt: (Long) -> String): Pair<String, Int> {
-        val f = "selesai " + fmt(p.finish)
+        val f = tr("selesai ", "done ") + fmt(p.finish)
         if (p.idle > 30 * 60_000L) {
-            val where = if (inSleep(schedule, p.finish)) "saat tidur" else "saat offline"
-            return "$f · menganggur ${Fmt.dur(p.idle)} $where" to -1
+            val where = if (inSleep(schedule, p.finish)) tr("saat tidur", "while asleep") else tr("saat offline", "while offline")
+            return tr("$f · menganggur ${Fmt.dur(p.idle)} $where", "$f · idle ${Fmt.dur(p.idle)} $where") to -1
         }
         // Selesai sesaat sebelum bangun (menunggu ≤ 30 menit) atau ≤ 45 menit setelah bangun.
         val woke = schedule.windowsBetween(p.finish - 45 * 60_000L, p.finish).any { it.last < p.finish }
-        if (p.idle > 0 || woke) return "$f · pas bangun" to 1
+        if (p.idle > 0 || woke) return tr("$f · pas bangun", "$f · right at wake-up") to 1
         val off = schedule.nextOfflineStart(now)
-        if (off != null && p.finish < off && off - p.finish < 6 * HOUR) return "$f · bisa diisi lagi sebelum tidur" to 0
+        if (off != null && p.finish < off && off - p.finish < 6 * HOUR) return tr("$f · bisa diisi lagi sebelum tidur", "$f · can refill before bed") to 0
         return f to 0
     }
 }

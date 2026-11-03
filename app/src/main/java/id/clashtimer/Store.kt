@@ -221,7 +221,7 @@ object Store {
             .remove("cancel_$tag").remove("bumps_$tag").remove("items_$tag")
             .remove("name_$tag").remove("started_$tag").remove("pct_$tag")
             .remove("clock_used_$tag").remove("api_player_$tag").remove("cwl_s_$tag").remove("cwl_e_$tag")
-            .remove("cwl_auto_$tag").remove("gpdet_b_$tag").remove("gpdet_r_$tag").remove("bob_$tag")
+            .remove("cwl_auto_$tag").remove("war_$tag").remove("gpdet_b_$tag").remove("gpdet_r_$tag").remove("bob_$tag")
             .remove("pins_$tag").remove("hides_$tag").remove("api_stats_$tag")
             .remove("hist_$tag").remove("ulog_$tag").remove("hist_start_$tag").remove("ore_$tag").remove("opt_$tag")
             .remove("sessrem_$tag").remove("gp_pts_$tag").remove("gp_rate_$tag").remove("fix_$tag")
@@ -531,6 +531,50 @@ object Store {
         prefs(ctx).edit().putBoolean("bob_$tag", done).putInt("plan_version", prefs(ctx).getInt("plan_version", 0) + 1).commit()
     }
 
+    /**
+     * Status serangan war / CWL dari API saat sinkron terakhir. [kind] "cwl" atau "war"; [state]
+     * "preparation" / "inWar"; [end] = akhir hari perang (CWL: hari ini, atau hari 1 saat persiapan);
+     * [left] = serangan tersisa; [lineup] = akun ini ikut war itu; [needEnd] = akhir hari perang berikutnya
+     * yang masih butuh serangan akun ini (0 = tidak ada lagi); [day]/[days] = ronde CWL.
+     */
+    class WarState(
+        val kind: String, val state: String, val end: Long, val left: Int, val lineup: Boolean,
+        val needEnd: Long, val day: Int, val days: Int, val at: Long,
+    ) {
+        fun json(): String = JSONObject().put("k", kind).put("s", state).put("e", end).put("l", left).put("u", lineup)
+            .put("n", needEnd).put("d", day).put("ds", days).put("at", at).toString()
+    }
+
+    fun warState(ctx: Context, tag: String): WarState? {
+        val s = prefs(ctx).getString("war_$tag", null) ?: return null
+        return runCatching {
+            JSONObject(s).let {
+                WarState(it.getString("k"), it.optString("s"), it.optLong("e"), it.optInt("l"), it.optBoolean("u"),
+                    it.optLong("n"), it.optInt("d"), it.optInt("ds"), it.optLong("at"))
+            }
+        }.getOrNull()
+    }
+
+    /** Simpan status war; rencana dihitung ulang bila batas hero CWL berubah. */
+    fun setWarState(ctx: Context, tag: String, w: WarState?) {
+        val before = warState(ctx, tag)
+        val e = prefs(ctx).edit()
+        if (w == null) e.remove("war_$tag") else e.putString("war_$tag", w.json())
+        val changed = (before?.kind == "cwl" || w?.kind == "cwl") &&
+            (before?.kind != w?.kind || before?.needEnd != w?.needEnd || before?.left != w?.left)
+        if (changed) e.putInt("plan_version", prefs(ctx).getInt("plan_version", 0) + 1)
+        e.commit()
+    }
+
+    /** Helper yang Anda tugaskan dari Dashboard: kapan & ke upgrade mana (uid, bisa kosong). */
+    fun helperUsed(ctx: Context, tag: String, id: Int): Pair<Long, String?>? {
+        val s = prefs(ctx).getString("helper_used_${tag}_$id", null) ?: return null
+        return runCatching { JSONObject(s).let { it.getLong("at") to it.optString("u").takeIf { u -> u.isNotBlank() } } }.getOrNull()
+    }
+
+    fun setHelperUsed(ctx: Context, tag: String, id: Int, at: Long, uid: String?) =
+        prefs(ctx).edit().putString("helper_used_${tag}_$id", JSONObject().put("at", at).put("u", uid ?: "").toString()).commit()
+
     /** Jadwal CWL asli clan desa ini (ms): mulai persiapan ronde 1 – akhir ronde 7. */
     fun cwlKnown(ctx: Context, tag: String): LongRange? {
         val s = prefs(ctx).getLong("cwl_s_$tag", 0L)
@@ -793,6 +837,20 @@ object Store {
     const val DEFAULT_WORK_DAYS = 0b0011111
 
     /** Pengaturan perencana untuk desa [tag] (null = nilai awal untuk desa baru). */
+    /**
+     * Batas hero CWL dari status serangan: hero yang selesai sebelum waktu ini masih sempat dipakai untuk
+     * serangan berikutnya (akhir hari perang itu − 3 jam). Tidak ada serangan lagi → akhir CWL.
+     */
+    fun cwlFreeUntil(ctx: Context, tag: String, window: LongRange?): Long {
+        val w = warState(ctx, tag)?.takeIf { it.kind == "cwl" } ?: return 0L
+        val cwlEnd = window?.let { it.last + 1 } ?: return 0L
+        if (w.at !in window.first - 2 * id.clashtimer.core.DAY until cwlEnd) return 0L
+        return if (w.needEnd <= 0L) cwlEnd else (w.needEnd - CWL_MARGIN).coerceAtMost(cwlEnd)
+    }
+
+    /** Hero harus sudah selesai paling lambat 3 jam sebelum hari perang berakhir (sama dengan pengingat serangan). */
+    const val CWL_MARGIN = 3 * 3_600_000L
+
     fun planSettings(ctx: Context, tag: String?): PlanSettings {
         val p = prefs(ctx)
         val sleep = DailyWindow(p.getBoolean("sleep_on", true), p.getInt("sleep_start", 23 * 60), p.getInt("sleep_end", 6 * 60))
@@ -803,7 +861,8 @@ object Store {
         val known = if (tag != null) listOfNotNull(cwlKnown(ctx, tag)) else emptyList()
         // Dengan API: ikut CWL atau tidak ditentukan otomatis (roster clan & war preference).
         val auto = if (tag != null) cwlAuto(ctx, tag) else null
-        val cwl = CwlRule(auto?.counts ?: getBool(ctx, "cwl_on", true, tag), 1, 8, getInt(ctx, "cwl_days", 11, tag), known)
+        val cwl = CwlRule(auto?.counts ?: getBool(ctx, "cwl_on", true, tag), 1, 8, getInt(ctx, "cwl_days", 11, tag), known,
+            if (tag != null) cwlFreeUntil(ctx, tag, known.firstOrNull()) else 0L)
         val gold = staged(ctx, tag, GoldPass(getInt(ctx, "gp_builder", 0, tag), getInt(ctx, "gp_research", 0, tag)))
         val strategy = runCatching { Strategy.valueOf(getStr(ctx, "strategy", "MAX", tag)) }.getOrDefault(Strategy.MAX)
         val bbChosen = runCatching { BBStrategy.valueOf(getStr(ctx, "bb_strategy", "SIXTH", tag)) }.getOrDefault(BBStrategy.SIXTH)
