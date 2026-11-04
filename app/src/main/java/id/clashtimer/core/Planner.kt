@@ -182,7 +182,8 @@ class PlannedStep(
     val laneIndex: Int,
     val title: String,
     val start: Long,
-    val finish: Long,
+    /** Selesai, termasuk percepatan helper di simulasi. */
+    var finish: Long,
     val idle: Long,
     /** Catatan, mis. hero yang ditunda karena CWL. */
     val note: String? = null,
@@ -464,7 +465,7 @@ object Planner {
         var sum = 0L
         for (l in item.levels.sortedBy { it.level }) {
             if (l.level <= from) continue
-            if (l.time <= 0) break
+            if (l.time <= 0 && l.cost <= 0) break
             if (item.cat != Cat.BB_TROOP && l.hall > hall) break
             if (reqCap != null && l.req > reqCap) break
             sum += gold.apply(l.time, lane)
@@ -475,11 +476,15 @@ object Planner {
     fun candidates(
         v: Village, gd: GameData, lane: Lane, gold: GoldPass, includeHall: Boolean,
         skip: Set<Int> = emptySet(),
-    ): List<Candidate> = candidatesRaw(v, gd, lane, gold, includeHall, skip).map { c ->
+    ): List<Candidate> = candidatesRaw(v, gd, lane, gold, includeHall, skip).filter { !Capacity.never(v, gd, it) }.map { c ->
         if (c.gear) c
         else Candidate(c.lane, c.item, c.inst, c.fromLevel, c.toLevel, c.duration, c.cost, c.isNew, c.count, c.gear, c.baseDuration,
             maxOf(c.duration, chainOf(v, gd, c.item, c.fromLevel, lane, gold)), c.item.id in GATES)
     }
+
+    /** Kandidat mentah (tanpa saringan gudang) — untuk uji & penjelasan. */
+    fun candidatesForTest(v: Village, gd: GameData, lane: Lane, gold: GoldPass): List<Candidate> =
+        candidatesRaw(v, gd, lane, gold, includeHall = true)
 
     private fun candidatesRaw(
         v: Village, gd: GameData, lane: Lane, gold: GoldPass, includeHall: Boolean,
@@ -510,7 +515,7 @@ object Planner {
             val item = inst.item
             if (item.id in skip) continue
             val next = item.lv(inst.level + 1) ?: continue
-            if (next.time <= 0) continue
+            if (next.time <= 0 && next.cost <= 0) continue
             // Syarat hall troop Builder Base di data tidak akurat; cukup level Star Lab.
             if (item.cat != Cat.BB_TROOP && next.hall > hall) continue
             if (item.isTownHall && !includeHall) continue
@@ -553,7 +558,8 @@ object Planner {
                 if (item.cat != Cat.HERO || v.has(item.id)) continue
                 if (item.prodLevel > v.heroHall) continue
                 val lv1 = item.lv(1) ?: continue
-                if (lv1.hall > hall || lv1.time <= 0) continue
+                if (lv1.hall > hall) continue
+                // Hero baru dibuka gratis & langsung (level berikutnya baru butuh waktu & biaya).
                 out += Candidate(lane, item, null, 0, 1, gold.apply(lv1.time, lane), lv1.cost, true, baseDuration = lv1.time)
             }
         }
@@ -562,7 +568,7 @@ object Planner {
             for (item in gd.items.values) {
                 if (item.cat != Cat.BB_HERO || v.has(item.id)) continue
                 if (!bbHeroUnlocked(gd, item, hall)) continue
-                val first = item.levels.firstOrNull { it.time > 0 } ?: continue
+                val first = item.levels.minByOrNull { it.level } ?: continue
                 if (first.hall > hall) continue
                 out += Candidate(lane, item, null, first.level - 1, first.level, gold.apply(first.time, lane), first.cost, true,
                     baseDuration = first.time)
@@ -574,11 +580,30 @@ object Planner {
                 if (item.cat != Cat.PET || v.has(item.id)) continue
                 if (item.prodLevel > v.petHouse) continue
                 val lv1 = item.lv(1) ?: continue
-                if (lv1.hall > hall || lv1.time <= 0) continue
+                if (lv1.hall > hall) continue
                 out += Candidate(lane, item, null, 0, 1, gold.apply(lv1.time, lane), lv1.cost, true, baseDuration = lv1.time)
             }
         }
         return out
+    }
+
+    /**
+     * Troop, spell & siege yang terbuka begitu bangunan produksinya ([building]: Barracks, Dark Barracks,
+     * Spell Factory, Dark Spell Factory, Workshop, Builder Barracks) mencapai level yang dibutuhkan. Di game
+     * unit itu langsung didapat di level awalnya, lalu risetnya masuk antrean Laboratory / Star Laboratory.
+     * Syaratnya hanya level bangunan itu (level bangunan sudah dibatasi hall; kolom hall troop BB bukan level
+     * Builder Hall). Troop event & super troop (tanpa biaya riset) dilewati.
+     */
+    fun unlockUnits(v: Village, gd: GameData, building: Item) {
+        val bb = building.cat.bb
+        val lvl = v.insts.filter { it.item.id == building.id }.maxOfOrNull { it.level } ?: return
+        for (item in gd.items.values) {
+            val ok = if (bb) item.cat == Cat.BB_TROOP else item.cat == Cat.TROOP || item.cat == Cat.SPELL
+            if (!ok || item.prodBuilding != building.name || item.prodLevel !in 1..lvl || v.has(item.id)) continue
+            if (item.levels.none { it.cost > 0 }) continue
+            val start = item.levels.minOfOrNull { it.level } ?: continue
+            v.insts += Inst("sim|unlock|${item.id}", item, start, false, 0, false, false)
+        }
     }
 
     /** Hero Builder Base terbuka bila altarnya (bangunan bernama sama) sudah tersedia di level hall ini. */
@@ -655,10 +680,26 @@ object Planner {
     private fun plannedCap(v: Village, resource: String): Long? {
         val now = Capacity.of(v, resource) ?: return null
         val id = Capacity.storageFor(resource) ?: return now
-        return now + v.insts.filter { it.item.id == id && it.upgrading }.sumOf { Capacity.gain(it.level, it.level + 1) }
+        return now + v.insts.filter { it.item.id == id && it.upgrading }.sumOf { Capacity.gain(resource, it.level, it.level + 1) }
     }
 
     /** Upgrade Star Lab berikutnya yang paling diutamakan (untuk menyiapkan kapasitas Elixir BB lebih awal). */
+    /**
+     * Riset Laboratory / Pet House teratas yang tertahan gudang (Home). Kedua = lab itu tidak punya riset
+     * lain yang muat (akan menganggur), sehingga storage-nya paling didahulukan.
+     */
+    private fun homeLabNext(v: Village, gd: GameData, ps: PlanSettings, start: Long): List<Pair<Scored, Boolean>> {
+        val out = ArrayList<Pair<Scored, Boolean>>()
+        for (lane in listOf(Lane.LAB, Lane.PET)) {
+            val all = candidates(v, gd, lane, ps.gold, includeHall = false, skip = ps.planSkip).map { score(it, start, ps) }
+            if (all.isEmpty()) continue
+            val top = all.maxByOrNull { it.score } ?: continue
+            if (!Capacity.blocked(v, top.c, top.cost)) continue
+            out += top to all.all { Capacity.blocked(v, it.c, it.cost) }
+        }
+        return out
+    }
+
     private fun starLabNext(v: Village, gd: GameData, ps: PlanSettings, start: Long): Scored? {
         if (v.starLab <= 0) return null
         if (sixthActive(v, Lane.STAR_LAB, ps)) {
@@ -673,29 +714,31 @@ object Planner {
     }
 
     /**
-     * Upgrade Builder Base yang biayanya melebihi kapasitas gudang (Builder Hall + storage) tidak bisa
-     * dimulai: dibuang dari daftar, dan storage yang menampung resource itu didahulukan — di strategi
-     * builder ke-6 dengan urutan yang sama dengan langkah yang tertahan, selain itu skornya dikalikan.
-     * Kebutuhan Star Lab (mis. Night Witch 3,7 jt Elixir BB) ikut dihitung untuk Master Builder.
+     * Upgrade yang biayanya melebihi kapasitas gudang (Builder Base: Builder Hall + storage; Home: Town Hall +
+     * Gold/Elixir/Dark Elixir Storage) tidak bisa dimulai: dibuang dari daftar, dan storage yang menampung
+     * resource itu didahulukan — di strategi builder ke-6 dengan urutan yang sama dengan langkah yang tertahan,
+     * selain itu skornya dikalikan. Kebutuhan Star Lab (mis. Night Witch 3,7 jt Elixir BB) dan Laboratory /
+     * Pet House ikut dihitung untuk Master Builder / builder.
      */
     private fun fitCapacity(
         state: Village, gd: GameData, lane: Lane, start: Long, ps: PlanSettings, list: List<Scored>, tiered: Boolean,
     ): List<Scored> {
-        if (!lane.bb || state.bh <= 0) return list
+        if (if (lane.bb) state.bh <= 0 else state.th <= 0) return list
         fun more(a: Scored, b: Scored) = if (tiered) a.tier < b.tier || (a.tier == b.tier && a.score > b.score) else a.score > b.score
         val ok = list.filter { !Capacity.blocked(state, it.c, it.cost) }
-        if (lane != Lane.BB_BUILDER) return ok
+        if (lane != Lane.BB_BUILDER && lane != Lane.BUILDER) return ok
         // Kebutuhan per resource: langkah terpenting yang tidak muat di gudang (setelah storage yang sedang naik selesai).
         val need = HashMap<String, Scored>()
         val labWaits = HashSet<String>()
-        val wants = list.filter { Capacity.blocked(state, it.c, it.cost) } + listOfNotNull(starLabNext(state, gd, ps, start))
-        for (w in wants) {
+        val labs = if (lane == Lane.BUILDER) homeLabNext(state, gd, ps, start) else listOfNotNull(starLabNext(state, gd, ps, start)?.let { it to true })
+        val wants = list.filter { Capacity.blocked(state, it.c, it.cost) }.map { it to false } + labs
+        for ((w, starved) in wants) {
             val res = w.c.item.resource
             val cap = plannedCap(state, res) ?: continue
             if (w.cost <= cap) continue
             val cur = need[res]
             if (cur == null || more(w, cur)) need[res] = w
-            if (w.c.lane == Lane.STAR_LAB) labWaits += res
+            if (starved) labWaits += res
         }
         if (need.isEmpty()) return ok
         val ids = need.keys.mapNotNull { Capacity.storageFor(it) }.toSet()
@@ -719,11 +762,12 @@ object Planner {
     }
 
     private fun rank(
-        state: Village, gd: GameData, lane: Lane, start: Long, ps: PlanSettings,
+        state: Village, gd: GameData, lane: Lane, start: Long, ps: PlanSettings, labFreeAt: Long? = null,
+        nextBuilderFree: Long? = null,
     ): Pair<List<Scored>, List<Candidate>> {
         val reg = regular(state, gd, lane, start, ps)
         if (!sixthActive(state, lane, ps)) return reg
-        val six = fitCapacity(state, gd, lane, start, ps, Sixth.options(state, gd, lane, ps).map { (c, tier) -> score(c, start, ps, tier = tier) }, tiered = true)
+        val six = fitCapacity(state, gd, lane, start, ps, Sixth.options(state, gd, lane, ps, start, labFreeAt, nextBuilderFree).map { (c, tier) -> score(c, start, ps, tier = tier) }, tiered = true)
             .sortedWith(compareBy<Scored> { it.tier }.thenByDescending { it.score })
         if (six.isEmpty()) return reg
         // Langkah builder ke-6 dulu; opsi lain tetap bisa dipilih di bawahnya.
@@ -746,6 +790,9 @@ object Planner {
         upcoming: Int = 3,
     ): List<LaneSlot> {
         val slots = ArrayList<LaneSlot>()
+        // Kapan Star Lab bebas (riset yang sedang berjalan selesai): untuk menjadwalkan upgrade Star Laboratory tepat waktu.
+        val starLabFree = v.insts.filter { it.upgrading && it.lane == Lane.STAR_LAB && !it.extra }
+            .maxOfOrNull { finishOf(v, it, finishes) }?.coerceAtLeast(now) ?: now
         for (lane in Lane.entries) {
             val total = laneCount(v, lane, ps)
             if (total <= 0) continue
@@ -759,7 +806,7 @@ object Planner {
                 val st = v.copy()
                 completeUntil(st, finishes, now)
                 Sixth.autoClaim(st)
-                val (ranked, skipped) = rank(st, gd, lane, now, ps)
+                val (ranked, skipped) = rank(st, gd, lane, now, ps, starLabFree, stillRunning.firstOrNull()?.second)
                 slots += LaneSlot(lane, now, now, null, freeNow, ranked, skipped)
             }
             for ((inst, fin) in stillRunning.take(upcoming)) {
@@ -767,7 +814,8 @@ object Planner {
                 completeUntil(st, finishes, fin)
                 Sixth.autoClaim(st)
                 val start = ps.schedule.nextOnline(fin)
-                val (ranked, skipped) = rank(st, gd, lane, start, ps)
+                val (ranked, skipped) = rank(st, gd, lane, start, ps, maxOf(starLabFree, start),
+                    stillRunning.map { it.second }.firstOrNull { it > fin })
                 slots += LaneSlot(lane, fin, start, runTitle(inst), 1, ranked, skipped)
             }
         }
@@ -796,7 +844,10 @@ object Planner {
     // ------------------------------------------------------------------ simulasi
 
     private class SimLane(val lane: Lane, val index: Int, var freeAt: Long, var retired: Boolean = false, var lastFinish: Long? = null)
-    private class SimRun(val inst: Inst, var finish: Long, val laneRef: SimLane)
+    private class SimRun(val inst: Inst, var finish: Long, val laneRef: SimLane) {
+        /** Langkah yang ditampilkan untuk pekerjaan ini (jam selesainya ikut maju bila dibantu helper). */
+        var step: PlannedStep? = null
+    }
 
     /**
      * Simulasi maju: pekerja mengambil saran terbaik setiap kali bebas (hanya saat Anda online),
@@ -833,11 +884,12 @@ object Planner {
                 val f = maxOf(finishOf(v, inst, finishes), now)
                 val l = SimLane(lane, count + k + 1, f, retired = true, lastFinish = f)
                 lanes += l
-                runs += SimRun(inst, f, l)
-                running += PlannedStep(
+                val st = PlannedStep(
                     lane, l.index, runTitle(inst), now, f, 0, if (lane == Lane.LAB) "👺 Goblin Researcher (event)" else "👺 Goblin Builder (event)", (f - now) / 1000, inst.item,
                     inst.level, inst.level + 1, false, false, running = true,
                 )
+                running += st
+                runs += SimRun(inst, f, l).also { it.step = st }
             }
             // B1 = pekerja yang paling cepat bebas
             busy.sortedBy { finishOf(v, it, finishes) }.forEachIndexed { idx, inst ->
@@ -845,11 +897,12 @@ object Planner {
                 val l = laneObjs[idx]
                 l.freeAt = f
                 l.lastFinish = f
-                runs += SimRun(inst, f, l)
-                running += PlannedStep(
+                val st = PlannedStep(
                     lane, l.index, runTitle(inst), now, f, 0, null, (f - now) / 1000, inst.item,
                     inst.level, if (inst.gearing) inst.level else inst.level + 1, inst.level == 0, inst.gearing, running = true,
                 )
+                running += st
+                runs += SimRun(inst, f, l).also { it.step = st }
             }
         }
         // Helper harian
@@ -934,6 +987,7 @@ object Planner {
                         r.inst.remaining = 0
                     }
                 } else r.inst.complete()
+                if (item.cat == Cat.BUILDING || item.cat == Cat.BB_BUILDING) unlockUnits(v, gd, item)
                 if (item.cat == Cat.HERO && !r.inst.gearing) heroDone = maxOf(heroDone ?: 0L, r.finish)
                 runs.remove(r)
                 trackSixth(r.finish)
@@ -959,6 +1013,7 @@ object Planner {
                     target.finish = if (rem <= boost + HOUR) h.next + rem / (h.level + 1) else target.finish - boost
                     target.laneRef.freeAt = target.finish
                     target.laneRef.lastFinish = target.finish
+                    target.step?.finish = target.finish
                 }
                 h.next += HELPER_CYCLE
                 continue
@@ -984,7 +1039,9 @@ object Planner {
             var best: Scored? = null
             var cwlBlocked: Long? = null
             if (sixthPicking && lane.bb) {
-                val opts = Sixth.options(v, gd, lane, ps).map { (c, tier) -> score(c, tStart, ps, tier = tier) }
+                val labFreeAt = runs.filter { it.laneRef.lane == Lane.STAR_LAB }.maxOfOrNull { it.finish }?.coerceAtLeast(tStart) ?: tStart
+                val nextFree = runs.filter { it.laneRef.lane == lane && it.finish > tStart }.minOfOrNull { it.finish }
+                val opts = Sixth.options(v, gd, lane, ps, tStart, labFreeAt, nextFree).map { (c, tier) -> score(c, tStart, ps, tier = tier) }
                 for (s in fitCapacity(v, gd, lane, tStart, ps, opts, tiered = true)) {
                     val b = best
                     if (b == null || s.tier < b.tier || (s.tier == b.tier && s.score > b.score)) best = s
@@ -1028,7 +1085,8 @@ object Planner {
                     .also { v.insts += it }
                 inst.upgrading = true
                 if (c.gear) inst.gearing = true
-                runs += SimRun(inst, pick.finish, nextLane)
+                val run = SimRun(inst, pick.finish, nextLane)
+                runs += run
                 nextLane.freeAt = pick.finish
                 // Town Hall lebih awal tidak dihitung ke "builder selesai" (target tetap max TH sekarang).
                 if (early) earlyHall = inst else nextLane.lastFinish = pick.finish
@@ -1038,7 +1096,7 @@ object Planner {
                     steps += PlannedStep(
                         lane, nextLane.index, c.shortTitle, pick.start, pick.finish, pick.idle, pick.reason, pick.duration,
                         c.item, c.fromLevel, c.toLevel, c.isNew, c.gear, false, pick.cost, pick.event?.name, pick.tier,
-                    )
+                    ).also { run.step = it }
                 }
             } else {
                 val waitFor = (runs.filter { it.finish > tStart }.map { it.finish } + listOfNotNull(cwlBlocked)).minOrNull()

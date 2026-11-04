@@ -275,10 +275,11 @@ data class GameEvent(
             return if (utc8(y, month, day) < now) y + 1 else y
         }
 
-        /** Hammer Jam: perkiraan 1–17 November (seperti 2025), −50% waktu & biaya. */
+        /** Hammer Jam: perkiraan 1 Nov 08:00 – 16 Nov 08:00 UTC (seperti 2026), −50% waktu & biaya. */
         fun hammerJam(now: Long): GameEvent {
-            val y = yearFor(now, 11, 17)
-            return GameEvent("hammer_$y", "Hammer Jam", utc8(y, 11, 1), utc8(y, 11, 17), 50, 50,
+            // 15 hari: 1 Nov 08:00 – 16 Nov 08:00 UTC (Hammer Jam 2026).
+            val y = yearFor(now, 11, 16)
+            return GameEvent("hammer_$y", "Hammer Jam", utc8(y, 11, 1), utc8(y, 11, 16), 50, 50,
                 builder = true, lab = true, bb = false, cutRunning = false, enabled = false)
         }
 

@@ -83,13 +83,19 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
   berikutnya didahulukan, dan Star Lab mengisi riset lain bila riset fokus belum bisa
 - **Semua hero jalan bersamaan**; saat builder kehabisan pekerjaan tetapi lab/pet masih jalan, strategi
   Seimbang/Max memulai **Town Hall berikutnya lebih awal**
-- Builder ke-6 memakai **jalur kritis** (syarat dengan sisa waktu terpanjang dulu). Max BB di BH9: buka
+- Builder ke-6 memakai **jalur kritis** (syarat dengan sisa waktu terpanjang dulu). Star Laboratory dimulai **tepat
+  waktu**: Master Builder menghitung kapan troop fokus butuh level Star Lab berikutnya (termasuk menaikkan gudang
+  dan kapan builder berikutnya bebas), supaya riset troop tidak tertahan. Max BB di BH9: buka
   B.O.B dulu, lalu lanjut dengan 4 Master Builder
 - Saran di Dashboard, Tukang, Lab, widget & notifikasi memakai urutan yang sama
 - Cara lama tetap ikut dicoba: hero yang menganggur didahulukan dan biaya Dark Elixir disetarakan
   (1 DE ≈ 100 Gold/Elixir)
-- Builder Base: upgrade yang biayanya melebihi **kapasitas gudang** (Builder Hall + Gold/Elixir Storage)
-  ditunda dan storage-nya dinaikkan dulu (juga untuk troop Star Lab); kapasitas tampil di Tukang BB
+- Troop, spell & siege yang terbuka saat Barracks, Dark Barracks, Spell Factory, Workshop atau Builder Barracks
+  selesai di-upgrade langsung masuk antrean riset rencana (tidak menunggu export berikutnya)
+- **Kapasitas gudang**: upgrade atau riset yang biayanya melebihi gudang ditunda dan storage-nya dinaikkan
+  dulu — Home: Town Hall + Gold/Elixir/Dark Elixir Storage; Builder Base: Builder Hall + Gold/Elixir Storage
+  (juga untuk troop Star Lab). Upgrade yang tetap tidak muat walau semua storage max di TH itu dikeluarkan dari
+  rencana TH tersebut. Kapasitas BB tampil di Tukang BB
 - **Builder ke-6 (B.O.B)**: checklist 6 syarat (BH9 + B.O.B Control, 3 gear-up, troop Lv18,
   pertahanan Lv9, BM + BC = 45) dengan perkiraan tanggal tiap syarat dan tanggal B.O.B terbuka. Bangunan
   **dan jebakan** baru (mis. Mine, Mega Mine) dipasang dulu supaya Builder Hall bisa naik ke BH9
@@ -103,7 +109,7 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
 - Per kategori: persen, sisa biaya, daftar item (ketuk untuk membuka)
 
 **🎉 Event** (Pengaturan → Event)
-- Hammer Jam (−50% waktu & biaya, perkiraan 1–17 Nov), Builder Base Bonanza, atau event lain
+- Hammer Jam (−50% waktu & biaya, perkiraan 1 Nov 08:00 – 16 Nov 08:00 UTC), Builder Base Bonanza, atau event lain
 - Tidak ada jadwal event resmi yang bisa dibaca aplikasi, jadi event diaktifkan & dicocokkan
   tanggalnya sendiri ("isi dari sisa waktu di game"). Potongan berlaku untuk upgrade yang
   dimulai selama event dan dikalikan dengan Gold Pass; opsi untuk ikut memotong upgrade berjalan
@@ -256,6 +262,18 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
   cukup "Perbaikan kecil".
 - Mengedit file langsung di GitHub (tanpa zip) juga langsung dibuatkan APK dari kode di repo.
 
+## Memperbarui data game
+Saat Supercell merilis update, `app/src/main/assets/gamedata.json` disusun ulang dengan skrip (Python 3, tanpa
+library tambahan):
+```
+python3 tools/build_gamedata.py          # unduh data ClashKingAssets terbaru, susun & periksa
+python3 tools/build_gamedata.py --check  # hanya periksa apakah data sudah terbaru
+```
+- Data yang tidak ada di ClashKingAssets (kapasitas gudang, kamp Builder Base) diubah di `tools/overrides.json`.
+- Sebelum menulis, skrip memeriksa: upgrade termahal di tiap Town Hall harus muat di gudang maksimal, tabel
+  kapasitas mencakup level tertinggi, tidak ada id ganda atau level yang bolong. Bila ada yang gagal, file tidak
+  ditulis dan masalahnya ditampilkan.
+
 ## Cara pakai
 1. Di game: Settings → More Settings → paling bawah **Export village data** → Copy.
 2. Buka Clash Timer → **📋 Update desa** (atau Import dari Clipboard).
@@ -270,7 +288,12 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
 - Perhitungan helper berulang adalah perkiraan (1 jam kerja, cooldown 23 jam, +level jam kerja).
 - Clock Tower: 10× selama 12 + 2×level menit, cooldown 22 jam sejak boost selesai (data Supercell); tidak
   mempercepat gear-up.
-- Data game (durasi, biaya, syarat) dari ClashKingAssets via coc-rush-helper, Oktober 2026.
+- Data game (durasi, biaya, syarat, ikon) dari ClashKingAssets, disusun dengan `tools/build_gamedata.py`
+  (data 31 Oktober 2026).
+- Untuk troop, spell, siege machine, hero & pet, baris data level N berisi lama/biaya upgrade **dari** N ke N+1,
+  sedangkan syarat hall/lab di baris itu untuk **memiliki** level N — aplikasi menggesernya saat membaca data.
+- Kapasitas gudang (Town Hall, storage Home & BB) dari kolom kapasitas file data game; TH18 dari Clash of Clans Wiki
+  (`tools/overrides.json`).
 - Ikon diunduh saat dipakai dari **ClashKing Assets** (https://assets.clashk.ing) — terima kasih!
   Bisa dimatikan di Pengaturan → Ikon. Izin INTERNET hanya dipakai untuk ini.
 

@@ -163,17 +163,34 @@ class GameData(
         const val LAB_ASSISTANT = 93000001
         const val ALCHEMIST = 93000002
 
+        /**
+         * Troop, spell, siege, hero & pet: di data, lama & biaya baris Lv N = upgrade DARI Lv N ke N+1 (baris level
+         * max = 0), sedangkan syarat hall / lab baris itu = untuk MEMILIKI Lv N. Bangunan & jebakan: baris Lv N =
+         * biaya mencapai Lv N. Aplikasi memakai arti kedua untuk semua ([Item.lv] = mencapai level itu).
+         */
+        private val FROM_ROWS = setOf(Cat.TROOP, Cat.SPELL, Cat.HERO, Cat.PET, Cat.BB_TROOP, Cat.BB_HERO)
+
+        /** Lama & biaya mencapai Lv N = baris Lv N−1; syarat tetap baris Lv N. Level pertama (dibuka) = gratis. */
+        fun shiftUp(rows: List<Lv>): List<Lv> {
+            val byLevel = rows.associateBy { it.level }
+            return rows.sortedBy { it.level }.map { r ->
+                val prev = byLevel[r.level - 1]
+                Lv(r.level, prev?.time ?: 0L, prev?.cost ?: 0L, r.hall, r.req)
+            }
+        }
+
         fun parse(text: String): GameData {
             val root = Json.parse(text).obj() ?: throw IllegalArgumentException("gamedata rusak")
             val items = HashMap<Int, Item>()
             for (raw in root["items"].arr().orEmpty()) {
                 val o = raw.obj() ?: continue
                 val cat = Cat.of(o["c"].str()) ?: continue
-                val levels = o["lv"].arr().orEmpty().mapNotNull { l ->
+                val raw = o["lv"].arr().orEmpty().mapNotNull { l ->
                     val a = l.arr() ?: return@mapNotNull null
                     if (a.size < 5) null
                     else Lv(a[0].int(), a[1].long(), a[2].long(), a[3].int(), a[4].int())
                 }
+                val levels = if (cat in FROM_ROWS) shiftUp(raw) else raw
                 val merges = HashMap<Int, List<MergeSrc>>()
                 for (m in o["mg"].arr().orEmpty()) {
                     val a = m.arr() ?: continue
@@ -227,6 +244,15 @@ class GameData(
                 }
                 CraftedDef(o["id"].int(), o["n"].str(), mods)
             }
+            // Kapasitas gudang (indeks 0 = level 1); tanpa bagian ini kapasitas tidak dibatasi.
+            val cap = root["cap"].obj()
+            fun longs(o: Map<String, Any?>?, k: String): LongArray =
+                o?.get(k).arr().orEmpty().map { it.long() }.toLongArray()
+            Capacity.install(cap?.let { c ->
+                val h = c["home"].obj(); val b = c["bb"].obj()
+                Capacity.Tables(longs(h, "hall"), longs(h, "hall_dark"), longs(h, "storage"), longs(h, "dark_storage"),
+                    longs(b, "hall"), longs(b, "storage"))
+            })
             return GameData(
                 root["v"].str(), root["maxTH"].int(18), root["maxBH"].int(10), items,
                 unlocks(unl?.get("home").obj()), unlocks(unl?.get("bb").obj()), names, icons, weapons, crafted,

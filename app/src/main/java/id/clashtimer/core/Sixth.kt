@@ -242,6 +242,51 @@ object Sixth {
         return rem.entries.sortedByDescending { it.value }.mapIndexed { i, e -> e.key to (T_CRIT + i) }.toMap()
     }
 
+    /**
+     * Upgrade Star Laboratory [sl] harus dimulai sekarang supaya selesai sebelum troop fokus [f] butuh
+     * level berikutnya: riset fokus yang masih bisa di level Star Lab sekarang dijalankan dari [labFreeAt],
+     * lalu dibandingkan dengan [start] + lama upgrade Star Laboratory (+12 jam cadangan jam tidur/kapasitas).
+     */
+    private fun starLabDue(
+        v: Village, f: Inst?, sl: Candidate, ps: PlanSettings, start: Long?, labFreeAt: Long?, nextBuilderFree: Long?,
+    ): Boolean {
+        if (f == null || start == null || labFreeAt == null) return false
+        val gold = ps.gold
+        // Bila ditunda, Master Builder berikutnya baru bebas pada [nextBuilderFree]: masih sempat?
+        val latest = maxOf(start, nextBuilderFree?.let { ps.schedule.nextOnline(it) } ?: Long.MAX_VALUE / 4)
+        var t = maxOf(labFreeAt, start)
+        var l = f.level + if (f.upgrading) 1 else 0
+        while (l < 18) {
+            val lv = f.item.lv(l + 1) ?: return false
+            if (lv.req > v.starLab) return latest + storageLead(v, sl, gold) + sl.duration * 1000 + 6 * 3_600_000L >= t
+            t += gold.apply(lv.time, Lane.STAR_LAB) * 1000
+            l++
+        }
+        return false
+    }
+
+    /**
+     * Lama (ms) menaikkan gudang sampai biaya [c] muat: storage terendah dinaikkan satu per satu
+     * (berurutan, perkiraan aman). 0 bila sudah muat.
+     */
+    private fun storageLead(v: Village, c: Candidate, gold: GoldPass): Long {
+        val id = Capacity.storageFor(c.item.resource) ?: return 0L
+        var cap = Capacity.of(v, c.item.resource) ?: return 0L
+        val st = v.insts.filter { it.item.id == id }
+        cap += st.filter { it.upgrading }.sumOf { Capacity.gain(c.item.resource, it.level, it.level + 1) }
+        if (c.cost <= cap) return 0L
+        val lv = st.map { it.level + if (it.upgrading) 1 else 0 }.toMutableList()
+        var lead = 0L
+        while (cap < c.cost) {
+            val i = lv.indices.filter { k -> st[k].item.lv(lv[k] + 1)?.let { it.hall <= v.bh } == true }.minByOrNull { lv[it] } ?: break
+            val next = st[i].item.lv(lv[i] + 1)!!
+            lead += gold.apply(next.time, Lane.BB_BUILDER) * 1000
+            cap += Capacity.gain(c.item.resource, lv[i], lv[i] + 1)
+            lv[i]++
+        }
+        return lead
+    }
+
     /** Star Lab bebas tetapi tidak ada riset yang bisa dimulai di levelnya sekarang. */
     private fun labStarved(v: Village, gd: GameData, ps: PlanSettings): Boolean {
         if (v.starLab <= 0 || v.insts.any { it.upgrading && it.lane == Lane.STAR_LAB }) return false
@@ -250,7 +295,14 @@ object Sixth {
     }
 
     /** Kandidat + urutan (kecil = lebih dulu) untuk jalur builder ke-6. */
-    fun options(v: Village, gd: GameData, lane: Lane, ps: PlanSettings): List<Pair<Candidate, Int>> {
+    /**
+     * [start] = kapan Master Builder ini mulai; [labFreeAt] = kapan Star Lab bebas. Dengan keduanya,
+     * upgrade Star Laboratory dimulai tepat waktu: selesai sebelum troop fokus butuh level Star Lab berikutnya.
+     */
+    fun options(
+        v: Village, gd: GameData, lane: Lane, ps: PlanSettings, start: Long? = null, labFreeAt: Long? = null,
+        nextBuilderFree: Long? = null,
+    ): List<Pair<Candidate, Int>> {
         if (done(v)) return emptyList()
         val st = status(v)
         val gold = ps.gold
@@ -259,7 +311,7 @@ object Sixth {
         if (lane == Lane.STAR_LAB) {
             val focus = focusTroop(v)
             val next = focus?.takeIf { !isDone(st, "troop") && !it.upgrading }?.item?.lv(focus.level + 1)
-            if (focus != null && next != null && next.req <= v.starLab && next.time > 0) {
+            if (focus != null && next != null && next.req <= v.starLab && (next.time > 0 || next.cost > 0)) {
                 out += Candidate(lane, focus.item, focus, focus.level, focus.level + 1, gold.apply(next.time, lane), next.cost, false,
                     baseDuration = next.time) to T_TROOP
             }
@@ -299,7 +351,9 @@ object Sixth {
             val f = focusTroop(v)
             val nextReq = f?.item?.lv(f.level + if (f.upgrading) 2 else 1)?.req ?: 0
             all.firstOrNull { it.item.id == GameData.STAR_LAB && it.toLevel <= 9 }?.let {
-                add(it, if (nextReq > v.starLab) T_UNBLOCK else tierOf("troop", T_STARLAB))
+                // Jalur kritis: Star Laboratory dimulai tepat waktu supaya riset troop fokus tidak tertahan.
+                val urgent = nextReq > v.starLab || (critical && starLabDue(v, f, it, ps, start, labFreeAt, nextBuilderFree))
+                add(it, if (urgent) T_UNBLOCK else tierOf("troop", T_STARLAB))
             }
         }
         // Star Lab yang tidak punya riset lagi di levelnya: upgrade Star Laboratory paling didahulukan.

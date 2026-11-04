@@ -34,7 +34,7 @@ object Help {
                 "• Urutan prioritas rencana: (1) tercepat ke target strategi; bila sama cepat, (2) jeda menganggur terlama paling pendek, lalu (3) total jam menganggur paling sedikit — untuk semua pekerja, Home Village & Builder Base.\n" +
                 "• Pekerja tidak dibiarkan menunggu pekerja lain: bila Lab / Star Lab tertahan gudang atau level lab, upgrade builder yang membukanya didahulukan.\n" +
                 "• Semua hero dijalankan bersamaan. Seimbang: begitu builder kehabisan pekerjaan sementara lab masih jalan, Town Hall berikutnya dimulai lebih awal.\n" +
-                "• Builder ke-6: syarat yang paling lama sisanya dikerjakan dulu (jalur kritis). Max BB di BH9 membuka B.O.B dulu karena Master Builder ke-4 mempercepat sisanya.\n" +
+                "• Builder ke-6: syarat yang paling lama sisanya dikerjakan dulu (jalur kritis). Star Laboratory dimulai tepat waktu (dihitung dengan lama menaikkan gudang & kapan Master Builder berikutnya bebas) supaya riset troop fokus tidak tertahan. Max BB di BH9 membuka B.O.B dulu karena Master Builder ke-4 mempercepat sisanya.\n" +
                 "• Hero yang bentrok dengan CWL ditunda dan tidak dimasukkan ke antrean selama CWL.\n" +
                 "• Ketuk sebuah langkah untuk detail; lonceng = pengingat untuk sesi itu. Saat lonceng sesi aktif, notifikasi \"selesai\" per upgrade di sesi itu masuk tanpa suara.",
         ),

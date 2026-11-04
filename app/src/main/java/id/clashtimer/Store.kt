@@ -692,7 +692,12 @@ object Store {
                 )
             }
         }
-        return out
+        // Perkiraan lama Hammer Jam berakhir 17 Nov 08:00 UTC; yang benar 16 Nov. Dikoreksi bila belum diubah sendiri.
+        return out.map { e ->
+            val y = e.id.removePrefix("hammer_").toIntOrNull()
+            fun nov(d: Int) = java.time.ZonedDateTime.of(y ?: 0, 11, d, 8, 0, 0, 0, java.time.ZoneOffset.UTC).toInstant().toEpochMilli()
+            if (y != null && e.id.startsWith("hammer_") && e.end == nov(17)) e.copy(end = nov(16)) else e
+        }
     }
 
     fun setEvents(ctx: Context, list: List<GameEvent>) {
