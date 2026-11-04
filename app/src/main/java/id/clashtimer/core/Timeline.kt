@@ -13,11 +13,17 @@ enum class BoostKind(
     val label: String, val lanes: Set<Lane>, val extra: Double, val duration: Long,
     /** Boost dalam grup yang sama tidak menumpuk (yang baru memperpanjang). */
     val group: String,
+    /**
+     * Boost beda grup yang tidak saling menambah kecepatan: selama keduanya aktif hanya yang terkuat berlaku
+     * (Builder Bite tidak menambah apa pun saat Builder Potion aktif; menurut wiki Magic Snacks sejak update Februari 2026). null = menumpuk
+     * (dijumlah), mis. Study Soup + Research Potion = 1 + 23 + 3 = 27×.
+     */
+    val noStack: String? = null,
 ) {
-    BUILDER_POTION("Builder Potion", setOf(Lane.BUILDER), 9.0, HOUR, "builder_potion"),
+    BUILDER_POTION("Builder Potion", setOf(Lane.BUILDER), 9.0, HOUR, "builder_potion", noStack = "builder"),
     RESEARCH_POTION("Research Potion", setOf(Lane.LAB), 23.0, HOUR, "research_potion"),
     PET_POTION("Pet Potion", setOf(Lane.PET), 23.0, HOUR, "pet_potion"),
-    BUILDER_BITE("Builder Bite", setOf(Lane.BUILDER), 1.0, HOUR, "builder_bite"),
+    BUILDER_BITE("Builder Bite", setOf(Lane.BUILDER), 1.0, HOUR, "builder_bite", noStack = "builder"),
     STUDY_SOUP("Study Soup", setOf(Lane.LAB, Lane.PET), 3.0, HOUR, "study_soup"),
     /** Durasi tergantung level Clock Tower (lihat [ClockTower.boostMinutes]). */
     CLOCK_TOWER("Clock Tower", setOf(Lane.BB_BUILDER, Lane.STAR_LAB), 9.0, 22 * MIN, "clock"),
@@ -86,12 +92,14 @@ data class WorkCut(val at: Long, val factor: Double)
 
 object Projector {
 
-    private class Seg(val start: Long, val end: Long, val extra: Double)
+    /** [noStack]: lihat [BoostKind.noStack]; null untuk helper & boost yang menumpuk. */
+    private class Seg(val start: Long, val end: Long, val extra: Double, val noStack: String? = null)
 
     /**
      * Hitung kapan upgrade selesai. [remainingSec] = sisa waktu saat [from] (biasanya waktu export).
      * Kecepatan = 1 + jumlah tambahan dari boost aktif & sesi helper (dijumlah, karena
-     * potion tidak mempengaruhi helper dan sebaliknya). [cuts] mengalikan sisa kerja pada waktunya.
+     * potion / snack tidak mempercepat helper dan sebaliknya; boost dengan [BoostKind.noStack] yang sama
+     * hanya diambil yang terkuat). [cuts] mengalikan sisa kerja pada waktunya.
      */
     fun project(
         from: Long,
@@ -108,7 +116,7 @@ object Projector {
         for (b in Boosts.merged(boosts)) {
             if (lane !in b.kind.lanes) continue
             val s = maxOf(b.start, from)
-            if (b.end > s) segs += Seg(s, b.end, b.kind.extra)
+            if (b.end > s) segs += Seg(s, b.end, b.kind.extra, b.kind.noStack)
         }
         val sessionStarts = ArrayList<Long>()
         if (helper != null && helper.level > 0) {
@@ -143,7 +151,16 @@ object Projector {
             val a = maxOf(prev, t)
             while (ci < cutList.size && cutList[ci].at <= a) { work *= cutList[ci].factor; ci++ }
             var speed = 1.0
-            for (sg in segs) if (sg.start <= a && sg.end > a) speed += sg.extra
+            var strongest: HashMap<String, Double>? = null
+            for (sg in segs) if (sg.start <= a && sg.end > a) {
+                val k = sg.noStack
+                if (k == null) speed += sg.extra
+                else {
+                    val m = strongest ?: HashMap<String, Double>().also { strongest = it }
+                    m[k] = maxOf(m[k] ?: 0.0, sg.extra)
+                }
+            }
+            strongest?.let { m -> speed += m.values.sum() }
             val span = (next - a).toDouble()
             val capacity = span * speed
             if (work <= capacity) {

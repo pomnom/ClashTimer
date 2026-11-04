@@ -1,8 +1,9 @@
-# Gudang Home & perbaikan data riset
-- Perbaikan data: lama & biaya riset troop, spell, siege machine, serta upgrade hero & pet kini benar. Sebelumnya terbaca bergeser satu level (mis. Headhunter Lv2→3 tertulis 370 rb DE, di game 90 rb), jadi perkiraan selesai Home kini maju beberapa minggu. Deteksi Gold Pass dari riset ikut memakai lama yang benar.
-- Kapasitas gudang Home: Gold, Elixir & Dark Elixir (Town Hall + storage) kini dihitung. Upgrade atau riset yang biayanya melebihi gudang ditunda dan storage-nya dinaikkan dulu; yang tetap tidak muat walau semua storage max di TH itu dikeluarkan dari rencana TH tersebut.
-- Builder ke-6: upgrade Star Laboratory (dan gudangnya) dimulai tepat waktu supaya riset troop fokus tidak tertahan.
-- Data game diperbarui (31 Okt 2026) dan kini disusun otomatis dari data file game, termasuk kapasitas gudang; nama modul Crafting Station mengikuti nama di game.
-- Rencana kini memasukkan riset troop, spell & siege baru yang terbuka saat Barracks, Dark Barracks, Spell Factory, Workshop atau Builder Barracks selesai di-upgrade (sebelumnya baru muncul setelah export berikutnya), jadi perkiraan selesai bisa lebih lama tetapi lebih tepat.
-- Hammer Jam: perkiraan tanggal berakhir diperbaiki menjadi 16 Nov 08:00 UTC; event yang tanggalnya belum diubah ikut dikoreksi.
-- Jam selesai di daftar Rencana kini memperhitungkan Builder's Apprentice & Lab Assistant (sebelumnya tampil beberapa jam lebih lambat daripada perhitungannya).
+# Gudang Home, data riset & unit baru
+- Lama & biaya riset troop, spell, siege, hero dan pet kini benar (sebelumnya bergeser satu level), jadi perkiraan selesai Home lebih cepat.
+- Kapasitas gudang Home (Gold, Elixir, Dark Elixir) ikut dihitung: upgrade yang tidak muat ditunda dan storage-nya dinaikkan dulu.
+- Riset troop, spell & siege yang terbuka dari Barracks, Spell Factory, Workshop atau Builder Barracks langsung masuk rencana.
+- Builder ke-6: Star Laboratory dimulai tepat waktu supaya riset troop fokus tidak tertahan.
+- Jam selesai di Rencana kini memperhitungkan Builder's Apprentice & Lab Assistant.
+- Hammer Jam: tanggal berakhir diperbaiki menjadi 16 Nov.
+- Builder Bite tidak menambah kecepatan selama Builder Potion aktif, sama seperti di game.
+- Data game diperbarui (31 Okt 2026); nama modul Crafting Station mengikuti nama di game.
