@@ -108,7 +108,7 @@ object Repo {
                 list += Upgrade(
                     id = t.uid, tag = tag, kind = Kind.BB_BUILDER, name = t.name,
                     targetLevel = t.fromLevel, finishAt = finish, helped = false, baseFinishAt = base,
-                    note = if (doneAt != null) "Ditandai selesai lebih awal" else "Gear-up · Home Village",
+                    note = if (doneAt != null) tr("Ditandai selesai lebih awal", "Marked done early") else "Gear-up · Home Village",
                     customTitle = "${t.name} · Gear-up",
                 )
                 continue
@@ -126,14 +126,14 @@ object Repo {
             val noBoost = Projector.project(from, remain, t.lane, emptyList(), helper, cuts).finishAt
             val noCut = if (cuts.isEmpty()) p.finishAt else Projector.project(from, remain, t.lane, boosts, helper).finishAt
             val notes = ArrayList<String>()
-            if (doneAt != null) notes += "Ditandai selesai lebih awal"
+            if (doneAt != null) notes += tr("Ditandai selesai lebih awal", "Marked done early")
             else {
-                if (fix != null) notes += "Sisa waktu dikoreksi ${Fmt.at(fix.first, zone)}"
+                if (fix != null) notes += tr("Sisa waktu dikoreksi ${Fmt.at(fix.first, zone)}", "Remaining time corrected ${Fmt.at(fix.first, zone)}")
                 if (p.helperSessions.isNotEmpty()) {
-                    notes += "🧑‍🔧 dibantu ${helperName(t.lane)} ${p.helperSessions.size}× (perkiraan) · tanpa helper ${Fmt.at(p.baseFinishAt, zone)}"
+                    notes += tr("🧑‍🔧 dibantu ${helperName(t.lane)} ${p.helperSessions.size}× (perkiraan) · tanpa helper ${Fmt.at(p.baseFinishAt, zone)}", "🧑‍🔧 helped by ${helperName(t.lane)} ${p.helperSessions.size}× (estimate) · without helper ${Fmt.at(p.baseFinishAt, zone)}")
                 }
-                if (noBoost - p.finishAt > 60_000) notes += "⚡ dipercepat item ${Fmt.dur(noBoost - p.finishAt)}"
-                if (noCut - p.finishAt > 60_000) notes += "🎉 dipotong event ${Fmt.dur(noCut - p.finishAt)}"
+                if (noBoost - p.finishAt > 60_000) notes += tr("⚡ dipercepat item ${Fmt.dur(noBoost - p.finishAt)}", "⚡ sped up by items ${Fmt.dur(noBoost - p.finishAt)}")
+                if (noCut - p.finishAt > 60_000) notes += tr("🎉 dipotong event ${Fmt.dur(noCut - p.finishAt)}", "🎉 cut by event ${Fmt.dur(noCut - p.finishAt)}")
             }
             // Waktu di game sebelum tiap sesi helper berikutnya (game belum menghitung sesi yang belum mulai).
             val steps = if (doneAt != null || helper == null) emptyList() else p.helperSessions.map { s ->
@@ -156,7 +156,7 @@ object Repo {
                 list += Upgrade(
                     id = st.uid, tag = tag, kind = Kind.BB_BUILDER, name = st.name,
                     targetLevel = st.fromLevel, finishAt = finish, helped = false, baseFinishAt = st.finish,
-                    note = if (doneAt != null) "Ditandai selesai lebih awal" else "Gear-up · Home Village · dimulai di aplikasi",
+                    note = if (doneAt != null) tr("Ditandai selesai lebih awal", "Marked done early") else tr("Gear-up · Home Village · dimulai di aplikasi", "Gear-up · Home Village · started in the app"),
                     customTitle = "${st.name} · Gear-up",
                 )
                 continue
@@ -167,10 +167,10 @@ object Repo {
             val finish = doneAt ?: p.finishAt
             finishes[st.uid] = finish
             val note = when {
-                doneAt != null -> "Ditandai selesai lebih awal"
-                fix != null -> "Dimulai di aplikasi · sisa waktu dikoreksi ${Fmt.at(fix.first, zone)}"
-                st.finish - p.finishAt > 60_000 -> "Dimulai di aplikasi · ⚡ dipercepat ${Fmt.dur(st.finish - p.finishAt)}"
-                else -> "Dimulai di aplikasi"
+                doneAt != null -> tr("Ditandai selesai lebih awal", "Marked done early")
+                fix != null -> tr("Dimulai di aplikasi · sisa waktu dikoreksi ${Fmt.at(fix.first, zone)}", "Started in the app · remaining time corrected ${Fmt.at(fix.first, zone)}")
+                st.finish - p.finishAt > 60_000 -> tr("Dimulai di aplikasi · ⚡ dipercepat ${Fmt.dur(st.finish - p.finishAt)}", "Started in the app · ⚡ sped up ${Fmt.dur(st.finish - p.finishAt)}")
+                else -> tr("Dimulai di aplikasi", "Started in the app")
             }
             list += Upgrade(
                 id = st.uid, tag = tag, kind = Kind.of(st.lane), name = st.name,
@@ -184,7 +184,7 @@ object Repo {
             if (r.at < System.currentTimeMillis() - 60_000L) continue
             list += Upgrade(
                 id = "$tag|session|${r.at}", tag = tag, kind = Kind.REMINDER, name = "Login",
-                targetLevel = 0, finishAt = r.at, helped = false, note = r.text, customTitle = "🔔 Waktunya login",
+                targetLevel = 0, finishAt = r.at, helped = false, note = r.text, customTitle = tr("🔔 Waktunya login", "🔔 Time to log in"),
             )
         }
 
@@ -196,7 +196,7 @@ object Repo {
                 list += Upgrade(
                     id = "$tag|clock|$clockUsed", tag = tag, kind = Kind.REMINDER, name = "Clock Tower",
                     targetLevel = 0, finishAt = ready, helped = false,
-                    note = "Boost gratis 10× sudah bisa dipakai lagi", customTitle = "⏱️ Clock Tower siap lagi",
+                    note = tr("Boost gratis 10× sudah bisa dipakai lagi", "Free 10× boost can be used again"), customTitle = tr("⏱️ Clock Tower siap lagi", "⏱️ Clock Tower ready again"),
                 )
             }
         }
@@ -219,8 +219,8 @@ object Repo {
             val targetFinish = target?.let { finishes[it.uid] }
             val name = gameData(ctx).name(h.id)
             val (title, note) = if (target != null && targetFinish != null && targetFinish > at) {
-                "$name bantu ${target.name} lagi" to "Otomatis membantu ${target.name} (+${h.level} jam kerja)"
-            } else "$name siap dipakai" to "Helper sudah bisa ditugaskan lagi"
+                tr("$name bantu ${target.name} lagi", "$name helps ${target.name} again") to tr("Otomatis membantu ${target.name} (+${h.level} jam kerja)", "Automatically helping ${target.name} (+${h.level} work hours)")
+            } else tr("$name siap dipakai", "$name ready to use") to tr("Helper sudah bisa ditugaskan lagi", "Helper can be assigned again")
             list += Upgrade(
                 id = "$tag|helpers|${h.id}", tag = tag, kind = Kind.HELPER, name = name,
                 targetLevel = 0, finishAt = at, helped = false, note = note, customTitle = title,
@@ -392,16 +392,16 @@ object Repo {
             if (e.start > now) {
                 fresh += Upgrade(
                     id = "event|${e.id}|start", tag = "", kind = Kind.REMINDER, name = e.name, targetLevel = 0,
-                    finishAt = e.start, helped = false, customTitle = "🎉 ${e.name} dimulai",
-                    note = "Waktu −${e.timePct}% & biaya −${e.costPct}% (${e.scopeLabel}) sampai ${Fmt.at(e.end, zone)}",
+                    finishAt = e.start, helped = false, customTitle = tr("🎉 ${e.name} dimulai", "🎉 ${e.name} started"),
+                    note = tr("Waktu −${e.timePct}% & biaya −${e.costPct}% (${e.scopeLabel}) sampai ${Fmt.at(e.end, zone)}", "Time −${e.timePct}% & cost −${e.costPct}% (${e.scopeLabel}) until ${Fmt.at(e.end, zone)}"),
                 )
             }
             val soon = e.end - id.clashtimer.core.DAY
             if (soon > now && soon > e.start) {
                 fresh += Upgrade(
                     id = "event|${e.id}|end", tag = "", kind = Kind.REMINDER, name = e.name, targetLevel = 0,
-                    finishAt = soon, helped = false, customTitle = "⏳ ${e.name} berakhir besok",
-                    note = "Berakhir ${Fmt.at(e.end, zone)} — mulai upgrade panjang sebelum event selesai",
+                    finishAt = soon, helped = false, customTitle = tr("⏳ ${e.name} berakhir besok", "⏳ ${e.name} ends tomorrow"),
+                    note = tr("Berakhir ${Fmt.at(e.end, zone)} — mulai upgrade panjang sebelum event selesai", "Ends ${Fmt.at(e.end, zone)} — start long upgrades before the event ends"),
                 )
             }
         }
@@ -410,8 +410,8 @@ object Repo {
         if (gpEnd > 0 && gpSoon > now) {
             fresh += Upgrade(
                 id = "goldpass|$gpEnd", tag = "", kind = Kind.REMINDER, name = "Gold Pass", targetLevel = 0,
-                finishAt = gpSoon, helped = false, customTitle = "🎫 Gold Pass berakhir besok",
-                note = "Musim berakhir ${Fmt.at(gpEnd, zone)}. Setelah itu cek lagi Builder/Research Boost tiap desa (ikon opsi).",
+                finishAt = gpSoon, helped = false, customTitle = tr("🎫 Gold Pass berakhir besok", "🎫 Gold Pass ends tomorrow"),
+                note = tr("Musim berakhir ${Fmt.at(gpEnd, zone)}. Setelah itu cek lagi Builder/Research Boost tiap desa (ikon opsi).", "Season ends ${Fmt.at(gpEnd, zone)}. After that, check each village's Builder/Research Boost again (options icon)."),
             )
         }
         Store.mergeProjections(ctx, "", fresh, emptySet())
@@ -439,8 +439,8 @@ object Repo {
         if (api.at <= v.exportAt) return emptyList()
         val fin = finishes(ctx, tag)
         val out = ArrayList<String>()
-        if (api.th > v.th) out += "Town Hall TH${api.th} di game (aplikasi TH${v.th})"
-        if (api.bh > v.bh && v.bh > 0) out += "Builder Hall BH${api.bh} di game (aplikasi BH${v.bh})"
+        if (api.th > v.th) out += tr("Town Hall TH${api.th} di game (aplikasi TH${v.th})", "Town Hall TH${api.th} in game (app TH${v.th})")
+        if (api.bh > v.bh && v.bh > 0) out += tr("Builder Hall BH${api.bh} di game (aplikasi BH${v.bh})", "Builder Hall BH${api.bh} in game (app BH${v.bh})")
         val heroCats = setOf(id.clashtimer.core.Cat.HERO, id.clashtimer.core.Cat.BB_HERO)
         for ((name, lvl) in api.heroes) {
             // Hero yang belum ada di data game aplikasi tidak bisa dibandingkan
@@ -448,7 +448,7 @@ object Repo {
             val inst = v.insts.firstOrNull { it.item.name == name && it.item.cat in heroCats }
             val done = inst != null && inst.upgrading && (fin[inst.uid] ?: Long.MAX_VALUE) <= api.at
             val projected = (inst?.level ?: 0) + if (done) 1 else 0
-            if (lvl > projected) out += "$name Lv$lvl di game (aplikasi Lv$projected)"
+            if (lvl > projected) out += tr("$name Lv$lvl di game (aplikasi Lv$projected)", "$name Lv$lvl in game (app Lv$projected)")
         }
         return out
     }

@@ -1,9 +1,5 @@
-# Gudang Home, data riset & unit baru
-- Lama & biaya riset troop, spell, siege, hero dan pet kini benar (sebelumnya bergeser satu level), jadi perkiraan selesai Home lebih cepat.
-- Kapasitas gudang Home (Gold, Elixir, Dark Elixir) ikut dihitung: upgrade yang tidak muat ditunda dan storage-nya dinaikkan dulu.
-- Riset troop, spell & siege yang terbuka dari Barracks, Spell Factory, Workshop atau Builder Barracks langsung masuk rencana.
-- Builder ke-6: Star Laboratory dimulai tepat waktu supaya riset troop fokus tidak tertahan.
-- Jam selesai di Rencana kini memperhitungkan Builder's Apprentice & Lab Assistant.
-- Hammer Jam: tanggal berakhir diperbaiki menjadi 16 Nov.
-- Builder Bite tidak menambah kecepatan selama Builder Potion aktif, sama seperti di game.
-- Data game diperbarui (31 Okt 2026); nama modul Crafting Station mengikuti nama di game.
+# Dashboard, gudang Home & English
+- Pindah akun selalu membuka Dashboard.
+- Halaman Tukang Home kini menampilkan kapasitas gudang (Gold, Elixir, Dark Elixir), seperti di Builder Base.
+- Bahasa English kini juga mencakup bantuan (?), event, potion & item, update aplikasi, Ore, riwayat & statistik akun, pesan API, dan notifikasi pengingat.
+- Rencana: menjelang Hammer Jam atau event lain berakhir, upgrade terpanjang bisa didahulukan di slot terakhir (dipakai bila hasilnya lebih cepat).

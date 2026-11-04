@@ -51,7 +51,7 @@ object CocApi {
                 val reason = runCatching { Json.parse(text).obj()?.get("reason").str() }.getOrDefault("")
                 throw ApiError(code, explain(code, reason))
             }
-            return Json.parse(text).obj() ?: throw ApiError(code, "Jawaban API tidak bisa dibaca")
+            return Json.parse(text).obj() ?: throw ApiError(code, tr("Jawaban API tidak bisa dibaca", "Could not read the API response"))
         } finally {
             conn.disconnect()
         }
@@ -59,12 +59,12 @@ object CocApi {
 
     private fun explain(code: Int, reason: String): String = when {
         code == 403 && reason.contains("invalidIp", true) ->
-            "Akses ditolak: key tidak dibuat untuk IP $PROXY_IP. Buat key baru dengan IP itu."
-        code == 403 -> "Akses ditolak (403): token salah, kedaluwarsa, atau IP key bukan $PROXY_IP."
-        code == 404 -> "Tidak ditemukan (404): periksa tag desa."
-        code == 429 -> "Terlalu banyak permintaan (429). Coba lagi beberapa menit lagi."
-        code == 503 -> "Server Clash of Clans sedang maintenance (503)."
-        else -> "Gagal ($code${if (reason.isNotBlank()) " $reason" else ""})."
+            tr("Akses ditolak: key tidak dibuat untuk IP $PROXY_IP. Buat key baru dengan IP itu.", "Access denied: the key was not created for IP $PROXY_IP. Create a new key with that IP.")
+        code == 403 -> tr("Akses ditolak (403): token salah, kedaluwarsa, atau IP key bukan $PROXY_IP.", "Access denied (403): wrong or expired token, or the key IP is not $PROXY_IP.")
+        code == 404 -> tr("Tidak ditemukan (404): periksa tag desa.", "Not found (404): check the village tag.")
+        code == 429 -> tr("Terlalu banyak permintaan (429). Coba lagi beberapa menit lagi.", "Too many requests (429). Try again in a few minutes.")
+        code == 503 -> tr("Server Clash of Clans sedang maintenance (503).", "Clash of Clans servers are under maintenance (503).")
+        else -> tr("Gagal", "Failed") + " ($code${if (reason.isNotBlank()) " $reason" else ""})."
     }
 
     private val timeFmt = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss.SSSX")
@@ -93,7 +93,7 @@ object ApiSync {
         if (Store.apiKey(act).isBlank()) return
         syncAsync(act) { msg ->
             act.dataChanged()
-            android.widget.Toast.makeText(act, "🔑 API diperbarui · $msg", android.widget.Toast.LENGTH_LONG).show()
+            android.widget.Toast.makeText(act, tr("🔑 API diperbarui · $msg", "🔑 API updated · $msg"), android.widget.Toast.LENGTH_LONG).show()
         }
     }
 
@@ -138,7 +138,7 @@ object ApiSync {
         val ach = p["achievements"].arr().orEmpty().mapNotNull { it.obj() }
         if (ach.isNotEmpty()) {
             st.put("achStars", "${ach.sumOf { it["stars"].int() }}/${ach.size * 3}")
-            st.put("achDone", "${ach.count { it["stars"].int() >= 3 }}/${ach.size} selesai")
+            st.put("achDone", "${ach.count { it["stars"].int() >= 3 }}/${ach.size} " + tr("selesai", "done"))
             val next = ach.filter { it["stars"].int() < 3 && it["target"].long() > 0 && it["value"].long() < it["target"].long() }
                 .sortedByDescending { it["value"].long().toDouble() / it["target"].long() }.take(3)
             st.put("achNext", JSONArray().apply {
@@ -219,7 +219,7 @@ object ApiSync {
     /** Ambil semua data (thread latar). Kembalian: pesan status untuk ditampilkan. */
     fun sync(ctx: Context): String {
         val key = Store.apiKey(ctx).trim()
-        if (key.isBlank()) return "Belum ada API key"
+        if (key.isBlank()) return tr("Belum ada API key", "No API key yet")
         val now = System.currentTimeMillis()
         val zone = ZoneId.systemDefault()
         val notes = ArrayList<String>()
@@ -231,7 +231,7 @@ object ApiSync {
                 val end = CocApi.time(gp["endTime"].str())
                 if (end > 0) {
                     Store.setGoldPassEnd(ctx, end)
-                    notes += "Gold Pass s/d ${Fmt.dateShort(end, zone)}"
+                    notes += tr("Gold Pass s/d ${Fmt.dateShort(end, zone)}", "Gold Pass until ${Fmt.dateShort(end, zone)}")
                 }
             }
             var ok = 0
@@ -321,9 +321,9 @@ object ApiSync {
                 runCatching { Attacks.plan(ctx, key, acc.tag, clanTag, cwlWars, cwlActive) }
                 // Upgrade yang menurut API sudah selesai (book, gem, potion) langsung ditandai selesai.
                 val early = runCatching { Repo.applyApiProgress(ctx, acc.tag) }.getOrDefault(emptyList())
-                if (early.isNotEmpty()) notes += "${Store.villageName(ctx, acc.tag)}: ${early.joinToString(", ")} sudah selesai"
+                if (early.isNotEmpty()) notes += "${Store.villageName(ctx, acc.tag)}: ${early.joinToString(", ")} " + tr("sudah selesai", "already done")
             }
-            val msg = "OK · $ok desa" + if (notes.isNotEmpty()) " · " + notes.joinToString(" · ") else ""
+            val msg = tr("OK · $ok desa", "OK · $ok villages") + if (notes.isNotEmpty()) " · " + notes.joinToString(" · ") else ""
             Store.setApiResult(ctx, msg, now)
             Repo.rebuildGlobalReminders(ctx)
             return msg
@@ -331,7 +331,7 @@ object ApiSync {
             Store.setApiResult(ctx, e.message ?: "Gagal", now)
             return e.message ?: "Gagal"
         } catch (e: java.io.IOException) {
-            val msg = "Tidak bisa terhubung ke proxy (${e.javaClass.simpleName}). Periksa internet."
+            val msg = tr("Tidak bisa terhubung ke proxy (${e.javaClass.simpleName}). Periksa internet.", "Could not connect to the proxy (${e.javaClass.simpleName}). Check your internet.")
             Store.setApiResult(ctx, msg, now)
             return msg
         }

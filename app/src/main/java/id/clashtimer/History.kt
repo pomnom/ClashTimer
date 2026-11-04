@@ -194,31 +194,31 @@ object History {
         val tag = b.tag
         val from = since(act, tag)
         val log = log(act, tag)
-        box.addView(Ui.sectionRow(act, "📈 Riwayat", if (from > 0) "sejak ${Fmt.dateShort(from, zone)}" else null))
+        box.addView(Ui.sectionRow(act, tr("📈 Riwayat", "📈 History"), if (from > 0) tr("sejak ${Fmt.dateShort(from, zone)}", "since ${Fmt.dateShort(from, zone)}") else null))
         val (card, col) = Ui.card(act)
         val dm = DateTimeFormatter.ofPattern("d/M", Fmt.locale)
 
         val pct = pctWeeks(snaps(act, tag), bb, zone)
-        col.addView(Ui.text(act, "% menuju max per minggu", Ui.TITLE_S))
+        col.addView(Ui.text(act, tr("% menuju max per minggu", "% toward max per week"), Ui.TITLE_S))
         col.addView(ChartView(act, pct.map { it.second }, pct.map { dm.format(it.first) }, line = true) { Ui.pct(it) },
             LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(act, 130)))
 
         val lane = if (bb) Lane.BB_BUILDER else Lane.BUILDER
         val workers = if (bb) (if (b.ps.bbBuilders > 0) b.ps.bbBuilders else b.village.bbBuildersAuto) else b.village.homeBuilders
         val idle = idleWeeks(log, lane, workers, from, now, zone)
-        col.addView(Ui.text(act, "Jam ${if (bb) "builder BB" else "builder"} menganggur per minggu", Ui.TITLE_S).apply {
+        col.addView(Ui.text(act, tr("Jam ${if (bb) "builder BB" else "builder"} menganggur per minggu", "Idle ${if (bb) "BB builder" else "builder"} hours per week"), Ui.TITLE_S).apply {
             setPadding(0, Ui.dp(act, 12), 0, 0)
         })
-        col.addView(ChartView(act, idle.map { it.second }, idle.map { dm.format(it.first) }) { String.format(java.util.Locale.ROOT, "%.0fj", it) },
+        col.addView(ChartView(act, idle.map { it.second }, idle.map { dm.format(it.first) }) { String.format(java.util.Locale.ROOT, tr("%.0fj", "%.0fh"), it) },
             LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(act, 130)))
 
         val months = doneMonths(log, from, now, zone)
         val mf = DateTimeFormatter.ofPattern("MMM", Fmt.locale)
-        col.addView(Ui.text(act, "Upgrade selesai per bulan (semua pekerja)", Ui.TITLE_S).apply { setPadding(0, Ui.dp(act, 12), 0, 0) })
+        col.addView(Ui.text(act, tr("Upgrade selesai per bulan (semua pekerja)", "Upgrades finished per month (all workers)"), Ui.TITLE_S).apply { setPadding(0, Ui.dp(act, 12), 0, 0) })
         col.addView(ChartView(act, months.map { it.second?.toDouble() }, months.map { mf.format(it.first) }) { it.toInt().toString() },
             LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(act, 130)))
-        col.addView(Ui.muted(act, "Dikumpulkan dari setiap import (dan tanda Sudah dimulai). Upgrade yang mulai & selesai di antara " +
-            "dua import tidak terlihat, jadi jam menganggur adalah perkiraan atas.").apply { setPadding(0, Ui.dp(act, 6), 0, 0) })
+        col.addView(Ui.muted(act, tr("Dikumpulkan dari setiap import (dan tanda Sudah dimulai). Upgrade yang mulai & selesai di antara ", "Collected from every import (and Started marks). Upgrades that start & finish between ") +
+            tr("dua import tidak terlihat, jadi jam menganggur adalah perkiraan atas.", "two imports are not visible, so idle hours are an upper estimate.")).apply { setPadding(0, Ui.dp(act, 6), 0, 0) })
         box.addView(card)
 
         stats(act, box, tag, zone)
@@ -227,7 +227,7 @@ object History {
     /** Statistik akun & clan dari API resmi (sinkron terakhir). */
     private fun stats(act: MainActivity, box: LinearLayout, tag: String, zone: ZoneId) {
         val s = Store.apiStats(act, tag) ?: return
-        box.addView(Ui.sectionRow(act, "👤 Statistik akun", "API · ${Fmt.at(s.optLong("at"), zone)}"))
+        box.addView(Ui.sectionRow(act, tr("👤 Statistik akun", "👤 Account stats"), "API · ${Fmt.at(s.optLong("at"), zone)}"))
         val (card, col) = Ui.card(act)
         fun row(label: String, value: String?) {
             if (value.isNullOrBlank() || value == "0" || value == "null") return
@@ -237,16 +237,16 @@ object History {
             col.addView(r)
         }
         fun n(k: String) = s.optLong(k, 0).takeIf { it > 0 }?.let { String.format(Fmt.locale, "%,d", it) }
-        row("Level pengalaman", n("exp"))
-        row("Trophy (terbaik)", n("trophies")?.let { t -> t + (n("bestTrophies")?.let { " ($it)" } ?: "") })
-        row("Liga", s.optString("league"))
-        row("Trophy Builder Base", n("bbTrophies")?.let { t -> t + (n("bbBest")?.let { " ($it)" } ?: "") })
-        row("Liga Builder Base", s.optString("bbLeague"))
+        row(tr("Level pengalaman", "Experience level"), n("exp"))
+        row(tr("Trophy (terbaik)", "Trophies (best)"), n("trophies")?.let { t -> t + (n("bestTrophies")?.let { " ($it)" } ?: "") })
+        row(tr("Liga", "League"), s.optString("league"))
+        row(tr("Trophy Builder Base", "Builder Base trophies"), n("bbTrophies")?.let { t -> t + (n("bbBest")?.let { " ($it)" } ?: "") })
+        row(tr("Liga Builder Base", "Builder Base league"), s.optString("bbLeague"))
         row("War stars", n("warStars"))
-        row("Menang serang / bertahan", listOfNotNull(n("attackWins"), n("defenseWins")).joinToString(" / "))
-        row("Donasi diberi / diterima", listOfNotNull(n("donations") ?: "0", n("donationsReceived") ?: "0").joinToString(" / "))
-        row("Kontribusi Clan Capital", n("capital"))
-        row("Peran di clan", s.optString("role"))
+        row(tr("Menang serang / bertahan", "Attack / defense wins"), listOfNotNull(n("attackWins"), n("defenseWins")).joinToString(" / "))
+        row(tr("Donasi diberi / diterima", "Donations given / received"), listOfNotNull(n("donations") ?: "0", n("donationsReceived") ?: "0").joinToString(" / "))
+        row(tr("Kontribusi Clan Capital", "Clan Capital contributions"), n("capital"))
+        row(tr("Peran di clan", "Clan role"), s.optString("role"))
         row("Achievements", s.optString("achStars").takeIf { it.isNotBlank() }?.let { "$it ⭐ · ${s.optString("achDone")}" })
         s.optJSONArray("achNext")?.let { a ->
             for (i in 0 until a.length()) {
@@ -256,12 +256,12 @@ object History {
         }
         s.optJSONObject("clan")?.let { c ->
             col.addView(Ui.text(act, "🛡️ ${c.optString("name")}", Ui.TITLE_S).apply { setPadding(0, Ui.dp(act, 10), 0, Ui.dp(act, 2)) })
-            row("Level clan · anggota", "${c.optInt("level")} · ${c.optInt("members")}/50")
-            row("Liga CWL", c.optString("warLeague"))
-            row("Capital Hall · liga Capital", listOf(c.optInt("capitalHall").takeIf { it > 0 }?.toString(), c.optString("capitalLeague"))
+            row(tr("Level clan · anggota", "Clan level · members"), "${c.optInt("level")} · ${c.optInt("members")}/50")
+            row(tr("Liga CWL", "CWL league"), c.optString("warLeague"))
+            row(tr("Capital Hall · liga Capital", "Capital Hall · Capital league"), listOf(c.optInt("capitalHall").takeIf { it > 0 }?.toString(), c.optString("capitalLeague"))
                 .filter { !it.isNullOrBlank() }.joinToString(" · "))
-            row("Rentetan menang war", c.optInt("winStreak").takeIf { it > 0 }?.toString())
-            row("War log", if (c.optBoolean("warLogPublic")) "publik" else "privat (pengingat war biasa tidak bisa)")
+            row(tr("Rentetan menang war", "War win streak"), c.optInt("winStreak").takeIf { it > 0 }?.toString())
+            row("War log", if (c.optBoolean("warLogPublic")) tr("publik", "public") else tr("privat (pengingat war biasa tidak bisa)", "private (regular war reminders not possible)"))
         }
         box.addView(card)
     }
@@ -309,7 +309,7 @@ class ChartView(
             if (!line || i == n - 1 || values.getOrNull(i + 1) == null) canvas.drawText(fmt(v), cx, y - Ui.dp(context, 4), text)
         }
         if (values.all { it == null }) {
-            canvas.drawText("Belum ada data — terisi setelah beberapa kali import", width / 2f, (top + bottom) / 2, label)
+            canvas.drawText(tr("Belum ada data — terisi setelah beberapa kali import", "No data yet — fills in after a few imports"), width / 2f, (top + bottom) / 2, label)
         }
     }
 }

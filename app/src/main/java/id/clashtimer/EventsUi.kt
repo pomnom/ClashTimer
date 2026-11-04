@@ -29,8 +29,8 @@ import java.time.ZonedDateTime
 object EventsUi {
 
     fun summary(e: GameEvent, zone: ZoneId): String =
-        "${Fmt.at(e.start, zone)} – ${Fmt.at(e.end, zone)}\n−${e.timePct}% waktu · −${e.costPct}% biaya · ${e.scopeLabel}" +
-            if (e.cutRunning) " · upgrade berjalan ikut dipotong" else ""
+        tr("${Fmt.at(e.start, zone)} – ${Fmt.at(e.end, zone)}\n−${e.timePct}% waktu · −${e.costPct}% biaya · ${e.scopeLabel}", "${Fmt.at(e.start, zone)} – ${Fmt.at(e.end, zone)}\n−${e.timePct}% time · −${e.costPct}% cost · ${e.scopeLabel}") +
+            if (e.cutRunning) tr(" · upgrade berjalan ikut dipotong", " · running upgrades are cut too") else ""
 
     /** Simpan (ganti bila id sama) lalu hitung ulang timer semua desa. */
     fun save(ctx: Context, e: GameEvent) {
@@ -111,19 +111,19 @@ object EventsUi {
         val now = System.currentTimeMillis()
         val presets = listOf(GameEvent.hammerJam(now).copy(enabled = true), GameEvent.bonanza(now), GameEvent.custom(now))
         val labels = arrayOf<CharSequence>(
-            "🔨 Hammer Jam\n−50% waktu & biaya · Builder, Lab & Pet",
-            "🛠️ Builder Base Bonanza\n−50% waktu & biaya · Builder Base",
-            "🎉 Event lain\natur sendiri",
+            tr("🔨 Hammer Jam\n−50% waktu & biaya · Builder, Lab & Pet", "🔨 Hammer Jam\n−50% time & cost · Builder, Lab & Pet"),
+            tr("🛠️ Builder Base Bonanza\n−50% waktu & biaya · Builder Base", "🛠️ Builder Base Bonanza\n−50% time & cost · Builder Base"),
+            tr("🎉 Event lain\natur sendiri", "🎉 Other event\nset it yourself"),
         )
         MaterialAlertDialogBuilder(act)
-            .setTitle("Tambah event")
+            .setTitle(tr("Tambah event", "Add event"))
             .setItems(labels) { _, w ->
                 val e = presets[w]
                 // Hammer Jam yang sama sudah ada → buka yang lama
                 val existing = Store.events(act).firstOrNull { it.id == e.id }
                 edit(act, existing?.copy(enabled = true) ?: e, existing == null, onChanged)
             }
-            .setNegativeButton("Batal", null)
+            .setNegativeButton(tr("Batal", "Cancel"), null)
             .show()
     }
 
@@ -157,16 +157,16 @@ object EventsUi {
 
         fill = {
             col.removeAllViews()
-            col.addView(row("Nama", e.name) {
-                askText(act, "Nama event", e.name) { e = e.copy(name = it.ifBlank { e.name }); fill() }
+            col.addView(row(tr("Nama", "Name"), e.name) {
+                askText(act, tr("Nama event", "Event name"), e.name) { e = e.copy(name = it.ifBlank { e.name }); fill() }
             })
-            col.addView(row("Mulai", Fmt.at(e.start, zone)) {
+            col.addView(row(tr("Mulai", "Start"), Fmt.at(e.start, zone)) {
                 pickDateTime(act, e.start) { t -> e = e.copy(start = t, end = maxOf(e.end, t + HOUR)); fill() }
             })
-            col.addView(row("Selesai", Fmt.at(e.end, zone)) {
+            col.addView(row(tr("Selesai", "End"), Fmt.at(e.end, zone)) {
                 pickDateTime(act, e.end) { t -> e = e.copy(end = maxOf(t, e.start + HOUR)); fill() }
             })
-            col.addView(Ui.flat(act, "⏱️ Sudah berjalan? Isi dari sisa waktu di game") {
+            col.addView(Ui.flat(act, tr("⏱️ Sudah berjalan? Isi dari sisa waktu di game", "⏱️ Already running? Fill in from the time left in the game")) {
                 askRemaining(act) { ms ->
                     val now = System.currentTimeMillis()
                     val end = (now + ms) / MIN * MIN
@@ -174,39 +174,39 @@ object EventsUi {
                     fill()
                 }
             }.apply { isAllCaps = false })
-            col.addView(row("Potongan waktu", "${e.timePct}%") { pickPct(act, "Potongan waktu", e.timePct) { e = e.copy(timePct = it); fill() } })
-            col.addView(row("Potongan biaya", "${e.costPct}%") { pickPct(act, "Potongan biaya", e.costPct) { e = e.copy(costPct = it); fill() } })
-            col.addView(row("Berlaku untuk", e.scopeLabel) {
+            col.addView(row(tr("Potongan waktu", "Time discount"), "${e.timePct}%") { pickPct(act, tr("Potongan waktu", "Time discount"), e.timePct) { e = e.copy(timePct = it); fill() } })
+            col.addView(row(tr("Potongan biaya", "Cost discount"), "${e.costPct}%") { pickPct(act, tr("Potongan biaya", "Cost discount"), e.costPct) { e = e.copy(costPct = it); fill() } })
+            col.addView(row(tr("Berlaku untuk", "Applies to"), e.scopeLabel) {
                 val checked = booleanArrayOf(e.builder, e.lab, e.bb)
                 MaterialAlertDialogBuilder(act)
-                    .setTitle("Berlaku untuk")
+                    .setTitle(tr("Berlaku untuk", "Applies to"))
                     .setMultiChoiceItems(
-                        arrayOf<CharSequence>("Builder (bangunan, jebakan, hero)", "Laboratory & Pet House", "Builder Base"), checked,
+                        arrayOf<CharSequence>(tr("Builder (bangunan, jebakan, hero)", "Builder (buildings, traps, heroes)"), tr("Laboratory & Pet House", "Laboratory & Pet House"), tr("Builder Base", "Builder Base")), checked,
                     ) { _, w, c -> checked[w] = c }
-                    .setPositiveButton("OK") { _, _ -> e = e.copy(builder = checked[0], lab = checked[1], bb = checked[2]); fill() }
-                    .setNegativeButton("Batal", null)
+                    .setPositiveButton(tr("OK", "OK")) { _, _ -> e = e.copy(builder = checked[0], lab = checked[1], bb = checked[2]); fill() }
+                    .setNegativeButton(tr("Batal", "Cancel"), null)
                     .show()
             })
-            col.addView(switchRow("Upgrade yang sudah berjalan ikut dipotong", e.cutRunning) { e = e.copy(cutRunning = it) })
-            col.addView(switchRow("Aktif", e.enabled) { e = e.copy(enabled = it) })
+            col.addView(switchRow(tr("Upgrade yang sudah berjalan ikut dipotong", "Running upgrades are cut too"), e.cutRunning) { e = e.copy(cutRunning = it) })
+            col.addView(switchRow(tr("Aktif", "Active"), e.enabled) { e = e.copy(enabled = it) })
             col.addView(Ui.muted(act,
-                "Potongan dipakai untuk upgrade yang DIMULAI selama event, dikalikan dengan Gold Pass (mis. 50% & 20% → 40% dari waktu asli). " +
-                    "Supercell tidak menyebut upgrade yang sudah berjalan ikut dipotong; nyalakan opsi itu hanya bila Anda melihatnya di game. " +
-                    "Supercharge & Crafted Defense tidak ikut (tidak dihitung aplikasi ini).").apply {
+                tr("Potongan dipakai untuk upgrade yang DIMULAI selama event, dikalikan dengan Gold Pass (mis. 50% & 20% → 40% dari waktu asli). ", "The discount applies to upgrades STARTED during the event, multiplied with Gold Pass (e.g. 50% & 20% → 40% of the original time). ") +
+                    tr("Supercell tidak menyebut upgrade yang sudah berjalan ikut dipotong; nyalakan opsi itu hanya bila Anda melihatnya di game. ", "Supercell does not say running upgrades are cut too; only turn that option on if you see it in the game. ") +
+                    tr("Supercharge & Crafted Defense tidak ikut (tidak dihitung aplikasi ini).", "Supercharges & Crafted Defenses are not included (this app does not count them).")).apply {
                 setPadding(0, Ui.dp(act, 6), 0, Ui.dp(act, 4))
             })
         }
         fill()
 
         val dlg = MaterialAlertDialogBuilder(act)
-            .setTitle(if (isNew) "Event baru" else e.name)
+            .setTitle(if (isNew) tr("Event baru", "New event") else e.name)
             .setView(ScrollView(act).apply { addView(col) })
-            .setPositiveButton("Simpan") { _, _ ->
+            .setPositiveButton(tr("Simpan", "Save")) { _, _ ->
                 save(act, e)
                 onChanged()
             }
-            .setNegativeButton("Batal", null)
-        if (!isNew) dlg.setNeutralButton("Hapus") { _, _ ->
+            .setNegativeButton(tr("Batal", "Cancel"), null)
+        if (!isNew) dlg.setNeutralButton(tr("Hapus", "Delete")) { _, _ ->
             remove(act, e)
             onChanged()
         }
@@ -247,8 +247,8 @@ object EventsUi {
                 setPadding(Ui.dp(act, 20), Ui.dp(act, 8), Ui.dp(act, 20), 0)
                 addView(input, Ui.matchWrap())
             })
-            .setPositiveButton("OK") { _, _ -> onDone(input.text.toString().trim().take(40)) }
-            .setNegativeButton("Batal", null)
+            .setPositiveButton(tr("OK", "OK")) { _, _ -> onDone(input.text.toString().trim().take(40)) }
+            .setNegativeButton(tr("Batal", "Cancel"), null)
             .show()
     }
 
@@ -268,15 +268,15 @@ object EventsUi {
         row.addView(mins, Ui.weight1().apply { marginStart = Ui.dp(act, 8) })
         val col = Ui.vbox(act)
         col.addView(TextView(act).apply {
-            text = "Lihat sisa waktu event di game (mis. \"Berakhir dalam 16h 3j\")."
+            text = tr("Lihat sisa waktu event di game (mis. \"Berakhir dalam 16h 3j\").", "Check the event time left in the game (e.g. \"Ends in 16h 3m\").")
             setPadding(Ui.dp(act, 20), Ui.dp(act, 4), Ui.dp(act, 20), 0)
         })
         col.addView(row)
         var dialog: AlertDialog? = null
         dialog = MaterialAlertDialogBuilder(act)
-            .setTitle("Sisa waktu event")
+            .setTitle(tr("Sisa waktu event", "Event time left"))
             .setView(col)
-            .setPositiveButton("OK") { _, _ ->
+            .setPositiveButton(tr("OK", "OK")) { _, _ ->
                 val d = days.text.toString().toLongOrNull() ?: 0
                 val h = hours.text.toString().toLongOrNull() ?: 0
                 val m = mins.text.toString().toLongOrNull() ?: 0
@@ -284,7 +284,7 @@ object EventsUi {
                 if (ms > 0) onDone(ms)
                 dialog?.dismiss()
             }
-            .setNegativeButton("Batal", null)
+            .setNegativeButton(tr("Batal", "Cancel"), null)
             .show()
     }
 }

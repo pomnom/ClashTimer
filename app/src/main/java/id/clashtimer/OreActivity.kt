@@ -106,8 +106,10 @@ class OreActivity : AppCompatActivity() {
 
     private fun render() {
         box.removeAllViews()
-        box.addView(Ui.muted(this, "Level equipment dari export${if (Store.apiStats(this, tag) != null) " & API" else ""} · Blacksmith Lv$blacksmith · TH$th. " +
-            "Centang equipment yang ingin dinaikkan, ketuk barisnya untuk memilih level target.").apply {
+        box.addView(Ui.muted(this, tr("Level equipment dari export", "Equipment levels from the export") +
+            (if (Store.apiStats(this, tag) != null) " & API" else "") + " · Blacksmith Lv$blacksmith · TH$th. " +
+            tr("Centang equipment yang ingin dinaikkan, ketuk barisnya untuk memilih level target.",
+                "Tick the equipment you want to upgrade, tap its row to pick the target level.")).apply {
             setPadding(Ui.dp(this@OreActivity, 4), Ui.dp(this@OreActivity, 12), Ui.dp(this@OreActivity, 4), Ui.dp(this@OreActivity, 4))
         })
         summary = Ui.vbox(this)
@@ -115,7 +117,7 @@ class OreActivity : AppCompatActivity() {
         inputs()
         val owned = equips.filter { (current[it.id] ?: 0) > 0 }
         if (owned.isEmpty()) {
-            box.addView(Ui.muted(this, "Belum ada data equipment. Import ulang export desa (atau isi API key) lalu buka lagi.", Ui.BODY_M))
+            box.addView(Ui.muted(this, tr("Belum ada data equipment. Import ulang export desa (atau isi API key) lalu buka lagi.", "No equipment data yet. Re-import the village export (or set an API key) and open this again."), Ui.BODY_M))
             return
         }
         for ((hero, list) in owned.groupBy { it.hero }) {
@@ -150,21 +152,21 @@ class OreActivity : AppCompatActivity() {
         col.addView(Ui.text(this, "${e.name}${if (e.rarity == "Epic") " ✦" else ""}", Ui.TITLE_S))
         val target = targetOf(e)
         val n = need(e, cur, target)
-        col.addView(Ui.muted(this, if (cur >= max) "Lv $cur · max untuk Blacksmith/TH sekarang"
+        col.addView(Ui.muted(this, if (cur >= max) tr("Lv $cur · max untuk Blacksmith/TH sekarang", "Lv $cur · max for the current Blacksmith/TH")
         else "Lv $cur → $target (max $max) · ${ore(n)}"))
         r.addView(col, Ui.weight1())
         r.isClickable = cur < max
         r.setOnClickListener {
             val opts = ((cur + 1)..max).toList()
             MaterialAlertDialogBuilder(this)
-                .setTitle("${e.name}: level target")
+                .setTitle(tr("${e.name}: level target", "${e.name}: target level"))
                 .setItems(opts.map { "Lv $it · ${ore(need(e, cur, it))}" as CharSequence }.toTypedArray()) { _, w ->
                     val s = state.optJSONObject("sel") ?: JSONObject().also { state.put("sel", it) }
                     s.put(e.id.toString(), opts[w])
                     save()
                     render()
                 }
-                .setNegativeButton("Batal", null)
+                .setNegativeButton(tr("Batal", "Cancel"), null)
                 .show()
         }
         return r
@@ -183,16 +185,16 @@ class OreActivity : AppCompatActivity() {
     private val labels = listOf("Shiny", "Glowy", "Starry")
 
     private fun inputs() {
-        box.addView(Ui.sectionRow(this, "Ore Anda", "dimiliki · per minggu"))
+        box.addView(Ui.sectionRow(this, tr("Ore Anda", "Your ore"), tr("dimiliki · per minggu", "owned · per week")))
         val (card, col) = Ui.card(this)
         for (k in 0..2) {
             val r = Ui.hbox(this)
             r.addView(Ui.text(this, labels[k], Ui.BODY_M), LinearLayout.LayoutParams(Ui.dp(this, 64), LinearLayout.LayoutParams.WRAP_CONTENT))
             r.addView(field("own_${keys[k]}", "dimiliki"), Ui.weight1())
-            r.addView(field("inc_${keys[k]}", "per minggu"), Ui.weight1().apply { marginStart = Ui.dp(this@OreActivity, 8) })
+            r.addView(field("inc_${keys[k]}", tr("per minggu", "per week")), Ui.weight1().apply { marginStart = Ui.dp(this@OreActivity, 8) })
             col.addView(r)
         }
-        col.addView(Ui.muted(this, "Pemasukan per minggu: perkiraan Anda (Star Bonus, toko Raid, event, Trader)."))
+        col.addView(Ui.muted(this, tr("Pemasukan per minggu: perkiraan Anda (Star Bonus, toko Raid, event, Trader).", "Income per week: your estimate (Star Bonus, Raid shop, events, Trader).")))
         box.addView(card)
     }
 
@@ -226,7 +228,7 @@ class OreActivity : AppCompatActivity() {
             count++
         }
         val (card, col) = Ui.card(this, tinted = true)
-        col.addView(Ui.text(this, if (count == 0) "Belum ada equipment yang dicentang" else "Butuh untuk $count equipment", Ui.TITLE_S))
+        col.addView(Ui.text(this, if (count == 0) tr("Belum ada equipment yang dicentang", "No equipment ticked yet") else tr("Butuh untuk $count equipment", "Needed for $count equipment"), Ui.TITLE_S))
         if (count > 0) {
             col.addView(Ui.text(this, ore(total), Ui.BODY_M))
             var weeks = 0.0
@@ -240,10 +242,10 @@ class OreActivity : AppCompatActivity() {
                     if (inc <= 0) unknown = true else weeks = maxOf(weeks, lack[k].toDouble() / inc)
                 }
             }
-            col.addView(Ui.muted(this, if (lack.all { it == 0 }) "✓ Ore yang dimiliki sudah cukup" else "Kurang: ${ore(lack)}"))
+            col.addView(Ui.muted(this, if (lack.all { it == 0 }) tr("✓ Ore yang dimiliki sudah cukup", "✓ The ore you own is enough") else tr("Kurang: ${ore(lack)}", "Missing: ${ore(lack)}")))
             if (lack.any { it > 0 }) {
-                col.addView(Ui.text(this, if (unknown) "Isi pemasukan per minggu untuk perkiraan waktu"
-                else "Perkiraan: ±${Math.ceil(weeks).toInt()} minggu lagi", Ui.BODY_M).apply { setTextColor(Ui.primary(this@OreActivity)) })
+                col.addView(Ui.text(this, if (unknown) tr("Isi pemasukan per minggu untuk perkiraan waktu", "Fill in income per week for a time estimate")
+                else tr("Perkiraan: ±${Math.ceil(weeks).toInt()} minggu lagi", "Estimate: ±${Math.ceil(weeks).toInt()} more weeks"), Ui.BODY_M).apply { setTextColor(Ui.primary(this@OreActivity)) })
             }
         }
         summary.addView(card, Ui.matchWrap().apply { topMargin = Ui.dp(this@OreActivity, 8) })

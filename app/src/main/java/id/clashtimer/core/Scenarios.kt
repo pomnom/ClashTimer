@@ -40,28 +40,28 @@ object Scenarios {
 
         val rows = ArrayList<Row>()
         val gp = ps.gold.builderPct > 0 || ps.gold.researchPct > 0
-        val gpNote = if (gp) "Gold Pass ${ps.gold.builderPct}/${ps.gold.researchPct}%" else "tanpa Gold Pass"
-        rows += run("Pengaturan sekarang", "${strategyLabel(ps.strategy)} · $gpNote", ps, withBB = true, current = true)
+        val gpNote = if (gp) "Gold Pass ${ps.gold.builderPct}/${ps.gold.researchPct}%" else tr("tanpa Gold Pass", "no Gold Pass")
+        rows += run(tr("Pengaturan sekarang", "Current settings"), "${strategyLabel(ps.strategy)} · $gpNote", ps, withBB = true, current = true)
 
-        rows += if (gp) run("Tanpa Gold Pass", "Builder & Research Boost 0%", ps.with(gold = GoldPass.NONE), withBB = true)
-        else run("Dengan Gold Pass", "Builder & Research Boost 20%", ps.with(gold = GoldPass(20, 20)), withBB = true)
+        rows += if (gp) run(tr("Tanpa Gold Pass", "Without Gold Pass"), "Builder & Research Boost 0%", ps.with(gold = GoldPass.NONE), withBB = true)
+        else run(tr("Dengan Gold Pass", "With Gold Pass"), "Builder & Research Boost 20%", ps.with(gold = GoldPass(20, 20)), withBB = true)
 
         val hj = ps.events.firstOrNull { it.enabled && it.end > now && it.name.contains("Hammer", ignoreCase = true) }
-        rows += if (hj != null) run("Tanpa ${hj.name}", "event dimatikan", ps.with(events = ps.events - hj))
+        rows += if (hj != null) run(tr("Tanpa ${hj.name}", "Without ${hj.name}"), tr("event dimatikan", "event turned off"), ps.with(events = ps.events - hj))
         else {
             val ev = GameEvent.hammerJam(now).copy(enabled = true)
-            run("Dengan Hammer Jam", "−50% waktu & biaya, perkiraan ${Fmt.dateShort(ev.start, ps.schedule.zone)}–${Fmt.dateShort(ev.end, ps.schedule.zone)}",
+            run(tr("Dengan Hammer Jam", "With Hammer Jam"), tr("−50% waktu & biaya, perkiraan ${Fmt.dateShort(ev.start, ps.schedule.zone)}–${Fmt.dateShort(ev.end, ps.schedule.zone)}", "−50% time & cost, estimate ${Fmt.dateShort(ev.start, ps.schedule.zone)}–${Fmt.dateShort(ev.end, ps.schedule.zone)}"),
                 ps.with(events = ps.events + ev))
         }
 
-        for (s in Strategy.entries) if (s != ps.strategy) rows += run("Strategi ${strategyLabel(s)}", "saran memakai strategi ini", ps.with(strategy = s))
+        for (s in Strategy.entries) if (s != ps.strategy) rows += run(tr("Strategi ${strategyLabel(s)}", "Strategy ${strategyLabel(s)}"), tr("saran memakai strategi ini", "suggestions use this strategy"), ps.with(strategy = s))
 
         if (v.homeBuilders < 6) {
             val six = Village(
                 v.tag, v.exportAt, v.insts, v.walls, v.bbWalls, v.helpers, v.timers, v.unknown,
                 v.homeBuilders + 1, v.bbBuildersAuto, v.hasHome, v.hasBB, v.equipment, v.crafted, v.clock, v.potions,
             )
-            rows += run("Dengan builder ke-6", "B.O.B terbuka sekarang (${v.homeBuilders + 1} builder)", ps, six)
+            rows += run(tr("Dengan builder ke-6", "With a 6th builder"), tr("B.O.B terbuka sekarang (${v.homeBuilders + 1} builder)", "B.O.B unlocked now (${v.homeBuilders + 1} builders)"), ps, six)
         }
         return rows
     }

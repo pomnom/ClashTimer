@@ -263,7 +263,7 @@ data class GameEvent(
 
     val scopeLabel: String
         get() = listOfNotNull(if (builder) "Builder" else null, if (lab) "Lab & Pet" else null, if (bb) "Builder Base" else null)
-            .joinToString(", ").ifBlank { "tidak ada" }
+            .joinToString(", ").ifBlank { tr("tidak ada", "none") }
 
     companion object {
         /** Event mulai/berakhir biasanya pukul 08:00 UTC. */

@@ -19,7 +19,7 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
   setelah update (juga di Pengaturan → Update aplikasi)
 
 **🌐 Bahasa** — Bahasa Indonesia (bawaan) atau **English** di Pengaturan → Umum → Bahasa. Halaman utama,
-  rencana, notifikasi & widget sudah diterjemahkan; teks bantuan dan sebagian layar lain masih berbahasa Indonesia.
+  rencana, notifikasi, widget, bantuan (?), event, potion & item, Ore, riwayat dan pesan API sudah diterjemahkan.
 
 **⚙️ Pengaturan** — dirombak per kategori: Umum (bahasa, tema, ikon), Jam istirahat, Notifikasi, Event,
   Data & API, Widget & latar, Tentang & update. Strategi, Gold Pass & CWL tetap per desa (Opsi desa).
@@ -78,7 +78,8 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
 - **Urutan prioritas**: (1) tercepat ke target; bila sama cepat, (2) jeda menganggur terpanjang paling pendek,
   lalu (3) total menganggur paling sedikit — untuk semua builder, lab, pet, Master Builder & Star Lab.
   Menganggur karena semua sudah max atau menunggu syarat tidak dihitung. Ada cara baru **"pas jam tidur"**:
-  memilih upgrade yang selesainya pas saat bangun
+  memilih upgrade yang selesainya pas saat bangun, dan **"akhir event"**: slot terakhir tiap pekerja sebelum Hammer Jam
+  (atau event pemotong waktu lain) berakhir diisi upgrade terpanjang, karena potongannya berlaku untuk seluruh durasi
 - **Lab & Star Lab tidak menunggu builder**: gudang atau upgrade Laboratory/Star Lab yang membuka riset
   berikutnya didahulukan, dan Star Lab mengisi riset lain bila riset fokus belum bisa
 - **Semua hero jalan bersamaan**; saat builder kehabisan pekerjaan tetapi lab/pet masih jalan, strategi
@@ -95,7 +96,7 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
 - **Kapasitas gudang**: upgrade atau riset yang biayanya melebihi gudang ditunda dan storage-nya dinaikkan
   dulu — Home: Town Hall + Gold/Elixir/Dark Elixir Storage; Builder Base: Builder Hall + Gold/Elixir Storage
   (juga untuk troop Star Lab). Upgrade yang tetap tidak muat walau semua storage max di TH itu dikeluarkan dari
-  rencana TH tersebut. Kapasitas BB tampil di Tukang BB
+  rencana TH tersebut. Kapasitas gudang tampil di halaman Tukang (Home & BB)
 - **Builder ke-6 (B.O.B)**: checklist 6 syarat (BH9 + B.O.B Control, 3 gear-up, troop Lv18,
   pertahanan Lv9, BM + BC = 45) dengan perkiraan tanggal tiap syarat dan tanggal B.O.B terbuka. Bangunan
   **dan jebakan** baru (mis. Mine, Mega Mine) dipasang dulu supaya Builder Hall bisa naik ke BH9

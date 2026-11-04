@@ -525,11 +525,15 @@ class MainActivity : AppCompatActivity() {
         scroll2?.scrollTo(0, 0)
     }
 
-    /** Pilih desa aktif; [bb] / [open] (opsional) mengganti sisi dan tab sekaligus. */
+    /**
+     * Pilih desa aktif; [bb] (opsional) mengganti sisi. Pindah ke desa lain selalu membuka Dashboard;
+     * [open] hanya dipakai bila desanya tetap (pintas ke tab pekerja dari lembar Pilih desa).
+     */
     fun selectVillage(tag: String, bb: Boolean? = null, open: Tab? = null) {
+        val changed = tag != currentTag()
         Store.setSelectedTag(this, tag)
         if (bb != null) showBB = bb
-        if (open != null) tab = open
+        if (changed) tab = Tab.HOME else if (open != null) tab = open
         renderAll()
         scroll.scrollTo(0, 0)
         scroll2?.scrollTo(0, 0)

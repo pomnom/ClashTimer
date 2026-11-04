@@ -28,7 +28,11 @@ object Background {
         false
     }
 
-    const val TIP_TITLE = "📱 HyperOS: izinkan berjalan di latar"
-    const val TIP_BODY = "Supaya widget & notifikasi tetap diperbarui walau aplikasi ditutup: buka Info aplikasi → " +
-        "aktifkan Mulai otomatis (Autostart), lalu Penghemat baterai → Tidak ada batasan."
+    val TIP_TITLE: String get() = tr("📱 HyperOS: izinkan berjalan di latar", "📱 HyperOS: allow running in background")
+    val TIP_BODY: String get() = tr(
+        "Supaya widget & notifikasi tetap diperbarui walau aplikasi ditutup: buka Info aplikasi → " +
+            "aktifkan Mulai otomatis (Autostart), lalu Penghemat baterai → Tidak ada batasan.",
+        "To keep widgets & notifications updated while the app is closed: open App info → " +
+            "turn on Autostart, then Battery saver → No restrictions.",
+    )
 }

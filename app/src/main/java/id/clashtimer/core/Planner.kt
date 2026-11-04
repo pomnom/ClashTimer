@@ -40,7 +40,12 @@ enum class Policy(val label: String) {
     /** Rantai terpanjang, tapi pekerja yang akan menganggur saat tidur sangat dihindari (pas jam tidur). */
     FIT("pas jam tidur"),
     /** Builder ke-6: syarat B.O.B yang paling lama sisanya dikerjakan dulu (jalur kritis). Selain itu = rantai. */
-    CRITICAL("jalur kritis");
+    CRITICAL("jalur kritis"),
+    /**
+     * Seperti rantai, tetapi pada kesempatan terakhir sebelum event pemotong waktu (Hammer Jam) berakhir,
+     * pekerja diberi upgrade terpanjang: potongannya berlaku untuk seluruh durasi walau event sudah selesai.
+     */
+    EVENT_END("akhir event: terpanjang dulu");
 }
 
 class PlanSettings(
@@ -360,6 +365,25 @@ object Planner {
         }
         val ev = if (c.gear) null else ps.event(c.lane, start)
         return Scored(c, start, finish, idle, choice, dur, cost, ev, tier)
+    }
+
+    /**
+     * [Policy.EVENT_END] selama event pemotong waktu: upgrade yang dimulai sebelum event berakhir dipotong
+     * seluruh durasinya, jadi slot terakhir tiap pekerja diisi upgrade terpanjang.
+     * - Kesempatan terakhir (sesudah upgrade mana pun Anda baru online lagi setelah event usai): yang terpanjang.
+     * - Pilihan biasa [normal] akan melewati akhir event padahal masih sempat diselingi: isi dulu dengan upgrade
+     *   yang selesai sebelum event habis (supaya yang terpanjang dimulai di kesempatan terakhir).
+     * null = pakai pilihan biasa.
+     */
+    private fun eventEndPick(ok: List<Scored>, normal: Scored?, start: Long, ps: PlanSettings, lane: Lane): Scored? {
+        if (ok.isEmpty()) return null
+        val end = ps.event(lane, start)?.takeIf { it.timePct > 0 }?.end ?: return null
+        fun canFollow(s: Scored) = ps.schedule.nextOnline(s.finish) < end
+        val fillers = ok.filter(::canFollow)
+        if (fillers.isEmpty()) return ok.maxWithOrNull(compareBy<Scored> { it.duration }.thenBy { it.score })
+        val b = normal ?: return null
+        if (canFollow(b)) return null
+        return fillers.maxByOrNull { it.score }
     }
 
     /** Semua hero dijalankan bersamaan di strategi Seimbang. */
@@ -1049,6 +1073,7 @@ object Planner {
             } else {
                 val hall = rushHall && lane == Lane.BUILDER && hallDone == null && runs.none { it.inst.item.id == GameData.TOWN_HALL }
                 val opts = candidates(v, gd, lane, ps.gold, includeHall = hall, skip = ps.planSkip).map { score(it, tStart, ps, homeMult(it, homeNeeds, ps)) }
+                val ok = ArrayList<Scored>()
                 for (s in fitCapacity(v, gd, lane, tStart, ps, opts, tiered = false)) {
                     val c = s.c
                     if (c.item.cat == Cat.HERO) {
@@ -1059,9 +1084,11 @@ object Planner {
                             continue
                         }
                     }
+                    ok += s
                     val b = best
                     if (b == null || s.score > b.score) best = s
                 }
+                if (ps.policyFor(lane) == Policy.EVENT_END) eventEndPick(ok, best, tStart, ps, lane)?.let { best = it }
             }
 
             var early = false
@@ -1222,7 +1249,8 @@ object Planner {
         fun all(p: Policy) = lanes.associateWith { p }
         // Tercepat ke target dulu; bila sama (jam yang sama): jeda menganggur terlama, lalu total menganggur.
         fun key(s: SimResult) = hours(listOf(target(s, ps, bb))) + idleKey(s, lanes, now) + hours(secondary(s, bb))
-        val tryList = policies.filter { it != Policy.CRITICAL || bb }
+        val cutEvent = ps.events.any { e -> e.enabled && e.timePct > 0 && e.end > now && lanes.any { e.covers(it) } }
+        val tryList = policies.filter { (it != Policy.CRITICAL || bb) && (it != Policy.EVENT_END || cutEvent) }
         val runs = tryList.map { p -> all(p) to simulate(v, gd, ps.withPolicies(all(p)), now, finishes, lanes, keepSteps = keepSteps) }
         var best = runs.minWithOrNull { a, b -> keyOrder.compare(key(a.second), key(b.second)) }!!
         // Terbaik per jenis pekerja (antar jenis hampir tidak saling memengaruhi), lalu uji gabungannya.

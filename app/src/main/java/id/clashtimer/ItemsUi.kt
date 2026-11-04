@@ -38,8 +38,8 @@ object ItemsUi {
     /** Efek singkat untuk kotak grid. */
     private fun effect(mi: MagicItem): String = when {
         mi.boost != null -> "${mi.boost.speedLabel} · ${Fmt.dur(mi.boost.duration)}"
-        mi.isBook -> "selesai instan"
-        else -> "+1 level"
+        mi.isBook -> tr("selesai instan", "instant finish")
+        else -> tr("+1 level", "+1 level")
     }
 
     fun open(act: MainActivity, tag: String) {
@@ -50,7 +50,7 @@ object ItemsUi {
         val col = Ui.vbox(act).apply { setPadding(Ui.dp(act, 14), Ui.dp(act, 4), Ui.dp(act, 14), Ui.dp(act, 8)) }
         var dialog: AlertDialog? = null
 
-        col.addView(Ui.muted(act, "Ketuk item yang baru Anda pakai di game — timer langsung dihitung ulang.").apply {
+        col.addView(Ui.muted(act, tr("Ketuk item yang baru Anda pakai di game — timer langsung dihitung ulang.", "Tap the item you just used in the game — timers are recalculated right away.")).apply {
             setPadding(Ui.dp(act, 2), 0, Ui.dp(act, 2), Ui.dp(act, 4))
         })
         for (g in groups(act.showBB)) {
@@ -68,7 +68,7 @@ object ItemsUi {
                         continue
                     }
                     val boost = mi.boost?.let { k -> active.firstOrNull { it.kind.group == k.group } }
-                    row.addView(tile(act, mi, owned[mi] ?: 0, boost?.end?.let { "aktif s/d ${Fmt.time(it, zone)}" }) {
+                    row.addView(tile(act, mi, owned[mi] ?: 0, boost?.end?.let { tr("aktif s/d ${Fmt.time(it, zone)}", "active until ${Fmt.time(it, zone)}") }) {
                         dialog?.dismiss()
                         use(act, tag, mi)
                     }, lp)
@@ -77,15 +77,15 @@ object ItemsUi {
             }
         }
         val actions = Ui.hbox(act).apply { setPadding(0, Ui.dp(act, 14), 0, 0) }
-        actions.addView(Ui.outlined(act, "📝 Atur jumlah") { dialog?.dismiss(); editCounts(act, tag) }.apply { isAllCaps = false }, Ui.weight1())
-        actions.addView(Ui.outlined(act, "↩️ Batalkan catatan") { dialog?.dismiss(); undo(act, tag) }.apply { isAllCaps = false },
+        actions.addView(Ui.outlined(act, tr("📝 Atur jumlah", "📝 Set amounts")) { dialog?.dismiss(); editCounts(act, tag) }.apply { isAllCaps = false }, Ui.weight1())
+        actions.addView(Ui.outlined(act, tr("↩️ Batalkan catatan", "↩️ Undo records")) { dialog?.dismiss(); undo(act, tag) }.apply { isAllCaps = false },
             Ui.weight1().apply { marginStart = Ui.dp(act, 8) })
         col.addView(actions)
 
         dialog = MaterialAlertDialogBuilder(act)
-            .setTitle("Pakai item · ${Store.villageName(act, tag)}")
+            .setTitle(tr("Pakai item · ${Store.villageName(act, tag)}", "Use item · ${Store.villageName(act, tag)}"))
             .setView(ScrollView(act).apply { addView(col) })
-            .setNegativeButton("Tutup", null)
+            .setNegativeButton(tr("Tutup", "Close"), null)
             .show()
     }
 
@@ -115,7 +115,7 @@ object ItemsUi {
             setPadding(0, Ui.dp(act, 4), 0, 0)
         }, Ui.matchWrap())
         t.addView(TextView(act).apply {
-            text = activeText ?: if (owned > 0) "punya $owned · ${effect(mi)}" else effect(mi)
+            text = activeText ?: if (owned > 0) tr("punya $owned · ${effect(mi)}", "have $owned · ${effect(mi)}") else effect(mi)
             textSize = 10f
             gravity = Gravity.CENTER
             maxLines = 1
@@ -147,14 +147,14 @@ object ItemsUi {
     fun useClockTower(act: MainActivity, tag: String, level: Int) {
         val min = ClockTower.boostMinutes(level)
         if (min <= 0) return
-        boost(act, tag, BoostKind.CLOCK_TOWER, "Clock Tower Lv$level ($min menit)", min * 60_000L, null)
+        boost(act, tag, BoostKind.CLOCK_TOWER, tr("Clock Tower Lv$level ($min menit)", "Clock Tower Lv$level ($min min)"), min * 60_000L, null)
     }
 
     private fun boost(act: MainActivity, tag: String, kind: BoostKind, label: String, duration: Long, mi: MagicItem?) {
         val offsets = intArrayOf(0, 5, 10, 20, 30, 45).filter { it * 60_000L < duration + 15 * 60_000L }
-        val labels = offsets.map { (if (it == 0) "Baru saja" else "$it menit lalu") as CharSequence }.toTypedArray()
+        val labels = offsets.map { (if (it == 0) tr("Baru saja", "Just now") else tr("$it menit lalu", "$it min ago")) as CharSequence }.toTypedArray()
         MaterialAlertDialogBuilder(act)
-            .setTitle("$label mulai kapan?")
+            .setTitle(tr("$label mulai kapan?", "When did $label start?"))
             .setItems(labels) { _, w ->
                 val now = System.currentTimeMillis()
                 val at = now - offsets[w] * 60_000L
@@ -172,12 +172,12 @@ object ItemsUi {
                 }
                 act.dataChanged()
                 val lanes = kind.lanes.joinToString(" & ") { it.label }
-                val msg = if (changes.isEmpty()) "Tidak ada $lanes yang sedang berjalan, jadi tidak ada timer yang berubah."
-                else "Waktu selesai diperbarui dan notifikasi dijadwalkan ulang:\n\n" + changes.joinToString("\n")
-                MaterialAlertDialogBuilder(act).setTitle("⚡ $label dicatat").setMessage(msg)
-                    .setPositiveButton("OK", null).show()
+                val msg = if (changes.isEmpty()) tr("Tidak ada $lanes yang sedang berjalan, jadi tidak ada timer yang berubah.", "No $lanes running, so no timers changed.")
+                else tr("Waktu selesai diperbarui dan notifikasi dijadwalkan ulang:\n\n", "Finish times updated and notifications rescheduled:\n\n") + changes.joinToString("\n")
+                MaterialAlertDialogBuilder(act).setTitle(tr("⚡ $label dicatat", "⚡ $label recorded")).setMessage(msg)
+                    .setPositiveButton(tr("OK", "OK"), null).show()
             }
-            .setNegativeButton("Batal", null)
+            .setNegativeButton(tr("Batal", "Cancel"), null)
             .show()
     }
 
@@ -208,7 +208,7 @@ object ItemsUi {
         }
         val head = Ui.hbox(act).apply { setPadding(Ui.dp(act, 24), Ui.dp(act, 18), Ui.dp(act, 24), Ui.dp(act, 4)) }
         head.addView(Icons.view(act, mi.icon, 32, mi.emoji, round = false))
-        head.addView(Ui.text(act, "${mi.label} untuk…", Ui.TITLE_M).apply { setPadding(Ui.dp(act, 10), 0, 0, 0) }, Ui.weight1())
+        head.addView(Ui.text(act, tr("${mi.label} untuk…", "${mi.label} for…"), Ui.TITLE_M).apply { setPadding(Ui.dp(act, 10), 0, 0, 0) }, Ui.weight1())
         val wrap = Ui.vbox(act)
         wrap.addView(head)
         wrap.addView(ScrollView(act).apply { addView(col) }, LinearLayout.LayoutParams(
@@ -216,7 +216,7 @@ object ItemsUi {
         ))
         dialog = MaterialAlertDialogBuilder(act)
             .setView(wrap)
-            .setNegativeButton("Batal", null)
+            .setNegativeButton(tr("Batal", "Cancel"), null)
             .show()
     }
 
@@ -230,15 +230,15 @@ object ItemsUi {
             .sortedByDescending { it.second }
         if (running.isEmpty()) {
             MaterialAlertDialogBuilder(act).setTitle(mi.label)
-                .setMessage("Tidak ada upgrade yang cocok untuk ${mi.label} yang sedang berjalan.")
-                .setPositiveButton("OK", null).show()
+                .setMessage(tr("Tidak ada upgrade yang cocok untuk ${mi.label} yang sedang berjalan.", "No running upgrade matches ${mi.label}."))
+                .setPositiveButton(tr("OK", "OK"), null).show()
             return
         }
         fun name(inst: Inst) =
             if (inst.gearing) "${inst.item.name} · Gear-up" else "${inst.item.name} → Lv ${inst.level + 1}"
         val zone = ZoneId.systemDefault()
         val targets = running.map { (inst, f) ->
-            Target(inst.item, inst.level, name(inst), "hemat ${Fmt.dur(f - now)} · selesai ${Fmt.at(f, zone)}")
+            Target(inst.item, inst.level, name(inst), tr("hemat ${Fmt.dur(f - now)} · selesai ${Fmt.at(f, zone)}", "saves ${Fmt.dur(f - now)} · done ${Fmt.at(f, zone)}"))
         }
         pickTarget(act, mi, targets) { w ->
             val inst = running[w].first
@@ -246,9 +246,9 @@ object ItemsUi {
             consume(act, tag, mi)
             Repo.reproject(act, tag)
             act.dataChanged()
-            MaterialAlertDialogBuilder(act).setTitle("📘 Dicatat")
-                .setMessage("${name(inst)} ditandai selesai. Pekerjanya sekarang dihitung bebas.")
-                .setPositiveButton("OK", null).show()
+            MaterialAlertDialogBuilder(act).setTitle(tr("📘 Dicatat", "📘 Recorded"))
+                .setMessage(tr("${name(inst)} ditandai selesai. Pekerjanya sekarang dihitung bebas.", "${name(inst)} marked as done. Its worker now counts as free."))
+                .setPositiveButton(tr("OK", "OK"), null).show()
         }
     }
 
@@ -263,22 +263,22 @@ object ItemsUi {
             .take(40)
         if (cands.isEmpty()) {
             MaterialAlertDialogBuilder(act).setTitle(mi.label)
-                .setMessage("Tidak ada target yang tersedia (sudah max atau sedang di-upgrade).")
-                .setPositiveButton("OK", null).show()
+                .setMessage(tr("Tidak ada target yang tersedia (sudah max atau sedang di-upgrade).", "No targets available (already max or being upgraded)."))
+                .setPositiveButton(tr("OK", "OK"), null).show()
             return
         }
         val targets = cands.map { c ->
             Target(c.item, c.fromLevel, "${c.item.name} → Lv ${c.toLevel}",
-                "hemat ${Fmt.durSec(c.duration)}" + if (c.cost > 0) " · ${Fmt.money(c.cost)} ${Fmt.resource(c.item.resource)}" else "")
+                tr("hemat ${Fmt.durSec(c.duration)}", "saves ${Fmt.durSec(c.duration)}") + if (c.cost > 0) " · ${Fmt.money(c.cost)} ${Fmt.resource(c.item.resource)}" else "")
         }
         pickTarget(act, mi, targets) { w ->
             val c = cands[w]
             Store.setBumps(act, tag, Store.bumps(act, tag) + Triple(c.item.id, c.fromLevel, System.currentTimeMillis()))
             consume(act, tag, mi)
             act.dataChanged()
-            MaterialAlertDialogBuilder(act).setTitle("🔨 Dicatat")
-                .setMessage("${c.item.name} sekarang dihitung Lv ${c.toLevel}. Saat import berikutnya, data level diambil lagi dari game.")
-                .setPositiveButton("OK", null).show()
+            MaterialAlertDialogBuilder(act).setTitle(tr("🔨 Dicatat", "🔨 Recorded"))
+                .setMessage(tr("${c.item.name} sekarang dihitung Lv ${c.toLevel}. Saat import berikutnya, data level diambil lagi dari game.", "${c.item.name} now counts as Lv ${c.toLevel}. On the next import, levels are read from the game again."))
+                .setPositiveButton(tr("OK", "OK"), null).show()
         }
     }
 
@@ -310,9 +310,9 @@ object ItemsUi {
         }
         val scroll = ScrollView(act).apply { addView(col) }
         MaterialAlertDialogBuilder(act)
-            .setTitle("Item yang dimiliki · ${Store.villageName(act, tag)}")
+            .setTitle(tr("Item yang dimiliki · ${Store.villageName(act, tag)}", "Items owned · ${Store.villageName(act, tag)}"))
             .setView(scroll)
-            .setPositiveButton("Selesai", null)
+            .setPositiveButton(tr("Selesai", "Done"), null)
             .setOnDismissListener { act.dataChanged() }
             .show()
     }
@@ -330,12 +330,12 @@ object ItemsUi {
             }
         }
         for ((uid, at) in Store.done(act, tag)) {
-            entries += Entry("✅ ${names[uid] ?: uid.substringAfterLast('|')} selesai · ${Fmt.at(at, zone)}") {
+            entries += Entry(tr("✅ ${names[uid] ?: uid.substringAfterLast('|')} selesai · ${Fmt.at(at, zone)}", "✅ ${names[uid] ?: uid.substringAfterLast('|')} done · ${Fmt.at(at, zone)}")) {
                 Store.setDone(act, tag, Store.done(act, tag) - uid)
             }
         }
         for ((uid, at) in Store.cancelled(act, tag)) {
-            entries += Entry("✖️ ${uid.split('|').getOrNull(2)?.toIntOrNull()?.let { gd.name(it) } ?: uid} dibatalkan · ${Fmt.at(at, zone)}") {
+            entries += Entry(tr("✖️ ${uid.split('|').getOrNull(2)?.toIntOrNull()?.let { gd.name(it) } ?: uid} dibatalkan · ${Fmt.at(at, zone)}", "✖️ ${uid.split('|').getOrNull(2)?.toIntOrNull()?.let { gd.name(it) } ?: uid} cancelled · ${Fmt.at(at, zone)}")) {
                 Store.setCancelled(act, tag, Store.cancelled(act, tag) - uid)
             }
         }
@@ -345,19 +345,19 @@ object ItemsUi {
             }
         }
         if (entries.isEmpty()) {
-            MaterialAlertDialogBuilder(act).setTitle("Belum ada catatan")
-                .setMessage("Belum ada potion, book, hammer, atau tanda selesai yang dicatat sejak import terakhir.")
-                .setPositiveButton("OK", null).show()
+            MaterialAlertDialogBuilder(act).setTitle(tr("Belum ada catatan", "No records yet"))
+                .setMessage(tr("Belum ada potion, book, hammer, atau tanda selesai yang dicatat sejak import terakhir.", "No potions, books, hammers, or done marks recorded since the last import."))
+                .setPositiveButton(tr("OK", "OK"), null).show()
             return
         }
         MaterialAlertDialogBuilder(act)
-            .setTitle("Hapus catatan mana?")
+            .setTitle(tr("Hapus catatan mana?", "Delete which record?"))
             .setItems(entries.map { it.label as CharSequence }.toTypedArray()) { _: DialogInterface, w: Int ->
                 entries[w].remove()
                 Repo.reproject(act, tag)
                 act.dataChanged()
             }
-            .setNegativeButton("Tutup", null)
+            .setNegativeButton(tr("Tutup", "Close"), null)
             .show()
     }
 }

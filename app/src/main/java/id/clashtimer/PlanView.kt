@@ -1,5 +1,7 @@
 package id.clashtimer
 
+import id.clashtimer.core.Capacity
+
 import android.graphics.Typeface
 import android.view.Gravity
 import android.view.View
@@ -72,7 +74,7 @@ object PlanView {
             val w = b.ps.cwl.next(now)
             box.addView(note(act, tr("CWL sampai ", "CWL until ") + Fmt.dateShort(w.last + 1, zone) + ": " + sim.cwlDeferred.joinToString(", ") + tr(" ditunda", " paused"), Ui.BUSY))
         }
-        if (bb && !lab) capacityLine(act, box, b)
+        if (!lab) capacityLine(act, box, b, bb)
         val split = agendaEnd(b.ps.schedule, now)
         if (!lab) {
             if (mode == 1) timeline(act, box, b, sim, bb, lanes, now, zone) else agenda(act, box, b, sim, bb, lanes, split, now, zone)
@@ -637,19 +639,24 @@ object PlanView {
         return col
     }
 
-    // ---------------------------------------------------------------- gudang Builder Base
+    // ---------------------------------------------------------------- gudang
 
-    /** Kapasitas gudang Builder Base (Builder Hall + storage) — upgrade di atasnya menunggu storage dinaikkan. */
-    private fun capacityLine(act: MainActivity, box: LinearLayout, b: PlanBundle) {
+    /**
+     * Kapasitas gudang (Home: Town Hall + Gold/Elixir/Dark Elixir Storage; Builder Base: Builder Hall + storage) —
+     * upgrade yang biayanya di atasnya menunggu storage dinaikkan.
+     */
+    private fun capacityLine(act: MainActivity, box: LinearLayout, b: PlanBundle, bb: Boolean) {
         val v = b.village
-        val gold = id.clashtimer.core.Capacity.of(v, id.clashtimer.core.Capacity.GOLD) ?: return
-        val elixir = id.clashtimer.core.Capacity.of(v, id.clashtimer.core.Capacity.ELIXIR) ?: return
-        val over = b.simBB?.steps.orEmpty().firstOrNull { s ->
+        val kinds = if (bb) listOf(Capacity.GOLD, Capacity.ELIXIR) else listOf(Capacity.H_GOLD, Capacity.H_ELIXIR, Capacity.H_DARK)
+        val caps = kinds.map { r -> r to (Capacity.of(v, r) ?: return) }
+        val steps = (if (bb) b.simBB else b.simHome)?.steps.orEmpty()
+        val over = steps.firstOrNull { s ->
             val res = s.item?.resource ?: return@firstOrNull false
-            val cap = id.clashtimer.core.Capacity.of(v, res) ?: return@firstOrNull false
+            if (res !in kinds) return@firstOrNull false
+            val cap = Capacity.of(v, res) ?: return@firstOrNull false
             s.cost > cap
         }
-        val text = StringBuilder(tr("Gudang: ", "Storage: ") + "${Fmt.money(gold)} ${Fmt.resource("Builder Gold")} · ${Fmt.money(elixir)} ${Fmt.resource("Builder Elixir")}")
+        val text = StringBuilder(tr("Gudang: ", "Storage: ") + caps.joinToString(" · ") { (r, c) -> "${Fmt.money(c)} ${Fmt.resource(r)}" })
         if (over != null) {
             text.append(" — ${over.title} " + tr("butuh", "needs") + " ${Fmt.money(over.cost)} ${Fmt.resource(over.item?.resource ?: "")}" + tr(", storage dinaikkan dulu", ", upgrade storage first"))
         }
