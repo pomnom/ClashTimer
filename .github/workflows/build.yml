@@ -59,40 +59,9 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Build APK
+      - name: Kunci tanda tangan dari Secrets
+        env:
+          CT_KEYSTORE_B64: ${{ secrets.CT_KEYSTORE_B64 }}
         run: |
-          chmod +x gradlew
-          ./gradlew --no-daemon assembleRelease
-
-      - name: Rename APK
-        run: cp app/build/outputs/apk/release/app-release.apk ClashTimer.apk
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ClashTimer-apk
-          path: ClashTimer.apk
-
-      # Catatan rilis dari app/src/main/assets/changelog.txt ("# judul" + "- butir").
-      # Bila file itu tidak berubah sejak rilis sebelumnya, cukup satu baris umum.
-      - name: Catatan rilis
-        run: |
-          NOTES=app/src/main/assets/changelog.txt
-          PREV=$(git tag --list 'build-*' --sort=-v:refname | head -n 1)
-          if [ -f "$NOTES" ] && { [ -z "$PREV" ] || ! git diff --quiet "$PREV" -- "$NOTES"; }; then
-            sed -e 's/^# \(.*\)/### \1/' "$NOTES" > RELEASE_NOTES.md
-          else
-            echo "- Perbaikan kecil." > RELEASE_NOTES.md
-          fi
-          cat RELEASE_NOTES.md
-
-      # Juga dipasang di halaman Releases supaya gampang diunduh dari HP; isi rilis = catatan di atas
-      # (tampil di kartu update aplikasi).
-      - name: Publish release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: build-${{ github.run_number }}
-          name: Clash Timer build ${{ github.run_number }}
-          body_path: RELEASE_NOTES.md
-          files: ClashTimer.apk
-          make_latest: true
+          test -n "$CT_KEYSTORE_B64" || { echo "::error::Secret CT_KEYSTORE_B64 belum diisi"; exit 1; }
+          echo "$CT_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/clashtimer.keystore"
