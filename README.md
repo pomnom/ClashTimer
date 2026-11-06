@@ -36,9 +36,8 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
 - **Siap dipakai** (paling atas, seperti "Data desa ketinggalan"): Builder's Apprentice, Lab Assistant, Alchemist dan
   boost gratis Clock Tower begitu bisa dipakai — dengan saran upgrade yang dibantu (terlama). Ketuk setelah memakainya
   di game: cooldown 23 jam & pengingatnya dihitung dari situ. Helper yang otomatis membantu upgrade yang sama tidak muncul
-- **War / CWL** (butuh API key): serangan hari ini sudah dipakai atau belum. Setelah menyerang (atau tidak masuk
-  lineup), upgrade hero yang selesai ≥ 3 jam sebelum hari perang berikutnya berakhir ikut saran & rencana; hari
-  terakhir CWL sudah diserang → hero bebas. Ketuk kartu = cek ulang API
+- **War / CWL** (dari ClashKing, tanpa API key): war atau CWL yang sedang diikuti dan kapan hari perangnya berakhir
+  — hanya info, rencana tidak menahan hero. Selama CWL nama akun, clan & liga terisi otomatis. Ketuk kartu = perbarui
 - **Hitung mundur** tukang & lab yang paling cepat selesai (jam:menit:detik), dengan pekerja yang bebas
 - **Tukang** dan **Lab** yang sedang bekerja + **satu saran**: kartu saran untuk pekerja yang bebas
   (**Sudah dimulai** / **Opsi lain**, dengan **Batalkan** di pesan bawah), atau "saran berikutnya" saat
@@ -177,17 +176,16 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
   tidak** (roster CWL clan, war preference, tidak di clan) beserta jadwal aslinya, awal & akhir musim
   Gold Pass, dan upgrade hero / lab / pet / Star Lab / TH / BH yang di game sudah naik level (book, gem,
   potion) langsung ditandai selesai.
-- Tidak tersedia di export maupun API: jadwal event (Hammer Jam), book/hammer, dan potion yang dipakai
+- Tidak tersedia di export maupun ClashKing: jadwal event (Hammer Jam), book/hammer, dan potion yang dipakai
   setelah export — dicatat manual atau cukup export ulang.
 
-**🔑 API resmi Clash of Clans** — Pengaturan → API resmi
-- Buat key di developer.clashofclans.com → My Account → Create New Key, IP address
-  **45.79.218.79** (proxy RoyaleAPI), salin Token, tempel di aplikasi
-- Key hanya disimpan di HP; permintaan lewat cocproxy.royaleapi.dev
+**⚔️ Status War & CWL** — Pengaturan → Data & akun
+- Diambil dari API publik ClashKing (api.clashk.ing), tanpa API key: tag pemain dikirim untuk membaca war/CWL yang
+  sedang diikuti (paling sering tiap 30 menit saat aplikasi dibuka). Grup CWL (nama, clan, liga) paling sering sekali sehari.
 
 **⚙️ Opsi per desa** (ikon opsi di header, atau ketuk ringkasan strategi di Dashboard)
 - Lembar **Opsi desa** (Home | Builder Base): kartu strategi menampilkan **tanggal target masing-masing**
-  ("Semua upgrade TH11 selesai ±7 Feb", "Semua hero max ±7 Des"); Gold Pass & CWL bertanda **OTOMATIS**
+  ("Semua upgrade TH11 selesai ±7 Feb", "Semua hero max ±7 Des"); Gold Pass bertanda **OTOMATIS**
   bila terdeteksi; sakelar collector; prioritas & disembunyikan. Semua disimpan **per desa**.
 - Lembar ini juga berisi Update dari export, Ganti nama, Hapus desa, Potion & item, dan Pengaturan.
 - **Gold Pass naik bertahap**: boost 10% terbuka di awal track, 15% dan 20% setelah poin tertentu (musim
@@ -195,11 +193,6 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
   di Opsi desa → Gold Pass: aplikasi memperkirakan tanggal tiap ambang tercapai (poin per hari dari riwayat
   poin, bawaan ±90, atau isi sendiri) dan rencana memakai persen yang naik mulai tanggal itu
 - Jam tidur/kerja, event, ikon, nada & notifikasi (⚙️ Pengaturan) berlaku untuk semua desa.
-
-**⚔️ Pengingat serangan** (butuh API key)
-- CWL (hari perang, bila akun ada di lineup), war biasa (war log clan harus publik) dan Raid Weekend:
-  3 jam sebelum berakhir aplikasi mengecek API dan memberi notifikasi hanya bila serangan masih tersisa.
-  Ketuk notifikasi → membuka Clash of Clans.
 
 **📌 Prioritaskan / sembunyikan** — tahan lama upgrade di Dashboard, Tukang, Lab, atau Progres
 - Prioritaskan: didahulukan di saran, rencana, widget & notifikasi. Sembunyikan: hilang dari saran &
@@ -221,7 +214,7 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
 **🧱 Tembok** — progres terpisah (Home & Builder Base), biaya naik satu level per level tembok, dan total ke max.
 
 **📦 Pindah data & cadangan** (Pengaturan) — Salin semua data / Tempel data (HP ↔ tablet) atau simpan /
-  buka file cadangan .json: desa, timer, opsi, riwayat & API key.
+  buka file cadangan .json: desa, timer, opsi & riwayat.
 
 **🔄 Update dari dalam aplikasi** (Pengaturan → Update aplikasi)
 - Saat aplikasi dibuka (paling sering tiap 3 jam) Clash Timer mengecek rilis terbaru di GitHub
@@ -278,8 +271,8 @@ python3 tools/build_gamedata.py --check  # hanya periksa apakah data sudah terba
 ## Cara pakai
 1. Di game: Settings → More Settings → paling bawah **Export village data** → Copy.
 2. Buka Clash Timer → **📋 Update desa** (atau Import dari Clipboard).
-3. Pilih strategi saran & collector di lembar **Opsi desa** (ikon opsi di header); Gold Pass & CWL terisi
-   sendiri. Jam tidur/kerja, event, nada, dan API key ada di ⚙️ **Pengaturan**.
+3. Pilih strategi saran & collector di lembar **Opsi desa** (ikon opsi di header); Gold Pass terisi
+   sendiri. Jam tidur/kerja, event & nada ada di ⚙️ **Pengaturan**.
 4. Setelah memulai upgrade di game, tekan **Sudah dimulai** pada saran — atau import ulang
    (sekaligus membuat Gold Pass terdeteksi).
 
@@ -300,3 +293,12 @@ python3 tools/build_gamedata.py --check  # hanya periksa apakah data sudah terba
 
 Fan content tidak resmi, tidak berafiliasi dengan dan tidak didukung oleh Supercell.
 Gambar & nama Clash of Clans © Supercell.
+
+## Kunci tanda tangan APK (GitHub Secrets)
+APK ditandatangani dengan kunci tetap (supaya update bisa dipasang di atas versi lama). Kunci & sandinya tidak ada di
+repo; Actions membacanya dari **Settings → Secrets and variables → Actions**:
+- `CT_KEYSTORE_B64` — isi file keystore dalam base64
+- `CT_STORE_PASSWORD` dan `CT_KEY_PASSWORD` — sandi keystore & kunci (alias `clashtimer`)
+
+Langkah "Kunci tanda tangan dari Secrets" di `.github/workflows/build.yml` menulis keystore ke folder sementara
+runner. Tanpa Secrets, build gagal di langkah itu (APK tidak pernah dibuat tanpa tanda tangan).

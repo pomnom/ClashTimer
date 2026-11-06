@@ -353,62 +353,27 @@ object HomeView {
         return ready.takeIf { it <= now }
     }
 
-    // ---------------------------------------------------------------- serangan war / CWL
+    // ---------------------------------------------------------------- war / CWL
 
-    /**
-     * Status serangan dari API: sudah menyerang atau belum, dan upgrade hero mana yang masih sempat
-     * selesai sebelum serangan berikutnya (CWL: hari perang berikutnya yang masih butuh serangan Anda).
-     */
+    /** Status war / CWL dari ClashKing (info saja): yang sedang diikuti dan kapan hari perangnya berakhir. */
     private fun war(act: MainActivity, box: LinearLayout, tag: String, b: PlanBundle, now: Long, zone: ZoneId) {
         val ws = Store.warState(act, tag) ?: return
+        if (ws.end <= now) return
         val cwl = ws.kind == "cwl"
-        if (cwl && !b.ps.cwl.enabled) return
-        val window = b.ps.cwl.known.firstOrNull()
-        val cwlEnd = window?.let { it.last + 1 } ?: 0L
-        if (cwl && (cwlEnd <= now || ws.at < now - 3 * DAY)) return
-        if (!cwl && ws.end <= now) return
         val recheck = { ApiSync.syncAsync(act) { msg ->
             act.dataChanged()
-            android.widget.Toast.makeText(act, "🔑 $msg", android.widget.Toast.LENGTH_SHORT).show()
+            android.widget.Toast.makeText(act, msg, android.widget.Toast.LENGTH_SHORT).show()
         } }
-        val checked = tr("API ${short(ws.at, now, zone)} · ketuk untuk cek ulang", "API ${short(ws.at, now, zone)} · tap to re-check")
-        // Hari perang yang dicek sudah lewat: status hari ini belum diketahui.
-        if (cwl && ws.end <= now && ws.needEnd != 0L) {
-            box.addView(notice(act, tr("CWL: status serangan perlu dicek ulang", "CWL: attack status needs a re-check"), checked, Ui.TEXT2) { recheck() })
-            return
-        }
-        val needAttack = ws.lineup && ws.left > 0
-        val dayLabel = if (cwl && ws.days > 0) tr("CWL hari ${ws.day}/${ws.days}", "CWL day ${ws.day}/${ws.days}") else "CWL"
-        val (title, color) = when {
-            cwl && ws.state == "preparation" -> tr("$dayLabel belum mulai", "$dayLabel not started") +
-                (if (ws.lineup) tr(" · Anda di lineup", " · you are in the lineup") else tr(" · tidak di lineup", " · not in the lineup")) to Ui.TEXT
-            cwl && needAttack -> tr("$dayLabel: belum menyerang", "$dayLabel: not attacked yet") to Ui.IDLE
-            cwl && !ws.lineup -> tr("$dayLabel: tidak masuk lineup", "$dayLabel: not in the lineup") to Ui.FREE_TEXT
-            cwl -> tr("$dayLabel: serangan sudah dipakai ✓", "$dayLabel: attack used ✓") to Ui.FREE_TEXT
-            !ws.lineup -> return
-            ws.state == "preparation" -> tr("War: hari persiapan", "War: preparation day") to Ui.TEXT
-            needAttack -> tr("War: ${ws.left} serangan tersisa", "War: ${ws.left} attacks left") to Ui.IDLE
-            else -> tr("War: semua serangan sudah dipakai ✓", "War: all attacks used ✓") to Ui.FREE_TEXT
-        }
+        val info = Store.ckInfo(act, tag)
+        val title = (if (cwl) "⚔️ CWL" else "⚔️ War") + (info?.clanName?.takeIf { it.isNotBlank() }?.let { " · $it" } ?: "")
         val lines = ArrayList<String>()
-        if (needAttack) lines += tr("berakhir ${Fmt.at(ws.end, zone)}", "ends ${Fmt.at(ws.end, zone)}")
-        // Batas jam selesai upgrade hero; null = hero bebas.
-        val limit: Long? = if (cwl) Store.cwlFreeUntil(act, tag, window).takeIf { it in 1 until cwlEnd }
-        else if (needAttack || ws.state == "preparation") ws.end - Store.CWL_MARGIN else null
-        if (limit == null) {
-            lines += if (cwl) tr("hero bebas di-upgrade — tidak ada serangan CWL lagi", "heroes are free to upgrade — no CWL attacks left")
-            else tr("hero bebas di-upgrade sampai war berikutnya", "heroes are free to upgrade until the next war")
-        } else {
-            if (cwl && !needAttack && ws.needEnd > 0) lines += tr("serangan berikutnya: hari perang berakhir ${Fmt.at(ws.needEnd, zone)}",
-                "next attack: war day ends ${Fmt.at(ws.needEnd, zone)}")
-            val opts = Planner.heroOptions(b.village, Repo.gameData(act), b.ps, now, Repo.finishes(act, tag)).filter { it.finish <= limit }
-            lines += if (opts.isNotEmpty()) tr("hero sempat di-upgrade bila selesai sebelum ${short(limit, now, zone)}: ", "heroes that finish before ${short(limit, now, zone)}: ") +
-                opts.take(3).joinToString(", ") { it.c.shortTitle + tr(" (selesai ${short(it.finish, now, zone)})", " (done ${short(it.finish, now, zone)})") }
-            else tr("belum ada upgrade hero yang selesai sebelum ${short(limit, now, zone)}", "no hero upgrade finishes before ${short(limit, now, zone)}") +
-                if (needAttack) tr(" — serang dulu", " — attack first") else ""
-        }
-        lines += checked
-        box.addView(notice(act, title, lines.joinToString("\n"), color) { recheck() })
+        lines += if (cwl) tr("hari perang berakhir ${Fmt.at(ws.end, zone)}", "war day ends ${Fmt.at(ws.end, zone)}")
+        else tr("berakhir ${Fmt.at(ws.end, zone)}", "ends ${Fmt.at(ws.end, zone)}")
+        if (ws.needEnd > ws.end) lines += if (cwl) tr("hari perang berikutnya berakhir ${Fmt.at(ws.needEnd, zone)}", "next war day ends ${Fmt.at(ws.needEnd, zone)}")
+        else tr("war berikutnya berakhir ${Fmt.at(ws.needEnd, zone)}", "next war ends ${Fmt.at(ws.needEnd, zone)}")
+        if (cwl) info?.league?.takeIf { it.isNotBlank() }?.let { lines += it }
+        lines += tr("ClashKing · ${short(ws.at, now, zone)} · ketuk untuk perbarui", "ClashKing · ${short(ws.at, now, zone)} · tap to refresh")
+        box.addView(notice(act, title, lines.joinToString("\n"), Ui.TEXT) { recheck() })
     }
 
     // ---------------------------------------------------------------- CWL

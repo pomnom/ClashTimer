@@ -168,7 +168,7 @@ class SettingsActivity : AppCompatActivity() {
             "events" -> eventsPage()
             "data" -> { apiSection(); backupSection() }
             "widget" -> widgetPage()
-            "about" -> updateSection()
+            "about" -> { updateSection(); creditSection() }
             else -> mainPage()
         }
     }
@@ -204,8 +204,7 @@ class SettingsActivity : AppCompatActivity() {
             if (ev.isEmpty()) tr("Tidak ada event aktif", "No active events") else ev.joinToString(", ") { it.name }) { open("events") }
         group = null
         box.addView(android.view.View(this), LinearLayout.LayoutParams(1, Ui.dp(this, 4)))
-        val api = if (Store.apiKey(this).isBlank()) tr("API belum diisi", "API not set") else tr("API terhubung", "API connected")
-        category(R.drawable.ic_import, Ui.LAB, Ui.LAB_BG, tr("Data & akun", "Data & account"), api + tr(" · pindah data & cadangan", " · move data & backup")) { open("data") }
+        category(R.drawable.ic_import, Ui.LAB, Ui.LAB_BG, tr("Data & akun", "Data & account"), tr("Status War/CWL · pindah data & cadangan", "War/CWL status · move data & backup")) { open("data") }
         val bgOk = !Background.isXiaomi() && (getSystemService(android.os.PowerManager::class.java)?.isIgnoringBatteryOptimizations(packageName) == true)
         category(R.drawable.ic_nav_dashboard, if (bgOk) Ui.TEXT2 else Ui.IDLE, Ui.SURFACE2, tr("Widget & berjalan di latar", "Widget & background"),
             if (bgOk) tr("Berjalan tanpa batasan baterai", "Running without battery limits") else tr("Periksa izin berjalan di latar", "Check background permissions")) { open("widget") }
@@ -421,7 +420,7 @@ class SettingsActivity : AppCompatActivity() {
     // ---------------------------------------------------------------- pindah data
 
     private fun backupSection() {
-        sub(tr("📦 Pindah data & cadangan", "📦 Move data & backup"), tr("HP ↔ tablet: semua desa, timer, opsi, riwayat & API key", "Phone ↔ tablet: all villages, timers, options, history & API key"), Help.Topic.BACKUP)
+        sub(tr("📦 Pindah data & cadangan", "📦 Move data & backup"), tr("HP ↔ tablet: semua desa, timer, opsi, riwayat", "Phone ↔ tablet: all villages, timers, options & history"), Help.Topic.BACKUP)
         val dp8 = Ui.dp(this, 8)
         val r = Ui.hbox(this)
         r.addView(Ui.outlined(this, tr("Salin semua data", "Copy all data")) { copyAll() }.apply { isAllCaps = false }, Ui.weight1())
@@ -436,7 +435,6 @@ class SettingsActivity : AppCompatActivity() {
             runCatching { openFile.launch(arrayOf("application/json", "text/plain", "application/octet-stream", "*/*")) }
         }.apply { isAllCaps = false }, Ui.weight1().apply { marginStart = dp8 })
         box.addView(r2)
-        note(tr("Isinya termasuk API key — jangan dibagikan ke orang lain.", "It includes your API key — do not share it with anyone."))
     }
 
     private fun copyAll() {
@@ -464,7 +462,7 @@ class SettingsActivity : AppCompatActivity() {
         }
         MaterialAlertDialogBuilder(this)
             .setTitle(tr("Ganti semua data di perangkat ini?", "Replace all data on this device?"))
-            .setMessage(Backup.describe(o) + tr("\n\nSemua desa, timer, opsi, riwayat dan API key di perangkat ini diganti dengan data tersebut.", "\n\nAll villages, timers, options, history and the API key on this device will be replaced."))
+            .setMessage(Backup.describe(o) + tr("\n\nSemua desa, timer, opsi, riwayat di perangkat ini diganti dengan data tersebut.", "\n\nAll villages, timers, options and history on this device will be replaced."))
             .setPositiveButton(tr("Ganti", "Replace")) { _, _ ->
                 Backup.restore(this, o)
                 Toast.makeText(this, tr("Data dipulihkan", "Data restored"), Toast.LENGTH_SHORT).show()
@@ -477,85 +475,35 @@ class SettingsActivity : AppCompatActivity() {
     // ---------------------------------------------------------------- API resmi
 
     private fun apiSection() {
-        sub(tr("🔑 API resmi Clash of Clans", "🔑 Official Clash of Clans API"), tr("Otomatis: nama akun & clan, ikut CWL & jadwal aslinya, akhir Gold Pass, upgrade yang selesai lebih cepat, cek export ketinggalan", "Automatic: account & clan name, CWL participation & real schedule, Gold Pass end, upgrades finished early, outdated export check"))
-        val key = Store.apiKey(this)
-        row("API key", if (key.isBlank()) tr("Belum diisi — ketuk untuk menempel", "Not set — tap to paste") else "•••• ${key.takeLast(6)}") { askApiKey() }
+        sub(tr("⚔️ Status War & CWL", "⚔️ War & CWL status"), tr("Dari ClashKing, tanpa API key", "From ClashKing, no API key needed"))
+        note(tr("Ditampilkan di Dashboard sebagai info: war/CWL yang sedang diikuti dan kapan hari perangnya berakhir. " +
+            "Selama CWL, nama akun, clan & liga diisi otomatis. Rencana tidak menahan hero karena war. " +
+            "Tag pemain dikirim ke ClashKing (api.clashk.ing) untuk mengambil status ini.",
+            "Shown on the Dashboard as info: the war/CWL you are in and when its war day ends. " +
+            "During CWL, account name, clan & league are filled in automatically. The plan does not hold heroes for wars. " +
+            "Player tags are sent to ClashKing (api.clashk.ing) to fetch this status."))
         val status = Store.apiStatus(this)
-        if (status.isNotBlank()) {
-            note("Status: $status · ${Fmt.at(Store.apiTried(this), java.time.ZoneId.systemDefault())}")
-        }
-        val r = Ui.hbox(this)
-        r.addView(Ui.outlined(this, tr("Tes & perbarui", "Test & refresh")) { syncNow() }.apply { isAllCaps = false }, Ui.weight1())
-        r.addView(Ui.outlined(this, tr("Salin IP proxy", "Copy proxy IP")) {
-            val cm = getSystemService(android.content.ClipboardManager::class.java)
-            cm?.setPrimaryClip(android.content.ClipData.newPlainText("IP", CocApi.PROXY_IP))
-            Toast.makeText(this, tr("Disalin: ", "Copied: ") + CocApi.PROXY_IP, Toast.LENGTH_SHORT).show()
-        }.apply { isAllCaps = false }, Ui.weight1().apply { marginStart = Ui.dp(this@SettingsActivity, 8) })
-        box.addView(r)
-        box.addView(Ui.outlined(this, tr("Buka developer.clashofclans.com", "Open developer.clashofclans.com")) {
-            runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(CocApi.DEV_SITE))) }
-        }.apply { isAllCaps = false }, Ui.matchWrap())
-        note(if (!id.clashtimer.core.Lang.en) "Cara membuat key: masuk ke developer.clashofclans.com → My Account → Create New Key → nama & deskripsi bebas → " +
-            "IP address: ${CocApi.PROXY_IP} → Create Key → salin Token, lalu tempel di sini. Permintaan dikirim lewat proxy RoyaleAPI " +
-            "(cocproxy.royaleapi.dev); key hanya disimpan di HP ini. Data diperbarui otomatis setiap desa ditambah / di-update dan saat aplikasi dibuka " +
-            "(paling sering tiap 30 menit): CWL dihitung hanya bila akun ini ada di roster CWL clan (atau war preference IN sebelum CWL mulai), " +
-            "dan upgrade hero, lab, pet, Star Lab, TH/BH yang di game sudah naik level (book, gem, potion) langsung ditandai selesai. " +
-            "Data event seperti Hammer Jam tidak tersedia di API resmi." else "How to create a key: sign in at developer.clashofclans.com → My Account → Create New Key → any name & description → " +
-            "IP address: ${CocApi.PROXY_IP} → Create Key → copy the Token and paste it here. Requests go through the RoyaleAPI proxy " +
-            "(cocproxy.royaleapi.dev); the key is stored on this phone only. Data refreshes automatically whenever a village is added / updated and when the app opens " +
-            "(at most every 30 minutes): CWL counts only if this account is on the clan's CWL roster (or war preference IN before CWL starts), " +
-            "and hero, lab, pet, Star Lab, TH/BH upgrades that already levelled up in the game (book, gems, potion) are marked done right away. " +
-            "Event data such as Hammer Jam is not available in the official API.")
-        if (key.isNotBlank()) {
-            box.addView(Ui.flat(this, tr("Hapus API key", "Remove API key")) {
-                Store.setApiKey(this, "")
-                render()
-            }.apply { isAllCaps = false })
-        }
-    }
-
-    private fun askApiKey() {
-        val input = android.widget.EditText(this).apply {
-            hint = "eyJ0eXAiOiJKV1Qi…"
-            setText(Store.apiKey(this@SettingsActivity))
-            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE or
-                android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
-            minLines = 3
-            maxLines = 6
-        }
-        val wrap = LinearLayout(this).apply {
-            setPadding(Ui.dp(this@SettingsActivity, 20), Ui.dp(this@SettingsActivity, 8), Ui.dp(this@SettingsActivity, 20), 0)
-            addView(input, Ui.matchWrap())
-        }
-        MaterialAlertDialogBuilder(this)
-            .setTitle("API key (Token)")
-            .setView(wrap)
-            .setPositiveButton(tr("Simpan & tes", "Save & test")) { _, _ ->
-                Store.setApiKey(this, input.text.toString().replace("\\s".toRegex(), ""))
-                render()
-                syncNow()
-            }
-            .setNeutralButton(tr("Tempel", "Paste")) { _, _ ->
-                val cm = getSystemService(android.content.ClipboardManager::class.java)
-                val text = cm?.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString().orEmpty()
-                Store.setApiKey(this, text.replace("\\s".toRegex(), ""))
-                render()
-                syncNow()
-            }
-            .setNegativeButton(tr("Batal", "Cancel"), null)
-            .show()
+        if (status.isNotBlank()) note("Status: $status · ${Fmt.at(Store.apiTried(this), java.time.ZoneId.systemDefault())}")
+        box.addView(Ui.outlined(this, tr("Perbarui sekarang", "Refresh now")) { syncNow() }.apply { isAllCaps = false }, Ui.matchWrap())
     }
 
     private fun syncNow() {
-        if (Store.apiKey(this).isBlank()) {
-            Toast.makeText(this, tr("Isi API key dulu", "Enter the API key first"), Toast.LENGTH_SHORT).show()
-            return
-        }
-        Toast.makeText(this, tr("Menghubungi API…", "Contacting the API…"), Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, tr("Menghubungi ClashKing…", "Contacting ClashKing…"), Toast.LENGTH_SHORT).show()
         ApiSync.syncAsync(this) { msg ->
             Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
             render()
         }
+    }
+
+    /** Sumber data & pernyataan (Fan Content Policy Supercell). */
+    private fun creditSection() {
+        sub(tr("ℹ️ Sumber & pernyataan", "ℹ️ Sources & disclaimer"), null)
+        note(tr("Clash Timer tidak berafiliasi dengan, didukung, disponsori, atau disetujui secara khusus oleh Supercell, " +
+            "dan Supercell tidak bertanggung jawab atasnya. Lihat Fan Content Policy Supercell: supercell.com/fan-content-policy.",
+            "Clash Timer is not affiliated with, endorsed, sponsored, or specifically approved by Supercell and Supercell " +
+            "is not responsible for it. See Supercell's Fan Content Policy: supercell.com/fan-content-policy."))
+        note(tr("Data game, gambar, serta status war & CWL: ClashKing (clashk.ing).",
+            "Game data, images, and war & CWL status: ClashKing (clashk.ing)."))
     }
 
     private fun testTone(key: String) {

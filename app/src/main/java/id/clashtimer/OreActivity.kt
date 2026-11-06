@@ -117,7 +117,7 @@ class OreActivity : AppCompatActivity() {
         inputs()
         val owned = equips.filter { (current[it.id] ?: 0) > 0 }
         if (owned.isEmpty()) {
-            box.addView(Ui.muted(this, tr("Belum ada data equipment. Import ulang export desa (atau isi API key) lalu buka lagi.", "No equipment data yet. Re-import the village export (or set an API key) and open this again."), Ui.BODY_M))
+            box.addView(Ui.muted(this, tr("Belum ada data equipment. Import ulang export desa lalu buka lagi.", "No equipment data yet. Re-import the village export and open this again."), Ui.BODY_M))
             return
         }
         for ((hero, list) in owned.groupBy { it.hero }) {

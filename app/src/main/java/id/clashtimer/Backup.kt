@@ -13,7 +13,7 @@ import java.util.zip.GZIPOutputStream
 
 /**
  * Pindah data antar perangkat (HP ↔ tablet) & file cadangan: semua desa, timer, tanda Sudah dimulai/selesai,
- * item, opsi per desa, pengaturan, event, riwayat, dan API key.
+ * item, opsi per desa, pengaturan, event, dan riwayat (tanpa API key).
  */
 object Backup {
     private const val PREFIX = "CLASHTIMER-DATA:"

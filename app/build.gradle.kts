@@ -15,24 +15,25 @@ android {
         versionName = "1.0." + (System.getenv("GITHUB_RUN_NUMBER") ?: "0")
     }
 
-    // Kunci tanda tangan tetap, supaya APK versi baru bisa langsung
-    // di-install di atas versi lama tanpa harus uninstall dulu.
+    // Kunci tanda tangan tetap (kunci & sandinya dari GitHub Secrets, lihat README), supaya APK versi baru
+    // bisa langsung di-install di atas versi lama tanpa harus uninstall dulu.
+    val signPass: String? = System.getenv("CT_STORE_PASSWORD")
     signingConfigs {
         create("fixed") {
-            storeFile = file("clashtimer.keystore")
-            storePassword = "clashtimer"
-            keyAlias = "clashtimer"
-            keyPassword = "clashtimer"
+            storeFile = file(System.getenv("CT_KEYSTORE_FILE") ?: "clashtimer.keystore")
+            storePassword = signPass
+            keyAlias = System.getenv("CT_KEY_ALIAS") ?: "clashtimer"
+            keyPassword = System.getenv("CT_KEY_PASSWORD") ?: signPass
         }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("fixed")
+            if (signPass != null) signingConfig = signingConfigs.getByName("fixed")
         }
         debug {
-            signingConfig = signingConfigs.getByName("fixed")
+            if (signPass != null) signingConfig = signingConfigs.getByName("fixed")
         }
     }
 

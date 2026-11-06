@@ -4,3 +4,7 @@ local.properties
 .idea/
 *.iml
 .DS_Store
+
+# Kunci tanda tangan: hanya lewat GitHub Secrets
+*.keystore
+*.jks
