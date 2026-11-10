@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * Status War / CWL dari API publik ClashKing (tanpa API key). Hanya ditampilkan sebagai info: tidak ada status
  * serangan, dan rencana tidak menahan hero karena war/CWL. Selama CWL, nama pemain, nama clan & liga diambil
- * dari grup CWL (paling sering sekali sehari, karena ukurannya besar).
+ * dari grup CWL (paling sering sekali sehari, karena ukurannya besar); nama yang belum ada diambil dari pencarian pemain.
  */
 object ApiSync {
     private val exec = Executors.newSingleThreadExecutor()
@@ -62,6 +62,8 @@ object ApiSync {
                 continue
             }
             ok++
+            // Nama akun dari pencarian ClashKing bila belum ada (di luar CWL tidak ada sumber lain).
+            if (!Store.hasName(ctx, acc.tag)) runCatching { ClashKing.player(acc.tag) }.getOrNull()?.let { Store.setCkName(ctx, acc.tag, it.name) }
             // Event yang sedang diikuti (war / CWL), urut dari yang paling dulu berakhir.
             val wars = timers.filter { (it.type == "war" || it.type == "cwl") && it.expiresAt > now }.sortedBy { it.expiresAt }
             val first = wars.firstOrNull()

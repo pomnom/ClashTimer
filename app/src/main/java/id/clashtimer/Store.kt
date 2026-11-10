@@ -264,6 +264,19 @@ object Store {
         prefs(ctx).edit().putString("ck_$tag", o.toString()).apply()
     }
 
+    /** Simpan nama pemain dari pencarian ClashKing tanpa mengubah info clan/liga & jadwal cek grup CWL. */
+    fun setCkName(ctx: Context, tag: String, name: String) {
+        if (name.isBlank()) return
+        val old = ckInfo(ctx, tag)
+        val o = JSONObject().put("n", name).put("c", old?.clanTag.orEmpty()).put("cn", old?.clanName.orEmpty())
+            .put("l", old?.league.orEmpty()).put("at", old?.at ?: 0L)
+        prefs(ctx).edit().putString("ck_$tag", o.toString()).apply()
+    }
+
+    /** Ada nama yang bisa ditampilkan (diisi sendiri atau dari ClashKing). */
+    fun hasName(ctx: Context, tag: String): Boolean =
+        !prefs(ctx).getString("name_$tag", null).isNullOrBlank() || !ckInfo(ctx, tag)?.name.isNullOrBlank()
+
     /**
      * Sekali saja: hapus data dari API resmi yang tidak dipakai lagi (API key, statistik, pemain, status CWL lama),
      * supaya tidak ikut tersimpan di cadangan.

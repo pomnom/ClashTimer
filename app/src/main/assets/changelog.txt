@@ -1,6 +1,2 @@
-# Status War/CWL tanpa API key
-- Status War & CWL kini diambil dari ClashKing tanpa API key: kartu di Dashboard menampilkan war/CWL yang sedang diikuti dan kapan hari perangnya berakhir.
-- Selama CWL, nama akun, clan dan liga CWL terisi otomatis.
-- Upgrade hero tidak lagi ditahan karena CWL; rencana mengikuti perhitungan biasa.
-- Fitur yang membutuhkan API key resmi dihapus: isian API key, status & pengingat serangan, statistik akun, equipment yang sedang dipakai, dan deteksi upgrade selesai lebih awal. API key yang tersimpan ikut dihapus, jadi cadangan data tidak lagi berisi key.
-- Halaman Tentang kini mencantumkan sumber data (ClashKing) dan pernyataan tidak berafiliasi dengan Supercell.
+# Nama akun otomatis
+- Nama akun kini juga diambil dari pencarian ClashKing bila belum ada, tidak hanya selama CWL. Tidak semua akun terdaftar di ClashKing; yang tidak ditemukan bisa diberi nama sendiri (tahan desa → Ganti nama).
