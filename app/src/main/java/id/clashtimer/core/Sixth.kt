@@ -358,7 +358,9 @@ object Sixth {
         }
         // Star Lab yang tidak punya riset lagi di levelnya: upgrade Star Laboratory paling didahulukan.
         if (labStarved(v, gd, ps)) all.firstOrNull { it.item.id == GameData.STAR_LAB }?.let { add(it, T_UNBLOCK) }
-        // Gear-up dan bangunan Builder Base yang menjadi syaratnya
+        // Gear-up dan bangunan Builder Base yang menjadi syaratnya. Hanya satu Master Builder yang bisa ke
+        // Home Village, jadi gear-up berikutnya baru bisa dimulai setelah yang sedang berjalan selesai.
+        val gearBusy = v.insts.any { it.gearing }
         for (r in rules) {
             if (gearDone(v, r) || gearRunning(v, r)) continue
             if (homeLevel(v, r.bbId) < r.bbLevel) {
@@ -366,6 +368,7 @@ object Sixth {
                     .maxByOrNull { it.fromLevel }?.let { add(it, tierOf("gears", T_PREP)) }
                 continue
             }
+            if (gearBusy) continue
             val home = v.insts.filter { it.item.id == r.homeId && !it.upgrading && !it.geared && it.level >= r.homeLevel }
                 .maxByOrNull { it.level } ?: continue
             add(Candidate(Lane.BB_BUILDER, home.item, home, home.level, home.level, r.durationSec, r.cost, false, gear = true), tierOf("gears", T_GEAR))

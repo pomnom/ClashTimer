@@ -80,11 +80,22 @@ object ProgressCalc {
     }
 
     /** [exclude] = id item yang tidak dihitung (mis. collector bila memilih tidak meng-upgrade-nya). */
+    /**
+     * Level hall yang dituju progres: bila Town Hall / Builder Hall sedang di-upgrade, langsung level
+     * berikutnya (rencana juga sudah mengerjakan isi level itu begitu hall selesai).
+     */
+    fun effectiveHall(v: Village, bb: Boolean): Int {
+        val lvl = if (bb) v.bh else v.th
+        val id = if (bb) GameData.BUILDER_HALL else GameData.TOWN_HALL
+        val up = v.insts.any { it.item.id == id && it.upgrading }
+        return if (up && lvl > 0) lvl + 1 else lvl
+    }
+
     fun compute(
         v: Village, gd: GameData, bb: Boolean, gold: GoldPass, now: Long, finishes: Map<String, Long>,
         exclude: Set<Int> = emptySet(),
     ): VillageProgress {
-        val hall = if (bb) v.bh else v.th
+        val hall = effectiveHall(v, bb)
         val accs = LinkedHashMap<String, Acc>()
         fun acc(item: Item): Acc {
             val (k, t) = catKey(item)

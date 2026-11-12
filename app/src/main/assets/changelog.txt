@@ -1,2 +1,5 @@
-# Nama akun otomatis
-- Nama akun kini juga diambil dari pencarian ClashKing bila belum ada, tidak hanya selama CWL. Tidak semua akun terdaftar di ClashKing; yang tidak ditemukan bisa diberi nama sendiri (tahan desa → Ganti nama).
+# Progres saat Town Hall / Builder Hall di-upgrade
+- Bila Town Hall atau Builder Hall sedang di-upgrade, Progres langsung menghitung menuju max level berikutnya (mis. "menuju max BH8"), sama dengan rencana. Sebelumnya persentase & hari kerja masih untuk level lama, sedangkan perkiraan tanggalnya sudah untuk level baru.
+- Judul desa menampilkan "BH7 → 8" selama Builder Hall di-upgrade (begitu juga Town Hall).
+- Rencana Builder Base: gear-up di Home Village kini satu per satu (hanya satu Master Builder yang bisa ke Home Village).
+- Setiap rilis kini diperiksa otomatis dulu (data game & tes perencana).

@@ -7,6 +7,7 @@ Pakai:
   python3 tools/build_gamedata.py                      # unduh data ClashKingAssets terbaru dari GitHub
   python3 tools/build_gamedata.py --src <folder/zip>   # pakai salinan lokal (folder atau zip repo)
   python3 tools/build_gamedata.py --check              # hanya cek: gagal bila hasil berbeda dari file sekarang
+  python3 tools/build_gamedata.py --validate           # periksa gamedata.json yang ada saja (tanpa unduh; dipakai workflow)
 
 Setelah menulis, skrip menjalankan pemeriksaan data (lihat validate()). Bila ada yang gagal, file tidak ditulis.
 """
@@ -239,7 +240,16 @@ def main():
     ap.add_argument("--src", help="folder atau zip ClashKingAssets (bawaan: unduh dari GitHub)")
     ap.add_argument("--check", action="store_true", help="jangan menulis; gagal bila hasil berbeda")
     ap.add_argument("--out", default=OUT)
+    ap.add_argument("--validate", action="store_true", help="periksa gamedata.json yang ada saja, tanpa mengunduh")
     a = ap.parse_args()
+    if a.validate:
+        g = json.load(open(a.out, encoding="utf-8"))
+        bad = validate(g)
+        if bad:
+            print("❌ Pemeriksaan data gagal:", *bad, sep="\n  ", file=sys.stderr)
+            sys.exit(1)
+        print(f"✅ {os.path.relpath(a.out, ROOT)} lolos pemeriksaan ({len(g['items'])} item, data {g['v']})")
+        return
     data, paths, version = load_src(a.src)
     ovr = json.load(open(OVR, encoding="utf-8"))
     g = build(data, paths, ovr, version)

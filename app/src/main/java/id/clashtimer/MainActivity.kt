@@ -412,8 +412,10 @@ class MainActivity : AppCompatActivity() {
                     eta(if (showBB) sim?.starLabDone else sim?.labDone)).joinToString(" · ")
             }
             else -> {
-                val hall = if (showBB) acc.bh.takeIf { it > 0 }?.let { "BH$it" } else acc.th.takeIf { it > 0 }?.let { "TH$it" }
                 val p = if (showBB) b?.bb else b?.home
+                val cur = if (showBB) acc.bh else acc.th
+                // Hall sedang di-upgrade: progres sudah menuju level berikutnya ("BH7 → 8").
+                val hall = cur.takeIf { it > 0 }?.let { (if (showBB) "BH" else "TH") + it + (p?.hall?.takeIf { h -> h > it }?.let { h -> " → $h" } ?: "") }
                 val pct = p?.pct ?: Store.lastPct(this, acc.tag).takeIf { it >= 0 && !showBB }?.toDouble()
                 listOfNotNull(hall, pct?.let { tr("${Ui.pct(it)} menuju max", "${Ui.pct(it)} to max") }).joinToString(" · ")
             }

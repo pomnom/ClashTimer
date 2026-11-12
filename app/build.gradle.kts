@@ -50,8 +50,29 @@ android {
     }
 }
 
+// Di GitHub Actions (CI=true) APK rilis baru dibuat setelah pemeriksaan data game & tes perencana lolos.
+// Bila gagal, build berhenti dan tidak ada rilis baru; tes yang gagal tampil di log Actions.
+if (System.getenv("CI") != null) {
+    val validateGameData = tasks.register<Exec>("validateGameData") {
+        workingDir = rootProject.projectDir
+        commandLine("python3", "tools/build_gamedata.py", "--validate")
+    }
+    tasks.matching { it.name == "assembleRelease" }.configureEach {
+        dependsOn(validateGameData, "testReleaseUnitTest")
+    }
+}
+
+tasks.withType<Test>().configureEach {
+    testLogging {
+        events("failed")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
+}
+
 dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.12.0")
+    // Tes inti perencana (app/src/test): wajib lolos sebelum APK rilis dibuat di GitHub Actions.
+    testImplementation("junit:junit:4.13.2")
 }

@@ -73,10 +73,12 @@ object Capacity {
      * Kapasitas maksimum [resource] di desa [v] (null = tidak dibatasi / tidak dihitung, mis. resource
      * Home Village). Storage yang sedang di-upgrade tetap menampung sesuai level sekarang.
      */
-    fun of(v: Village, resource: String): Long? {
+    fun of(v: Village, resource: String): Long? = of(v, resource, if (bb(resource)) v.bh else v.th)
+
+    /** Seperti [of], dengan Town Hall / Builder Hall di level [hallLv] (mis. setelah hall naik dalam rencana). */
+    fun of(v: Village, resource: String, hallLv: Int): Long? {
         val tb = t ?: return null
         val id = storageFor(resource) ?: return null
-        val hallLv = if (bb(resource)) v.bh else v.th
         if (hallLv <= 0) return null
         return at(hallTable(tb, resource), hallLv) + v.insts.filter { it.item.id == id }.sumOf { at(table(tb, resource), it.level) }
     }

@@ -103,7 +103,7 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
   selama CWL — cukup disebut di ringkasan (Dashboard) & Tukang, lalu dilanjutkan setelah CWL selesai
 
 **📊 Progres**
-- Persentase menuju max TH/BH, perkiraan bulan selesai builder & lab, **hari kerja** builder & lab (helper ikut
+- Persentase menuju max TH/BH (saat TH/BH sedang di-upgrade: menuju max level berikutnya), perkiraan bulan selesai builder & lab, **hari kerja** builder & lab (helper ikut
   dihitung; Clock Tower di masa depan tidak diasumsikan), progres troop Star Lab sampai level max BH; syarat
   **Builder ke-6 (B.O.B)** di Builder Base
 - Per kategori: persen, sisa biaya, daftar item (ketuk untuk membuka)
@@ -262,11 +262,21 @@ library tambahan):
 ```
 python3 tools/build_gamedata.py          # unduh data ClashKingAssets terbaru, susun & periksa
 python3 tools/build_gamedata.py --check  # hanya periksa apakah data sudah terbaru
+python3 tools/build_gamedata.py --validate  # periksa gamedata.json yang ada (tanpa unduh)
 ```
 - Data yang tidak ada di ClashKingAssets (kapasitas gudang, kamp Builder Base) diubah di `tools/overrides.json`.
 - Sebelum menulis, skrip memeriksa: upgrade termahal di tiap Town Hall harus muat di gudang maksimal, tabel
   kapasitas mencakup level tertinggi, tidak ada id ganda atau level yang bolong. Bila ada yang gagal, file tidak
   ditulis dan masalahnya ditampilkan.
+
+## Pemeriksaan otomatis sebelum rilis
+Saat build di GitHub Actions (`CI=true`), `app/build.gradle.kts` menjalankan dua pemeriksaan sebelum APK rilis
+dibuat — `build.yml` tidak perlu diubah. Bila salah satu gagal, build berhenti (tidak ada rilis baru) dan
+penyebabnya tampil di log run Actions:
+- `tools/build_gamedata.py --validate` — data game (lihat di atas).
+- `./gradlew testReleaseUnitTest` — tes inti perencana di `app/src/test` dengan dua contoh desa (tag
+  disamarkan): arti baris data (mis. Headhunter Lv3 = 90 rb DE), kapasitas gudang, setiap langkah rencana
+  muat di gudang, riset Star Lab menunggu level Star Lab, hanya satu gear-up sekaligus, dan target tercapai.
 
 ## Cara pakai
 1. Di game: Settings → More Settings → paling bawah **Export village data** → Copy.
