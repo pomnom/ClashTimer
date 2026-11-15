@@ -66,6 +66,9 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
   pengingat, atau **Timeline** lab, lalu **Sisa riset** per kategori (ketuk → Progres)
 
 **🎯 Rencana**
+- **Bangunan esensial dulu** (semua strategi Home): setelah hero (Rush TH: setelah Town Hall & bangunan baru),
+  builder mengerjakan bangunan bertipe Army — Army Camp, Clan Castle, Barracks, Dark Barracks, Spell Factory,
+  Workshop, Blacksmith, Lab, Pet House — sebelum pertahanan & trap, tanpa memundurkan target strategi
 - **Urutan tercepat ke target**: tiap strategi punya target — Seimbang = semua upgrade di TH sekarang
   (builder, lab & pet) selesai; Rush TH = Town Hall berikutnya naik (bangunan baru dipasang dulu, TH ikut
   direncanakan); Hero dulu = semua level hero selesai; Builder ke-6 = B.O.B terbuka; Max BB = Builder Base

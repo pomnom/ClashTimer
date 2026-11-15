@@ -1,5 +1,4 @@
-# Progres saat Town Hall / Builder Hall di-upgrade
-- Bila Town Hall atau Builder Hall sedang di-upgrade, Progres langsung menghitung menuju max level berikutnya (mis. "menuju max BH8"), sama dengan rencana. Sebelumnya persentase & hari kerja masih untuk level lama, sedangkan perkiraan tanggalnya sudah untuk level baru.
-- Judul desa menampilkan "BH7 → 8" selama Builder Hall di-upgrade (begitu juga Town Hall).
-- Rencana Builder Base: gear-up di Home Village kini satu per satu (hanya satu Master Builder yang bisa ke Home Village).
-- Setiap rilis kini diperiksa otomatis dulu (data game & tes perencana).
+# Bangunan esensial didahulukan
+- Semua strategi Home Village: builder yang tidak sedang menaikkan hero kini mengerjakan bangunan esensial dulu (Army Camp, Clan Castle, Barracks, Dark Barracks, Spell Factory, Workshop, Blacksmith, Lab), baru pertahanan & trap. Sebelumnya trap & pertahanan yang murah dan cepat didahulukan.
+- Rush TH: Town Hall & bangunan baru tetap paling dulu, lalu hero & bangunan esensial.
+- Target tiap strategi tidak mundur (Seimbang, Rush TH & Hero dulu diuji dengan tiga contoh desa).

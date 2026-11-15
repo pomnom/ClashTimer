@@ -3,9 +3,9 @@ package id.clashtimer.core
 import kotlin.math.sqrt
 
 enum class Strategy(private val labelId: String, private val descId: String, private val targetId: String) {
-    MAX("Seimbang (max TH)", "Target: semua upgrade di TH sekarang (builder, lab & pet) selesai secepatnya; Town Hall berikutnya dimulai begitu builder kehabisan pekerjaan", "max TH"),
-    RUSH("Rush TH", "Target: Town Hall berikutnya secepatnya — bangunan baru dipasang dulu, lalu TH; sisanya offense", "Town Hall naik"),
-    HERO("Hero dulu", "Target: semua level hero di TH sekarang selesai secepatnya; builder lain mengisi sisanya", "hero max");
+    MAX("Seimbang (max TH)", "Target: semua upgrade di TH sekarang (builder, lab & pet) selesai secepatnya — hero jalan bersamaan, bangunan esensial (Army Camp, Clan Castle, Barracks, Workshop, Blacksmith, Lab) sebelum pertahanan & trap; Town Hall berikutnya dimulai begitu builder kehabisan pekerjaan", "max TH"),
+    RUSH("Rush TH", "Target: Town Hall berikutnya secepatnya — bangunan baru dipasang dulu, lalu TH; sesudahnya hero & bangunan esensial, baru pertahanan & trap", "Town Hall naik"),
+    HERO("Hero dulu", "Target: semua level hero di TH sekarang selesai secepatnya; builder lain mengerjakan bangunan esensial dulu (Army Camp, Clan Castle, Barracks, Spell Factory, Workshop, Blacksmith, Lab), lalu sisanya", "hero max");
 
     val label: String get() = if (!Lang.en) labelId else when (this) {
         MAX -> "Balanced (max TH)"
@@ -13,9 +13,9 @@ enum class Strategy(private val labelId: String, private val descId: String, pri
         HERO -> "Heroes first"
     }
     val desc: String get() = if (!Lang.en) descId else when (this) {
-        MAX -> "Target: every upgrade at the current TH (builders, lab & pets) done as soon as possible; the next Town Hall starts as soon as builders run out of work"
-        RUSH -> "Target: the next Town Hall as soon as possible — new buildings first, then the TH; the rest is offense"
-        HERO -> "Target: every hero level at the current TH done as soon as possible; other builders fill the rest"
+        MAX -> "Target: every upgrade at the current TH (builders, lab & pets) done as soon as possible — heroes in parallel, essential buildings (Army Camp, Clan Castle, Barracks, Workshop, Blacksmith, Lab) before defenses & traps; the next Town Hall starts as soon as builders run out of work"
+        RUSH -> "Target: the next Town Hall as soon as possible — new buildings first, then the TH; after that heroes & essential buildings, then defenses & traps"
+        HERO -> "Target: every hero level at the current TH done as soon as possible; other builders do essential buildings first (Army Camp, Clan Castle, Barracks, Spell Factory, Workshop, Blacksmith, Lab), then the rest"
     }
     val target: String get() = if (!Lang.en) targetId else when (this) {
         MAX -> "max TH"
@@ -347,7 +347,7 @@ object Planner {
             val costM = costValue(cost, c.item.resource) / 1_000_000.0
             val pin = if (c.item.id in ps.pinIds) PIN_BOOST else 1.0
             val hero = if (c.item.cat == Cat.HERO && !c.gear) HERO_IDLE_BOOST else 1.0
-            importance(c, ps.strategy) * mult * pin * hero / sqrt((hours + 0.25) * (costM + 0.05)) * eff * eff
+            importance(c, ps.strategy) * mult * pin * hero * strategyGroup(c, ps) / sqrt((hours + 0.25) * (costM + 0.05)) * eff * eff
         } else {
             // Waktu tercepat ke target: bobot target × lama rantai (atau lama upgrade ini).
             val pin = if (c.item.id in ps.pinIds) PIN_TARGET else 1.0
@@ -398,6 +398,37 @@ object Planner {
     private fun isPlacement(c: Candidate) = c.isNew && (c.item.cat == Cat.BUILDING || c.item.cat == Cat.TRAP)
 
     /**
+     * Bangunan esensial (offense & pendukung hero): semua bangunan bertipe Army di Home Village — Army Camp,
+     * Clan Castle, Barracks, Dark Barracks, Spell Factory, Dark Spell Factory, Workshop, Blacksmith,
+     * Laboratory, Pet House, Hero Hall.
+     */
+    fun isEssential(c: Candidate) = !c.lane.bb && c.item.cat == Cat.BUILDING && c.item.type == "Army" && !c.item.isTownHall
+
+    /**
+     * Kelompok urutan Home Village pada urutan nilai per waktu & biaya (jarak antarkelompok besar supaya
+     * trap/pertahanan yang murah & cepat tidak menyalip):
+     * - Seimbang & Hero dulu: hero (& Hero Hall) → bangunan esensial → sisanya.
+     * - Rush TH: Town Hall → bangunan baru → hero & bangunan esensial → sisanya.
+     */
+    private fun strategyGroup(c: Candidate, ps: PlanSettings): Double {
+        if (c.lane.bb || c.lane != Lane.BUILDER) return 1.0
+        val hero = (c.item.cat == Cat.HERO && !c.gear) || c.item.id == GameData.HERO_HALL
+        return when (ps.strategy) {
+            Strategy.MAX, Strategy.HERO -> when {
+                hero -> 1e6
+                isEssential(c) -> 1e3
+                else -> 1.0
+            }
+            Strategy.RUSH -> when {
+                c.item.isTownHall -> 1e9
+                isPlacement(c) -> 1e6
+                hero || isEssential(c) -> 1e3
+                else -> 1.0
+            }
+        }
+    }
+
+    /**
      * Bobot target strategi (urutan waktu-tercepat): upgrade yang menentukan tanggal target didahulukan,
      * sisanya diurutkan menurut lamanya.
      */
@@ -414,18 +445,20 @@ object Planner {
                 c.gate -> 1e3
                 // Tiap hero hanya bisa di-upgrade satu level sekaligus: semua hero dijalankan bersamaan.
                 it.cat == Cat.HERO && !c.gear && HERO_PARALLEL -> 1e2
+                isEssential(c) -> 10.0
                 else -> 1.0
             }
             Strategy.HERO -> when {
                 it.isTownHall -> 1e-6
                 it.id == GameData.HERO_HALL -> 1e5
                 it.cat == Cat.HERO && !c.gear -> 1e4
-                c.gate -> 1e2
+                c.gate || isEssential(c) -> 1e3
                 else -> 1.0
             }
             Strategy.RUSH -> when {
                 it.isTownHall -> 1e8
                 isPlacement(c) -> 1e6
+                isEssential(c) -> 1e3
                 else -> importance(c, Strategy.RUSH)
             }
         }

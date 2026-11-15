@@ -10,8 +10,11 @@ object TestData {
 
     val zone: ZoneId = ZoneId.of("Asia/Makassar")
 
-    /** TH11 / BH9 (B.O.B Control sudah dibangun) dan TH13 / BH7 (Builder Hall 8 sedang di-upgrade). */
-    val villages = listOf("th11_bh9", "th13_bh7")
+    /**
+     * TH11 / BH9 (B.O.B Control sudah dibangun), TH13 / BH7 (Builder Hall 8 sedang di-upgrade) dan TH12 / BH9
+     * (baru naik TH: banyak bangunan esensial & hero tersisa).
+     */
+    val villages = listOf("th11_bh9", "th13_bh7", "th12_bh9")
 
     fun village(name: String): Village =
         ExportReader.read(File("src/test/resources/villages/$name.json").readText(), gd, Long.MAX_VALUE / 4)
@@ -21,9 +24,9 @@ object TestData {
     }
 
     /** Pengaturan umum: tidur 23–06, Gold Pass 20%, strategi Max & Builder ke-6, tanpa event & CWL. */
-    fun settings(bb: BBStrategy = BBStrategy.SIXTH): PlanSettings = PlanSettings(
+    fun settings(bb: BBStrategy = BBStrategy.SIXTH, home: Strategy = Strategy.MAX): PlanSettings = PlanSettings(
         OfflineSchedule(DailyWindow(true, 23 * 60, 6 * 60), DailyWindow(false, 0, 0), zone),
-        CwlRule(false), GoldPass(20, 20), Strategy.MAX, 0, bb,
+        CwlRule(false), GoldPass(20, 20), home, 0, bb,
     )
 
     val HOME = setOf(Lane.BUILDER, Lane.LAB, Lane.PET)

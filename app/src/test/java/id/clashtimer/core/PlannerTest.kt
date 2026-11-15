@@ -82,6 +82,24 @@ class PlannerTest {
         }
     }
 
+    @Test fun bangunanEsensialSebelumPertahanan() {
+        // Semua strategi: builder yang tidak menaikkan hero mengerjakan Army Camp, Barracks, Workshop, dll.
+        // sebelum pertahanan & trap (Rush TH: Town Hall & bangunan baru tetap paling dulu).
+        val v = TestData.village("th12_bh9")
+        for (strat in Strategy.entries) {
+            val ps = TestData.settings(home = strat)
+            val s = Planner.optimize(v, gd, ps, v.exportAt, TestData.finishes(v), TestData.HOME, keepSteps = 5000).sim
+            val work = s.steps.filter { it.lane == Lane.BUILDER && it.item?.cat != Cat.HERO && it.item?.isTownHall != true }
+                .filter { strat != Strategy.RUSH || !it.isNew }
+            val essential = work.filter { it.item?.cat == Cat.BUILDING && it.item?.type == "Army" }
+            val other = work.filter { it !in essential }
+            assertTrue("$strat: tidak ada bangunan esensial tersisa di contoh desa", essential.isNotEmpty())
+            val lastEssential = essential.maxOf { it.start }
+            val early = other.filter { it.start < lastEssential }
+            assertTrue("$strat: menyalip bangunan esensial: ${early.take(5).map { it.title }}", early.isEmpty())
+        }
+    }
+
     @Test fun rencanaSamaBilaDiulang() {
         val v = TestData.village("th13_bh7")
         val fin = TestData.finishes(v)
