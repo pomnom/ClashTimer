@@ -33,13 +33,26 @@ object PlanView {
         else -> setOf(Lane.STAR_LAB)
     }
 
+    /**
+     * Jenis pekerja per halaman. Halaman Lab di Home Village hanya berisi Laboratory bila halaman Pet tampil
+     * ([pets]); bila tidak, pet (kalau ada) tetap ikut di halaman Lab. Halaman Pet hanya berisi Pet House.
+     */
+    private fun pageLanes(bb: Boolean, lab: Boolean, pet: Boolean, pets: Boolean): Set<Lane> = when {
+        pet -> setOf(Lane.PET)
+        lab && !bb && pets -> setOf(Lane.LAB)
+        else -> lanes(bb, lab)
+    }
+
     /** 0 = Agenda (Tukang) / Antrian (Lab), 1 = Timeline. */
     fun mode(act: MainActivity, lab: Boolean) = pref(act, if (lab) "lab_mode" else "plan_mode")
 
     fun setMode(act: MainActivity, lab: Boolean, v: Int) = setPref(act, if (lab) "lab_mode" else "plan_mode", v)
 
     /** [showFree] = false di layar lebar (kartu pekerja bebas sudah ada di Dashboard sebelah kiri). */
-    fun render(act: MainActivity, box: LinearLayout, tag: String, bb: Boolean, lab: Boolean, b: PlanBundle?, showFree: Boolean = true) {
+    fun render(
+        act: MainActivity, box: LinearLayout, tag: String, bb: Boolean, lab: Boolean, b: PlanBundle?, showFree: Boolean = true,
+        pet: Boolean = false,
+    ) {
         val zone = ZoneId.systemDefault()
         val now = System.currentTimeMillis()
         val acc = Store.accounts(act).firstOrNull { it.tag == tag } ?: return
@@ -53,7 +66,7 @@ object PlanView {
         val gd = Repo.gameData(act)
         val labels = Sessions.labels(ups, now)
         val sim = b?.let { if (bb) it.simBB else it.simHome }
-        val lanes = lanes(bb, lab)
+        val lanes = pageLanes(bb, lab, pet, act.petTab())
         val mode = mode(act, lab)
         val hasExport = Store.exportText(act, tag) != null
 
@@ -67,7 +80,7 @@ object PlanView {
 
         if (b == null || sim == null) {
             if (b == null) act.waiting(tag, box)
-            working(act, box, bb, lab, null, null, ups, gd, labels, now, zone)
+            working(act, box, lanes, lab, null, null, ups, gd, labels, now, zone)
             return
         }
         if (!bb && !lab && sim.cwlDeferred.isNotEmpty() && b.ps.cwl.enabled) {
@@ -78,12 +91,21 @@ object PlanView {
         val split = agendaEnd(b.ps.schedule, now)
         if (!lab) {
             if (mode == 1) timeline(act, box, b, sim, bb, lanes, now, zone) else agenda(act, box, b, sim, bb, lanes, split, now, zone)
-            working(act, box, bb, false, b, sim, ups, gd, labels, now, zone)
+            working(act, box, lanes, false, b, sim, ups, gd, labels, now, zone)
             queue(act, box, b, sim, lanes, split, now, zone)
         } else {
-            working(act, box, bb, true, b, sim, ups, gd, labels, now, zone)
-            if (mode == 1) timeline(act, box, b, sim, bb, lanes, now, zone) else labQueue(act, box, b, sim, bb, lanes, now, zone)
-            labProgress(act, box, b, bb)
+            working(act, box, lanes, true, b, sim, ups, gd, labels, now, zone)
+            // Halaman Pet: bila Pet House belum jadi, jelaskan kapan pet bisa mulai.
+            val petNote = if (pet) petHouseNote(b, sim, now, zone) else null
+            when {
+                mode == 1 -> {
+                    timeline(act, box, b, sim, bb, lanes, now, zone)
+                    petNote?.let { box.addView(note(act, it, Ui.TEXT2)) }
+                }
+                pet -> labQueue(act, box, b, sim, "Pet", lanes, 10, now, zone, pet = true, noteText = petNote)
+                else -> labQueue(act, box, b, sim, if (bb) "Star Lab" else "Lab", lanes, 10, now, zone)
+            }
+            labProgress(act, box, b, bb, lanes)
         }
     }
 
@@ -225,19 +247,36 @@ object PlanView {
         }
     }
 
-    /** Lab: antrian riset berikutnya dengan lonceng pengingat. */
-    private fun labQueue(act: MainActivity, box: LinearLayout, b: PlanBundle, sim: SimResult, bb: Boolean, lanes: Set<Lane>, now: Long, zone: ZoneId) {
+    /**
+     * Pet House belum ada di desa ini tetapi pembangunannya sudah berjalan / direncanakan: kapan pet bisa mulai.
+     * null = Pet House sudah ada, atau memang belum bisa dibangun (Town Hall belum cukup).
+     */
+    private fun petHouseNote(b: PlanBundle, sim: SimResult, now: Long, zone: ZoneId): String? {
+        if (b.village.petHouse > 0) return null
+        val build = (sim.running + sim.steps).firstOrNull { it.item?.id == id.clashtimer.core.GameData.PET_HOUSE && it.isNew } ?: return null
+        val done = HomeView.short(build.finish, now, zone)
+        return if (build.running) tr("🐾 Pet House sedang dibangun — pet bisa mulai $done", "🐾 Pet House is being built — pets can start $done")
+        else tr("🐾 Pet House belum dibangun — pet mulai setelah selesai, ±$done", "🐾 Pet House not built yet — pets start once it is done, about $done")
+    }
+
+    /** Lab / Pet: antrian riset berikutnya dengan lonceng pengingat. */
+    private fun labQueue(
+        act: MainActivity, box: LinearLayout, b: PlanBundle, sim: SimResult, name: String, lanes: Set<Lane>, limit: Int,
+        now: Long, zone: ZoneId, pet: Boolean = false, noteText: String? = null,
+    ) {
         val steps = sim.steps.filter { it.lane in lanes && !it.running && it.start > now + 60_000L }.sortedBy { it.start }
-        val name = if (bb) "Star Lab" else "Lab"
         val head = Ui.heading(act, tr("Antrian $name", "$name queue"), tr("urutan tercepat ke target", "fastest order to target"), Help.Topic.PLAN)
         box.addView(head)
+        if (noteText != null) box.addView(note(act, noteText, Ui.TEXT2))
         if (steps.isEmpty()) {
-            box.addView(Ui.muted(act, tr("Tidak ada riset lagi yang bisa direncanakan.", "No more research can be planned.")).apply { setPadding(Ui.dp(act, 4), 0, 0, Ui.dp(act, 10)) })
+            val none = if (pet) tr("Tidak ada upgrade pet lagi yang bisa direncanakan.", "No more pet upgrades can be planned.")
+            else tr("Tidak ada riset lagi yang bisa direncanakan.", "No more research can be planned.")
+            // Pet House belum jadi: keterangannya sudah menjelaskan, tidak perlu "tidak ada".
+            if (noteText == null) box.addView(Ui.muted(act, none).apply { setPadding(Ui.dp(act, 4), 0, 0, Ui.dp(act, 10)) })
             return
         }
         val schedule = b.ps.schedule
         val panel = Ui.panel(act, padH = 14, padV = 4)
-        val limit = 10
         steps.take(limit).forEachIndexed { i, s ->
             if (i > 0) panel.addView(View(act).apply { setBackgroundColor(Ui.LINE) },
                 LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(act, 1)))
@@ -279,21 +318,30 @@ object PlanView {
         }
         box.addView(panel, Ui.matchWrap(8, act))
         val rest = steps.size - limit
-        if (rest > 0) box.addView(Ui.muted(act, tr("… lalu $rest riset lagi", "… then $rest more research")).apply { setPadding(Ui.dp(act, 4), 0, 0, Ui.dp(act, 8)) })
+        if (rest > 0) {
+            val more = if (pet) tr("… lalu $rest upgrade pet lagi", "… then $rest more pet upgrades") else tr("… lalu $rest riset lagi", "… then $rest more research")
+            box.addView(Ui.muted(act, more).apply { setPadding(Ui.dp(act, 4), 0, 0, Ui.dp(act, 8)) })
+        }
     }
 
     // ---------------------------------------------------------------- sedang dikerjakan
 
     private fun working(
-        act: MainActivity, box: LinearLayout, bb: Boolean, lab: Boolean, b: PlanBundle?, sim: SimResult?,
+        act: MainActivity, box: LinearLayout, lanes: Set<Lane>, lab: Boolean, b: PlanBundle?, sim: SimResult?,
         ups: List<Upgrade>, gd: id.clashtimer.core.GameData, labels: Map<String, String>, now: Long, zone: ZoneId,
     ) {
-        val kinds = lanes(bb, lab).map { Kind.of(it) }.toSet()
+        val bb = lanes.any { it.bb }
+        val kinds = lanes.map { Kind.of(it) }.toSet()
         val running = ups.filter { it.kind in kinds && it.finishAt > now }.sortedBy { it.finishAt }
         if (running.isEmpty()) return
         val tag = running.first().tag
         val sub = if (lab) tr("${running.size} berjalan", "${running.size} running") else act.builderCounts(tag, bb).let { (busy, total) -> tr("$busy/$total bekerja", "$busy/$total working") }
-        box.addView(Ui.heading(act, (if (lab) tr("Sedang diriset", "Researching") else tr("Sedang dikerjakan", "In progress")) + " · $sub", tr("tercepat di atas", "soonest first")))
+        val what = when {
+            lanes == setOf(Lane.PET) -> tr("Sedang di-upgrade", "Upgrading")
+            lab -> tr("Sedang diriset", "Researching")
+            else -> tr("Sedang dikerjakan", "In progress")
+        }
+        box.addView(Ui.heading(act, "$what · $sub", tr("tercepat di atas", "soonest first")))
         for (u in running) box.addView(workCard(act, u, gd, labels[u.id], lab, b, sim, now, zone), Ui.matchWrap(10, act))
     }
 
@@ -378,11 +426,12 @@ object PlanView {
 
     // ---------------------------------------------------------------- lab: sisa riset
 
-    private fun labProgress(act: MainActivity, box: LinearLayout, b: PlanBundle, bb: Boolean) {
+    private fun labProgress(act: MainActivity, box: LinearLayout, b: PlanBundle, bb: Boolean, lanes: Set<Lane>) {
         val p = (if (bb) b.bb else b.home) ?: return
-        val cats = p.categories.filter { it.lane == Lane.LAB || it.lane == Lane.PET || it.lane == Lane.STAR_LAB }
+        val cats = p.categories.filter { it.lane in lanes }
         if (cats.isEmpty()) return
-        box.addView(Ui.heading(act, tr("Sisa riset", "Research left"), null, Help.Topic.PROGRESS))
+        val title = if (lanes == setOf(Lane.PET)) tr("Sisa upgrade pet", "Pet upgrades left") else tr("Sisa riset", "Research left")
+        box.addView(Ui.heading(act, title, null, Help.Topic.PROGRESS))
         val panel = Ui.panel(act, padH = 14, padV = 6)
         for (c in cats) {
             val pct = if (c.totalSec > 0) c.doneSec * 100.0 / c.totalSec else 100.0

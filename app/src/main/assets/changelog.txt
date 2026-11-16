@@ -5,6 +5,8 @@
 - Urutan tetap di dalam bangunan esensial: Lab, Pet House, Hero Hall, Blacksmith, Clan Castle, Army Camp, lalu Spell Factory, Barracks, Workshop.
 - Trap baru (pemasangan instan) langsung dipasang di semua strategi.
 - Perbaikan: pet tidak ikut direncanakan bila Pet House belum dibangun. Sekarang riset pet masuk jadwal begitu Pet House selesai.
+- Halaman Pet baru (di samping Tukang & Lab): Pet House yang bebas, upgrade pet yang berjalan, Antrian Pet / Timeline dan sisa upgrade pet. Halaman ini tersembunyi selama desa belum bisa punya Pet House; bila Pet House belum jadi, ada keterangan kapan pet bisa mulai.
+- Widget & daftar desa: kolom Lab juga mewakili Pet House — menampilkan yang bebas atau paling cepat selesai, bertanda "P" bila itu pet.
 - Perhitungan rencana sekitar 3× lebih cepat dan jauh lebih ringan di HP spek rendah.
 - Aplikasi lebih hemat: rencana hanya dihitung ulang saat data berubah atau saat ada pekerja yang bebas (bukan tiap 5 menit), simulasi Builder Base "Max" baru dihitung saat Progres Builder Base dibuka, dan widget memakai hasil hitung yang sama.
 - API key sendiri (opsional): tempel di Pengaturan → Data & akun. Dengan key, aplikasi memakai API resmi — status serangan War/CWL di Dashboard, pengingat serangan 3 jam sebelum berakhir (juga Raid Weekend), hero ditahan selama CWL, upgrade yang selesai lebih cepat ditandai otomatis, dan statistik akun. Tanpa key tetap memakai ClashKing seperti sebelumnya.

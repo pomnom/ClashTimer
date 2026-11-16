@@ -456,9 +456,10 @@ object HomeView {
             ups.filter { it.kind in bKinds && it.finishAt > now && !it.extra }.sortedBy { it.finishAt }, labels, freeB, now, zone) {
             act.openTab(MainActivity.Tab.BUILDERS)
         }, Ui.weight1())
+        val labSoonest = ups.filter { it.kind in lKinds && it.finishAt > now }.sortedBy { it.finishAt }
         row.addView(fastTile(act, (if (bb) "Star Lab" else "Lab") + tr(" tercepat", " soonest"), true,
-            ups.filter { it.kind in lKinds && it.finishAt > now }.sortedBy { it.finishAt }, labels, freeL, now, zone) {
-            act.openTab(MainActivity.Tab.LAB)
+            labSoonest, labels, freeL, now, zone) {
+            act.openTab(labPage(freeL, labSoonest))
         }, Ui.weight1().apply { marginStart = Ui.dp(act, 10) })
         box.addView(gap(act, row.apply { layoutParams = Ui.matchWrap() }))
     }
@@ -515,6 +516,13 @@ object HomeView {
         return card
     }
 
+    /** Halaman tujuan bagian Lab di Dashboard: Pet bila yang ditampilkan paling atas adalah pet. */
+    private fun labPage(free: List<FreeCard>, running: List<Upgrade>): MainActivity.Tab = when {
+        free.isNotEmpty() -> if (free.first().lane == Lane.PET) MainActivity.Tab.PET else MainActivity.Tab.LAB
+        running.firstOrNull()?.kind == Kind.PET -> MainActivity.Tab.PET
+        else -> MainActivity.Tab.LAB
+    }
+
     // ---------------------------------------------------------------- 3–4. tukang & lab + satu saran
 
     private fun workers(
@@ -531,14 +539,15 @@ object HomeView {
             else -> if (bb) "Master Builder" else tr("Tukang", "Builders")
         }
         val sub = if (lab) tr("${running.size} berjalan", "${running.size} running") else act.builderCounts(tag, bb).let { (busy, total) -> tr("$busy/$total bekerja", "$busy/$total working") }
-        box.addView(sectionHead(act, title, sub, tr("Lihat semua", "See all")) { act.openTab(if (lab) MainActivity.Tab.LAB else MainActivity.Tab.BUILDERS) })
+        val page = if (lab) labPage(free, running) else MainActivity.Tab.BUILDERS
+        box.addView(sectionHead(act, title, sub, tr("Lihat semua", "See all")) { act.openTab(page) })
         free.firstOrNull()?.let { box.addView(gap(act, freeCard(act, tag, b, it, bb, now, zone, hasExport), 8)) }
         if (free.size > 1) box.addView(Ui.muted(act, tr("+${free.size - 1} bebas lagi · lihat semua", "+${free.size - 1} more free · see all")).apply {
             textSize = 13f
             setTextColor(Ui.FREE_TEXT)
             setPadding(Ui.dp(act, 4), 0, 0, Ui.dp(act, 8))
             isClickable = true
-            setOnClickListener { act.openTab(if (lab) MainActivity.Tab.LAB else MainActivity.Tab.BUILDERS) }
+            setOnClickListener { act.openTab(page) }
         })
         if (running.isEmpty() && next == null) {
             box.addView(Ui.space(act), LinearLayout.LayoutParams(1, Ui.dp(act, 4)))

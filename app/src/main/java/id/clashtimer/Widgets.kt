@@ -192,7 +192,10 @@ object Widgets {
         val all = Store.upgrades(ctx)
         return Store.accounts(ctx).map { acc ->
             val s = snapshot(ctx, gd, acc.tag, all, now)
-            VRow(acc.tag, Store.villageName(ctx, acc.tag), acc, LANES.map { cellOf(s, acc, it, now) })
+            VRow(acc.tag, Store.villageName(ctx, acc.tag), acc, LANES.map { lane ->
+                val c = cellOf(s, acc, lane, now)
+                if (lane == Lane.LAB) withPet(c, cellOf(s, acc, Lane.PET, now)) else c
+            })
         }.sortedWith(compareBy<VRow>({ r -> r.cells.minOf { it.soonest(now) } }, { it.name.lowercase() }))
     }
 
@@ -318,6 +321,8 @@ object Widgets {
         val goblins: Int = 0,
         /** Pekerja tetap yang sedang bekerja. */
         val busy: Int = 0,
+        /** Kolom Lab: yang ditampilkan (bebas / hitung mundur) adalah Pet House, bukan Laboratory. */
+        val pet: Boolean = false,
     ) {
         fun soonest(now: Long): Long = when {
             free > 0 -> now
@@ -348,6 +353,21 @@ object Widgets {
         val pick = slot?.ranked?.firstOrNull()
         val free = if (pick != null) slot?.count ?: 0 else 0
         return Cell(lane, total, free, next, pick?.c?.title, goblins, running.size)
+    }
+
+    /**
+     * Kolom Lab juga mewakili Pet House: menampilkan yang bebas, atau yang paling cepat selesai di antara
+     * keduanya (ditandai "P" bila itu pet). Desa tanpa Pet House tidak berubah.
+     */
+    private fun withPet(lab: Cell, pet: Cell): Cell {
+        if (pet.total == 0 && pet.next == null) return lab
+        val free = lab.free + pet.free
+        val next = listOfNotNull(lab.next, pet.next).minByOrNull { it.finishAt }
+        val showPet = if (free > 0) lab.free == 0 else next != null && next === pet.next
+        return Cell(
+            Lane.LAB, lab.total + pet.total, free, next, if (lab.free > 0) lab.tip else pet.tip,
+            lab.goblins + pet.goblins, lab.busy + pet.busy, showPet,
+        )
     }
 
     internal fun laneName(lane: Lane): String = when (lane) {
@@ -384,10 +404,12 @@ object Widgets {
         val next = c.next
         var sub = ""
         var subColor = R.color.widget_text2
+        // Kolom Lab yang sedang menampilkan Pet House diberi tanda "P".
+        val mark = if (c.pet) "P " else ""
         rv.setInt(ids.box, "setBackgroundResource", if (c.free > 0) R.drawable.widget_tile_free else R.drawable.widget_tile)
         when {
             c.free > 0 -> {
-                showText(ctx, rv, ids, if (c.free > 1) tr("${c.free} bebas", "${c.free} free") else "bebas", R.color.widget_green)
+                showText(ctx, rv, ids, mark + (if (c.free > 1) tr("${c.free} bebas", "${c.free} free") else "bebas"), R.color.widget_green)
                 c.tip?.let {
                     sub = "💡 " + keep(it)
                     subColor = R.color.widget_accent
@@ -399,9 +421,9 @@ object Widgets {
                     rv.setViewVisibility(ids.text, View.GONE)
                     rv.setViewVisibility(ids.chrono, View.VISIBLE)
                     rv.setTextColor(ids.chrono, color(ctx, laneColor(c.lane)))
-                    rv.setChronometer(ids.chrono, SystemClock.elapsedRealtime() + rem, null, true)
+                    rv.setChronometer(ids.chrono, SystemClock.elapsedRealtime() + rem, if (c.pet) "P %s" else null, true)
                     rv.setChronometerCountDown(ids.chrono, true)
-                } else showText(ctx, rv, ids, Fmt.dur(rem), laneColor(c.lane))
+                } else showText(ctx, rv, ids, mark + Fmt.dur(rem), laneColor(c.lane))
                 sub = shortTitle(next)
                 if (c.total > 1) sub += " · ${c.busy}/${c.total}"
             }
@@ -489,7 +511,7 @@ object Widgets {
         if (free != null) {
             val (r, c) = free
             val what = c.tip?.let { ": $it" } ?: tr(" bebas", " free")
-            rv.setTextViewText(R.id.a_footer, "💡 ${r.name} · ${laneName(c.lane)}$what")
+            rv.setTextViewText(R.id.a_footer, "💡 ${r.name} · ${laneName(if (c.pet) Lane.PET else c.lane)}$what")
             rv.setTextColor(R.id.a_footer, color(ctx, R.color.widget_accent))
         } else {
             val next = rows.flatMap { r -> r.cells.mapNotNull { c -> c.next?.let { r to it } } }

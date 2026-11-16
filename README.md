@@ -5,10 +5,11 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
 
 ## Fitur
 **🧭 Tampilan**
-- Navigasi bawah (rel di kiri pada tablet): **Dashboard · Tukang · Lab · Progres**. Semua halaman
+- Navigasi bawah (rel di kiri pada tablet): **Dashboard · Tukang · Lab · Pet · Progres** (Pet hanya
+  tampil bila desa sudah bisa punya Pet House). Semua halaman
   hanya untuk **desa yang dipilih**. Header: nama desa ▾ (ketuk = lembar **Desa anda**), TH/BH & persen
-  menuju max, ikon update dari export & opsi desa, lalu **Home Village | Builder Base** (di Tukang & Lab:
-  **Agenda/Antrian | Timeline** dan **Home | BB**)
+  menuju max, ikon update dari export & opsi desa, lalu **Home Village | Builder Base** (di Tukang, Lab & Pet:
+  **Agenda/Antrian | Timeline**; Tukang & Lab juga **Home | BB**)
 - **Desa anda** (lembar pemilih desa, menggantikan tab Desa): login berikutnya semua desa, lalu kartu tiap
   desa dengan kotak Tukang, Lab, Builder Base & Star Lab (hitung mundur / bebas). Ketuk desa = buka,
   ketuk kotak = langsung ke halaman Tukang / Lab-nya, tahan = ganti nama / opsi / hapus
@@ -67,9 +68,16 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
 - **Antrian** besok dan seterusnya, per hari; peringatan builder menganggur 7 hari ke depan
 - **Builder Base**: Master Builder termasuk **gear-up di Home Village**; kapasitas gudang BB
 
-**🧪 Lab** (Laboratory, Pet House / Star Lab)
-- Kartu riset yang berjalan (termasuk Goblin Researcher), **Antrian** riset berikutnya dengan lonceng
+**🧪 Lab** (Laboratory / Star Lab)
+- Kartu riset yang berjalan (termasuk Goblin Researcher), **Antrian Lab** (10 riset berikutnya) dengan lonceng
   pengingat, atau **Timeline** lab, lalu **Sisa riset** per kategori (ketuk → Progres)
+
+**🐾 Pet** (Pet House) — halaman sendiri, seperti Tukang & Lab
+- Pet House yang bebas beserta sarannya, upgrade pet yang berjalan, **Antrian Pet** (10 upgrade berikutnya)
+  dengan lonceng pengingat atau **Timeline**, lalu **Sisa upgrade pet**
+- Halaman ini **tersembunyi** selama desa belum punya pilihan pet (Town Hall belum bisa membangun Pet House)
+  dan di sisi Builder Base. Bila Pet House baru direncanakan / sedang dibangun, ada keterangan kapan pet
+  bisa mulai
 
 **🎯 Rencana**
 - **Bangunan esensial dulu** (semua strategi Home): bangunan bertipe Army dikerjakan sebelum pertahanan & trap
@@ -138,6 +146,9 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
   Star Lab — hitung mundur (< 24 jam) atau sisa hari/jam, **bebas** (kotak hijau), "max" bila tidak ada
   lagi yang bisa di-upgrade, "–" bila belum dibangun. Warna sama dengan aplikasi: emas = builder,
   ungu = lab
+- Kotak **Lab juga mewakili Pet House**: menampilkan yang bebas, atau yang paling cepat selesai di antara
+  Laboratory & Pet House — bertanda **P** bila itu pet (di lembar Desa anda labelnya berubah jadi "Pet").
+  Desa tanpa Pet House tidak berubah
 - Isinya sama dengan lembar **Desa anda**: Goblin Builder/Researcher tidak dihitung sebagai pekerja tetap
   (tampil sebagai 👺 di bawah nama desa), dan saran memakai urutan tercepat yang sama dengan Tukang
 - Desa yang paling cepat bebas di atas; perbesar widget untuk menampilkan lebih banyak desa.

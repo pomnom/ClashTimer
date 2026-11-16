@@ -40,6 +40,8 @@ class MainActivity : AppCompatActivity() {
         HOME(R.drawable.ic_nav_dashboard, "Dashboard"),
         BUILDERS(R.drawable.ic_nav_builder, "Tukang"),
         LAB(R.drawable.ic_flask, "Lab"),
+        /** Halaman pet: hanya tampil bila desa ini sudah punya pilihan pet (lihat [MainActivity.petTab]). */
+        PET(R.drawable.ic_nav_pet, "Pet"),
         PROGRESS(R.drawable.ic_nav_progress, "Progres");
 
         /** Nama tab sesuai bahasa. */
@@ -47,6 +49,7 @@ class MainActivity : AppCompatActivity() {
             HOME -> "Dashboard"
             BUILDERS -> tr("Tukang", "Builders")
             LAB -> "Lab"
+            PET -> "Pet"
             PROGRESS -> tr("Progres", "Progress")
         }
 
@@ -336,9 +339,26 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderAll() {
+        // Halaman Pet tidak ada di Builder Base / desa yang belum punya pet: pindah ke Lab.
+        if (tab == Tab.PET && !petTab()) tab = Tab.LAB
         renderHeader()
         renderNav()
         renderBody()
+    }
+
+    /**
+     * Halaman Pet tampil? Hanya di Home Village, dan hanya bila desa ini sudah punya pilihan pet: Town Hall-nya
+     * sudah bisa membangun Pet House, atau sudah ada upgrade pet yang berjalan.
+     */
+    fun petTab(): Boolean {
+        if (showBB) return false
+        val tag = currentTag() ?: return false
+        val acc = Store.accounts(this).firstOrNull { it.tag == tag } ?: return false
+        val unlock = runCatching { Repo.gameData(this).item(id.clashtimer.core.GameData.PET_HOUSE)?.lv(1)?.hall }.getOrNull() ?: 14
+        // TH dari akun (import) atau dari hasil hitung rencana — akun lama bisa belum mencatat TH.
+        if (maxOf(acc.th, planCache[tag]?.village?.th ?: 0) >= unlock) return true
+        val now = System.currentTimeMillis()
+        return Store.upgrades(this).any { it.tag == tag && it.kind == Kind.PET && it.finishAt > now }
     }
 
     /**
@@ -365,7 +385,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
         val name = Store.villageName(this, acc.tag)
-        val workers = tab == Tab.BUILDERS || tab == Tab.LAB
+        val workers = tab == Tab.BUILDERS || tab == Tab.LAB || tab == Tab.PET
         val col = Ui.vbox(this).apply {
             setPadding(0, dp(2), dp(4), dp(2))
             isClickable = true
@@ -375,6 +395,7 @@ class MainActivity : AppCompatActivity() {
         val title = when (tab) {
             Tab.BUILDERS -> (if (showBB) "Master Builder" else tr("Tukang", "Builders")) + " · " + name
             Tab.LAB -> (if (showBB) "Star Lab" else "Lab") + " · " + name
+            Tab.PET -> "Pet · $name"
             else -> name
         }
         col.addView(Ui.text(this, "$title ▾", Ui.TITLE_L).apply {
@@ -407,10 +428,17 @@ class MainActivity : AppCompatActivity() {
             }
             Tab.LAB -> {
                 val now = System.currentTimeMillis()
-                val kinds = if (showBB) setOf(Kind.STAR_LAB) else setOf(Kind.LAB, Kind.PET)
+                // Pet punya halaman sendiri; bila halaman itu tidak tampil, pet (kalau ada) tetap dihitung di sini.
+                val kinds = if (showBB) setOf(Kind.STAR_LAB) else if (petTab()) setOf(Kind.LAB) else setOf(Kind.LAB, Kind.PET)
                 val n = Store.upgrades(this).count { it.tag == acc.tag && it.kind in kinds && it.finishAt > now }
                 listOfNotNull(if (n > 0) tr("$n riset berjalan", "$n research running") else tr("tidak ada riset berjalan", "no research running"),
                     eta(if (showBB) sim?.starLabDone else sim?.labDone)).joinToString(" · ")
+            }
+            Tab.PET -> {
+                val now = System.currentTimeMillis()
+                val n = Store.upgrades(this).count { it.tag == acc.tag && it.kind == Kind.PET && it.finishAt > now }
+                listOfNotNull(if (n > 0) tr("$n upgrade pet berjalan", "$n pet upgrade running") else tr("tidak ada upgrade pet berjalan", "no pet upgrade running"),
+                    eta(planCache[acc.tag]?.simHome?.petDone)).joinToString(" · ")
             }
             else -> {
                 val p = if (showBB) b?.bb else b?.home
@@ -434,7 +462,7 @@ class MainActivity : AppCompatActivity() {
 
     /** Tukang & Lab: Agenda (Antrian) | Timeline, lalu Home | BB (Star) yang ringkas. */
     private fun workerSwitch(acc: Account): View {
-        val lab = tab == Tab.LAB
+        val lab = tab == Tab.LAB || tab == Tab.PET
         val row = Ui.hbox(this)
         row.addView(Ui.segmentedWide(this, listOf(if (lab) tr("Antrian", "Queue") else "Agenda", "Timeline"), PlanView.mode(this, lab), lab = lab) {
             PlanView.setMode(this, lab, it)
@@ -442,7 +470,8 @@ class MainActivity : AppCompatActivity() {
             renderBody()
             scroll.scrollTo(0, 0)
         }, Ui.weight1())
-        row.addView(Ui.segmentedWide(this, listOf("Home", if (lab) "Star" else "BB"), if (showBB) 1 else 0, lab = lab) { selectSide(it == 1) },
+        // Pet hanya ada di Home Village: tanpa pilihan Home | BB.
+        if (tab != Tab.PET) row.addView(Ui.segmentedWide(this, listOf("Home", if (lab) "Star" else "BB"), if (showBB) 1 else 0, lab = lab) { selectSide(it == 1) },
             LinearLayout.LayoutParams(dp(150), LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(8) })
         return row
     }
@@ -478,16 +507,20 @@ class MainActivity : AppCompatActivity() {
     private fun selectSide(bb: Boolean) {
         if (bb == showBB) return
         showBB = bb
+        if (tab == Tab.PET && !petTab()) tab = Tab.LAB
         renderHeader()
+        renderNav() // halaman Pet hanya ada di Home Village
         renderBody()
         scroll.scrollTo(0, 0)
     }
 
     private fun renderNav() {
         nav.removeAllViews()
+        val pets = petTab()
         for (t in Tab.entries) {
+            if (t == Tab.PET && !pets) continue
             val selected = t == tab
-            val lab = t == Tab.LAB
+            val lab = t == Tab.LAB || t == Tab.PET
             val color = if (!selected) Ui.TEXT2 else if (lab) Ui.LAB_TEXT else Ui.FREE_TEXT
             val item = Ui.vbox(this).apply {
                 gravity = Gravity.CENTER_HORIZONTAL
@@ -518,7 +551,8 @@ class MainActivity : AppCompatActivity() {
 
     fun zoneId(): ZoneId = ZoneId.systemDefault()
 
-    private fun selectTab(t: Tab) {
+    private fun selectTab(t0: Tab) {
+        val t = if (t0 == Tab.PET && !petTab()) Tab.LAB else t0
         if (t == tab) return
         tab = t
         renderHeader()
@@ -609,6 +643,7 @@ class MainActivity : AppCompatActivity() {
                 Tab.HOME -> HomeView.render(this, body, tag, showBB, b)
                 Tab.BUILDERS -> PlanView.render(this, body, tag, showBB, lab = false, b = b)
                 Tab.LAB -> PlanView.render(this, body, tag, showBB, lab = true, b = b)
+                Tab.PET -> PlanView.render(this, body, tag, false, lab = true, b = b, pet = true)
                 Tab.PROGRESS -> when {
                     b == null -> waiting(tag)
                     // Progres Builder Base memakai simulasi "Max" yang baru dihitung saat layar ini dibuka.

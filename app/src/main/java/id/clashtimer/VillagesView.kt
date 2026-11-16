@@ -59,7 +59,7 @@ object VillagesView {
             val labels = Sessions.labels(ups.filter { it.tag == r.tag }, now)
             val free = home.filter { it.free > 0 }
             if (free.isNotEmpty()) {
-                list += Next(r.name, now, free.joinToString(" & ") { c -> if (c.lane == Lane.BUILDER) "${c.free} builder" else laneShort(c.lane) } + tr(" bebas", " free"))
+                list += Next(r.name, now, free.joinToString(" & ") { c -> if (c.lane == Lane.BUILDER) "${c.free} builder" else laneShort(if (c.pet) Lane.PET else c.lane) } + tr(" bebas", " free"))
                 continue
             }
             val nexts = home.mapNotNull { it.next }
@@ -180,13 +180,14 @@ object VillagesView {
             setOnClickListener {
                 dismiss()
                 val open = when (c.lane) {
-                    Lane.LAB, Lane.PET, Lane.STAR_LAB -> MainActivity.Tab.LAB
+                    Lane.LAB, Lane.PET, Lane.STAR_LAB -> if (c.pet) MainActivity.Tab.PET else MainActivity.Tab.LAB
                     else -> MainActivity.Tab.BUILDERS
                 }
                 act.selectVillage(tag, bb = c.lane.bb, open = open)
             }
         }
-        v.addView(Ui.muted(act, laneShort(c.lane)).apply { textSize = 12f; maxLines = 1 })
+        // Kotak Lab juga mewakili Pet House: labelnya "Pet" bila yang ditampilkan adalah pet.
+        v.addView(Ui.muted(act, laneShort(if (c.pet) Lane.PET else c.lane)).apply { textSize = 12f; maxLines = 1 })
         val main = when {
             free -> Ui.text(act, tr("${c.free} bebas", "${c.free} free"), Ui.TITLE_S).apply { setTextColor(Ui.FREE_TEXT); setTypeface(typeface, Typeface.BOLD) }
             next != null -> Ui.monoText(act, act.countdown(next.finishAt - now), 15f).apply {

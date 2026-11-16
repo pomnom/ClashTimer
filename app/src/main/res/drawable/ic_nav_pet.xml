@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Telapak kaki sederhana (empat jari + bantalan), digambar untuk aplikasi ini. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M3.6,10.4a2.1,2.1 0,1 0,4.2 0a2.1,2.1 0,1 0,-4.2 0zM7.4,5.8a2.2,2.2 0,1 0,4.4 0a2.2,2.2 0,1 0,-4.4 0zM12.2,5.8a2.2,2.2 0,1 0,4.4 0a2.2,2.2 0,1 0,-4.4 0zM16.2,10.4a2.1,2.1 0,1 0,4.2 0a2.1,2.1 0,1 0,-4.2 0z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M12,10.8C9.2,10.8 6.6,14 6.6,16.9C6.6,18.9 8,20.2 9.8,20.2C10.7,20.2 11.3,19.8 12,19.8C12.7,19.8 13.3,20.2 14.2,20.2C16,20.2 17.4,18.9 17.4,16.9C17.4,14 14.8,10.8 12,10.8z" />
+</vector>
