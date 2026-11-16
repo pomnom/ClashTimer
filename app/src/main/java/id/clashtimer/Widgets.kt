@@ -137,14 +137,52 @@ object Widgets {
     /** Satu baris widget: desa + status tiap kolom. */
     internal class VRow(val tag: String, val name: String, val acc: Account, val cells: List<Cell>)
 
+    /**
+     * Desa + saran pekerja bebas yang terakhir dihitung (oleh hitung rencana atau widget sendiri). Selama data &
+     * pengaturan belum berubah dan belum ada pekerja yang berganti status, widget & daftar desa memakainya lagi:
+     * export tidak diurai ulang dan saran tidak dihitung ulang.
+     */
+    private class Kept(
+        val version: Int, val stamp: Int, val export: String?, val en: Boolean, val until: Long,
+        val v: Village, val slots: List<LaneSlot>, val ps: PlanSettings,
+    )
+
+    private val kept = java.util.concurrent.ConcurrentHashMap<String, Kept>()
+
+    /** Data berubah lewat jalur yang tidak menaikkan versi rencana (import, pulihkan cadangan, dll). */
+    fun forget() = kept.clear()
+
+    /** Hasil hitung rencana desa [tag] — dipakai lagi oleh widget sampai [until] selama datanya sama. */
+    internal fun remember(
+        tag: String, version: Int, stamp: Int, export: String?, v: Village, slots: List<LaneSlot>, ps: PlanSettings,
+        now: Long, until: Long,
+    ) {
+        kept[tag] = Kept(version, stamp, export, id.clashtimer.core.Lang.en, until.coerceAtMost(now + PlanBundle.FRESH_MAX), v, slots, ps)
+    }
+
     private fun snapshot(ctx: Context, gd: GameData, tag: String, all: List<Upgrade>, now: Long): Snap {
         val ups = all.filter { it.tag == tag }
+        val version = Store.planVersion(ctx)
+        val stamp = Store.upgradesStamp(ctx)
+        val export = Store.exportText(ctx, tag)
+        kept[tag]?.let { k ->
+            val same = k.version == version && k.stamp == stamp && k.export == export && k.en == id.clashtimer.core.Lang.en
+            if (same && now < k.until) return Snap(tag, k.v, ups, k.slots, k.ps)
+        }
         val ps = runCatching { Store.planSettings(ctx, tag) }.getOrNull()
         val v = if (ps != null) runCatching { Repo.village(ctx, tag) }.getOrNull() else null
         val fin = ups.associate { it.id to it.finishAt }
         val slots = if (v != null && ps != null) {
             runCatching { Planner.suggest(v, gd, ps, now, fin, upcoming = 0) }.getOrDefault(emptyList())
         } else emptyList()
+        if (v != null && ps != null) {
+            // Ada pekerja bebas → sarannya mengikuti jam (disegarkan tiap 5 menit); selain itu berlaku sampai
+            // timer berikutnya selesai, paling lama 30 menit.
+            val freeNow = slots.any { it.freeAt <= now && it.ranked.isNotEmpty() }
+            val nextDone = ups.filter { it.finishAt > now }.minOfOrNull { it.finishAt } ?: Long.MAX_VALUE
+            val until = if (freeNow) now + PlanBundle.FRESH_MIN else minOf(nextDone, now + PlanBundle.FRESH_MAX)
+            kept[tag] = Kept(version, stamp, export, id.clashtimer.core.Lang.en, until, v, slots, ps)
+        }
         return Snap(tag, v, ups, slots, ps)
     }
 

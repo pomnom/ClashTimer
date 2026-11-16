@@ -36,8 +36,14 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
 - **Siap dipakai** (paling atas, seperti "Data desa ketinggalan"): Builder's Apprentice, Lab Assistant, Alchemist dan
   boost gratis Clock Tower begitu bisa dipakai — dengan saran upgrade yang dibantu (terlama). Ketuk setelah memakainya
   di game: cooldown 23 jam & pengingatnya dihitung dari situ. Helper yang otomatis membantu upgrade yang sama tidak muncul
-- **War / CWL** (dari ClashKing, tanpa API key): war atau CWL yang sedang diikuti dan kapan hari perangnya berakhir
-  — hanya info, rencana tidak menahan hero. Selama CWL nama akun, clan & liga terisi otomatis. Ketuk kartu = perbarui
+- **War / CWL**: sumber data dipilih otomatis.
+  - *Tanpa API key* (ClashKing): war atau CWL yang sedang diikuti dan kapan hari perangnya berakhir — hanya info,
+    rencana tidak menahan hero. Selama CWL nama akun, clan & liga terisi otomatis.
+  - *Dengan API key sendiri* (Pengaturan → Data & akun; API resmi lewat proxy RoyaleAPI, key dibuat di
+    developer.clashofclans.com untuk IP 45.79.218.79): serangan sudah dipakai atau belum, hero yang sempat selesai
+    sebelum serangan berikutnya, hero ditahan selama CWL, pengingat serangan 3 jam sebelum berakhir (War, CWL, Raid
+    Weekend), upgrade yang selesai lebih cepat ditandai otomatis, statistik akun. Bila API gagal → ClashKing.
+  - Key hanya disimpan di HP itu; tidak ada di repo/APK dan tidak ikut pindah data / cadangan. Ketuk kartu = perbarui
 - **Hitung mundur** tukang & lab yang paling cepat selesai (jam:menit:detik), dengan pekerja yang bebas
 - **Tukang** dan **Lab** yang sedang bekerja + **satu saran**: kartu saran untuk pekerja yang bebas
   (**Sudah dimulai** / **Opsi lain**, dengan **Batalkan** di pesan bawah), atau "saran berikutnya" saat
@@ -66,9 +72,13 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
   pengingat, atau **Timeline** lab, lalu **Sisa riset** per kategori (ketuk → Progres)
 
 **🎯 Rencana**
-- **Bangunan esensial dulu** (semua strategi Home): setelah hero (Rush TH: setelah Town Hall & bangunan baru),
-  builder mengerjakan bangunan bertipe Army — Army Camp, Clan Castle, Barracks, Dark Barracks, Spell Factory,
-  Workshop, Blacksmith, Lab, Pet House — sebelum pertahanan & trap, tanpa memundurkan target strategi
+- **Bangunan esensial dulu** (semua strategi Home): bangunan bertipe Army dikerjakan sebelum pertahanan & trap
+  dengan urutan tetap — Lab, Pet House, Hero Hall, Blacksmith, Clan Castle, Army Camp, lalu Spell Factory,
+  Barracks, Workshop. **Seimbang**: esensial → hero → sisanya. **Rush TH**: Town Hall → bangunan baru →
+  esensial → hero → sisanya. **Hero dulu**: Hero Hall → hero → esensial → sisanya. Trap baru yang pemasangannya
+  instan langsung dipasang di semua strategi. Target tiap strategi tidak mundur
+- **Pet ikut direncanakan sejak Pet House belum ada**: begitu Pet House selesai dibangun di rencana, riset pet
+  langsung masuk jadwal (begitu juga Laboratory & Star Laboratory yang baru dibangun)
 - **Urutan tercepat ke target**: tiap strategi punya target — Seimbang = semua upgrade di TH sekarang
   (builder, lab & pet) selesai; Rush TH = Town Hall berikutnya naik (bangunan baru dipasang dulu, TH ikut
   direncanakan); Hero dulu = semua level hero selesai; Builder ke-6 = B.O.B terbuka; Max BB = Builder Base
@@ -82,9 +92,13 @@ Aplikasi Android untuk memantau dan merencanakan upgrade Clash of Clans dari
   Menganggur karena semua sudah max atau menunggu syarat tidak dihitung. Ada cara baru **"pas jam tidur"**:
   memilih upgrade yang selesainya pas saat bangun, dan **"akhir event"**: slot terakhir tiap pekerja sebelum Hammer Jam
   (atau event pemotong waktu lain) berakhir diisi upgrade terpanjang, karena potongannya berlaku untuk seluruh durasi
+- **Hemat hitung**: hasil hitung rencana dipakai terus sampai data / pengaturan berubah atau ada pekerja yang
+  bebas (langkah berikutnya tiba waktunya) — paling cepat 5 menit, paling lama 30 menit. Simulasi Builder Base
+  "Max" untuk Progres baru dihitung saat layar Progres Builder Base dibuka, daftar timer hanya diurai ulang bila
+  isinya berubah, dan widget / daftar desa memakai desa + saran yang sama dengan hasil hitung rencana
 - **Lab & Star Lab tidak menunggu builder**: gudang atau upgrade Laboratory/Star Lab yang membuka riset
   berikutnya didahulukan, dan Star Lab mengisi riset lain bila riset fokus belum bisa
-- **Semua hero jalan bersamaan**; saat builder kehabisan pekerjaan tetapi lab/pet masih jalan, strategi
+- **Semua hero jalan bersamaan** (di Seimbang & Rush TH setelah bangunan esensial dimulai); saat builder kehabisan pekerjaan tetapi lab/pet masih jalan, strategi
   Seimbang/Max memulai **Town Hall berikutnya lebih awal**
 - Builder ke-6 memakai **jalur kritis** (syarat dengan sisa waktu terpanjang dulu). Star Laboratory dimulai **tepat
   waktu**: Master Builder menghitung kapan troop fokus butuh level Star Lab berikutnya (termasuk menaikkan gudang
@@ -277,9 +291,17 @@ Saat build di GitHub Actions (`CI=true`), `app/build.gradle.kts` menjalankan dua
 dibuat — `build.yml` tidak perlu diubah. Bila salah satu gagal, build berhenti (tidak ada rilis baru) dan
 penyebabnya tampil di log run Actions:
 - `tools/build_gamedata.py --validate` — data game (lihat di atas).
-- `./gradlew testReleaseUnitTest` — tes inti perencana di `app/src/test` dengan dua contoh desa (tag
+- `./gradlew testReleaseUnitTest` — tes inti perencana di `app/src/test` dengan empat contoh desa (tag
   disamarkan): arti baris data (mis. Headhunter Lv3 = 90 rb DE), kapasitas gudang, setiap langkah rencana
-  muat di gudang, riset Star Lab menunggu level Star Lab, hanya satu gear-up sekaligus, dan target tercapai.
+  muat di gudang, riset Star Lab menunggu level Star Lab, hanya satu gear-up sekaligus, bangunan esensial
+  sebelum hero / pertahanan sesuai strategi, pet direncanakan begitu Pet House dibangun, dan target tercapai.
+- **Rencana acuan** (`GoldenPlanTest`): urutan langkah tiap strategi untuk keempat contoh desa disimpan di
+  `app/src/test/resources/golden/`. Bila kode mengubah urutan itu, build gagal dan log menunjukkan baris
+  pertama yang berbeda — supaya perubahan prioritas yang tidak disengaja ketahuan sebelum rilis.
+  - Perubahan yang disengaja: buat ulang acuan dengan `UPDATE_GOLDEN=1 ./gradlew testReleaseUnitTest`, periksa
+    selisihnya, lalu ikutkan berkasnya.
+  - Bila `gamedata.json` diperbarui, rencana memang ikut berubah: tes acuan **dilewati** (bukan gagal) sampai
+    acuan dibuat ulang untuk data yang baru (baris pertama tiap berkas mencatat sidik data game).
 
 ## Cara pakai
 1. Di game: Settings → More Settings → paling bawah **Export village data** → Copy.

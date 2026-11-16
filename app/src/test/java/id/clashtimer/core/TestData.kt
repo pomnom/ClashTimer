@@ -11,10 +11,10 @@ object TestData {
     val zone: ZoneId = ZoneId.of("Asia/Makassar")
 
     /**
-     * TH11 / BH9 (B.O.B Control sudah dibangun), TH13 / BH7 (Builder Hall 8 sedang di-upgrade) dan TH12 / BH9
-     * (baru naik TH: banyak bangunan esensial & hero tersisa).
+     * TH11 / BH9 (B.O.B Control sudah dibangun), TH13 / BH7 (Builder Hall 8 sedang di-upgrade), TH12 / BH9
+     * (baru naik TH: banyak bangunan esensial & hero tersisa) dan TH14 / BH8 (baru naik TH, Pet House belum dibangun).
      */
-    val villages = listOf("th11_bh9", "th13_bh7", "th12_bh9")
+    val villages = listOf("th11_bh9", "th13_bh7", "th12_bh9", "th14_bh8")
 
     fun village(name: String): Village =
         ExportReader.read(File("src/test/resources/villages/$name.json").readText(), gd, Long.MAX_VALUE / 4)

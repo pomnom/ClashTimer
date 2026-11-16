@@ -148,15 +148,27 @@ object Store {
 
     // ---------------------------------------------------------------- timer
 
+    // Hasil urai terakhir daftar timer. Daftar ini dibaca di banyak tempat (tiap render, widget, alarm), jadi
+    // JSON-nya hanya diurai ulang bila teks yang tersimpan berubah; pemanggil selalu menerima salinan.
+    private var upgradesRaw: String? = null
+    private var upgradesParsed: List<Upgrade> = emptyList()
+
     fun upgrades(ctx: Context): MutableList<Upgrade> = synchronized(lock) {
         val raw = prefs(ctx).getString("upgrades", "[]") ?: "[]"
-        val arr = runCatching { JSONArray(raw) }.getOrDefault(JSONArray())
-        val list = mutableListOf<Upgrade>()
-        for (i in 0 until arr.length()) {
-            runCatching { list += Upgrade.fromJson(arr.getJSONObject(i)) }
+        if (raw !== upgradesRaw && raw != upgradesRaw) {
+            val arr = runCatching { JSONArray(raw) }.getOrDefault(JSONArray())
+            val list = ArrayList<Upgrade>(arr.length())
+            for (i in 0 until arr.length()) {
+                runCatching { list += Upgrade.fromJson(arr.getJSONObject(i)) }
+            }
+            upgradesParsed = list
         }
-        list
+        upgradesRaw = raw
+        upgradesParsed.mapTo(ArrayList(upgradesParsed.size)) { it.copy() }
     }
+
+    /** Penanda isi daftar timer (berubah bila ada timer yang ditambah, dihapus atau diubah). */
+    fun upgradesStamp(ctx: Context): Int = (prefs(ctx).getString("upgrades", "[]") ?: "[]").hashCode()
 
     fun saveUpgrades(ctx: Context, list: List<Upgrade>) = synchronized(lock) {
         val arr = JSONArray()
@@ -243,6 +255,7 @@ object Store {
     /** Nama desa: pilihan pengguna, lalu nickname dari API, lalu tag. */
     fun villageName(ctx: Context, tag: String): String =
         prefs(ctx).getString("name_$tag", null)?.takeIf { it.isNotBlank() }
+            ?: apiPlayer(ctx, tag)?.name?.takeIf { it.isNotBlank() && apiKey(ctx).isNotBlank() }
             ?: ckInfo(ctx, tag)?.name?.takeIf { it.isNotBlank() }
             ?: tag
 
@@ -278,18 +291,18 @@ object Store {
         !prefs(ctx).getString("name_$tag", null).isNullOrBlank() || !ckInfo(ctx, tag)?.name.isNullOrBlank()
 
     /**
-     * Sekali saja: hapus data dari API resmi yang tidak dipakai lagi (API key, statistik, pemain, status CWL lama),
-     * supaya tidak ikut tersimpan di cadangan.
+     * API key dihapus: buang data dari API resmi (statistik, pemain, status CWL & serangan) supaya Dashboard, rencana
+     * dan nama desa kembali memakai ClashKing pada sinkron berikutnya.
      */
-    fun dropApiData(ctx: Context) {
+    fun clearApiData(ctx: Context) {
         val p = prefs(ctx)
-        if (p.getBoolean("api_dropped", false)) return
         val e = p.edit()
         for (k in p.all.keys) {
-            if (k == "api_key" || k.startsWith("api_stats_") || k.startsWith("api_player_") || k.startsWith("cwl_auto_") ||
+            if (k.startsWith("api_stats_") || k.startsWith("api_player_") || k.startsWith("cwl_auto_") ||
                 k.startsWith("war_") || k.startsWith("cwl_known_") || k.startsWith("cwl_free_")) e.remove(k)
         }
-        e.putBoolean("api_dropped", true).putLong("api_tried", 0L).apply()
+        e.putLong("api_tried", 0L).putString("api_status", "")
+            .putInt("plan_version", p.getInt("plan_version", 0) + 1).commit()
     }
 
     fun setVillageName(ctx: Context, tag: String, name: String) {
@@ -589,6 +602,9 @@ object Store {
     ) {
         fun json(): String = JSONObject().put("k", kind).put("s", state).put("e", end).put("l", left).put("u", lineup)
             .put("n", needEnd).put("d", day).put("ds", days).put("at", at).toString()
+
+        /** Dari API resmi (ada status serangan & lineup); ClashKing hanya memberi jadwal ([state] kosong). */
+        val detailed: Boolean get() = state.isNotEmpty()
     }
 
     fun warState(ctx: Context, tag: String): WarState? {
@@ -909,8 +925,14 @@ object Store {
             p.getBoolean("work_on", false), p.getInt("work_start", 8 * 60), p.getInt("work_end", 16 * 60),
             daysFromMask(p.getInt("work_days", DEFAULT_WORK_DAYS)),
         )
-        // War/CWL hanya info (dari ClashKing): rencana tidak menahan hero.
-        val cwl = CwlRule(false)
+        // Dengan API key sendiri: ikut CWL atau tidak ditentukan otomatis (roster clan & war preference), jadwal asli
+        // dari API, dan hero yang selesai sebelum serangan berikutnya boleh di-upgrade. Tanpa key (ClashKing): hanya info.
+        val cwl = if (apiKey(ctx).isNotBlank()) {
+            val known = if (tag != null) listOfNotNull(cwlKnown(ctx, tag)) else emptyList()
+            val auto = if (tag != null) cwlAuto(ctx, tag) else null
+            CwlRule(auto?.counts ?: getBool(ctx, "cwl_on", true, tag), 1, 8, getInt(ctx, "cwl_days", 11, tag), known,
+                if (tag != null) cwlFreeUntil(ctx, tag, known.firstOrNull()) else 0L)
+        } else CwlRule(false)
         val gold = staged(ctx, tag, GoldPass(getInt(ctx, "gp_builder", 0, tag), getInt(ctx, "gp_research", 0, tag)))
         val strategy = runCatching { Strategy.valueOf(getStr(ctx, "strategy", "MAX", tag)) }.getOrDefault(Strategy.MAX)
         val bbChosen = runCatching { BBStrategy.valueOf(getStr(ctx, "bb_strategy", "SIXTH", tag)) }.getOrDefault(BBStrategy.SIXTH)

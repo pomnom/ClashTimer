@@ -204,7 +204,7 @@ class SettingsActivity : AppCompatActivity() {
             if (ev.isEmpty()) tr("Tidak ada event aktif", "No active events") else ev.joinToString(", ") { it.name }) { open("events") }
         group = null
         box.addView(android.view.View(this), LinearLayout.LayoutParams(1, Ui.dp(this, 4)))
-        category(R.drawable.ic_import, Ui.LAB, Ui.LAB_BG, tr("Data & akun", "Data & account"), tr("Status War/CWL · pindah data & cadangan", "War/CWL status · move data & backup")) { open("data") }
+        category(R.drawable.ic_import, Ui.LAB, Ui.LAB_BG, tr("Data & akun", "Data & account"), (if (Store.apiKey(this).isBlank()) tr("ClashKing (tanpa API key)", "ClashKing (no API key)") else tr("API resmi terhubung", "Official API connected")) + tr(" · pindah data & cadangan", " · move data & backup")) { open("data") }
         val bgOk = !Background.isXiaomi() && (getSystemService(android.os.PowerManager::class.java)?.isIgnoringBatteryOptimizations(packageName) == true)
         category(R.drawable.ic_nav_dashboard, if (bgOk) Ui.TEXT2 else Ui.IDLE, Ui.SURFACE2, tr("Widget & berjalan di latar", "Widget & background"),
             if (bgOk) tr("Berjalan tanpa batasan baterai", "Running without battery limits") else tr("Periksa izin berjalan di latar", "Check background permissions")) { open("widget") }
@@ -475,20 +475,72 @@ class SettingsActivity : AppCompatActivity() {
     // ---------------------------------------------------------------- API resmi
 
     private fun apiSection() {
-        sub(tr("⚔️ Status War & CWL", "⚔️ War & CWL status"), tr("Dari ClashKing, tanpa API key", "From ClashKing, no API key needed"))
-        note(tr("Ditampilkan di Dashboard sebagai info: war/CWL yang sedang diikuti dan kapan hari perangnya berakhir. " +
-            "Selama CWL, nama akun, clan & liga diisi otomatis. Rencana tidak menahan hero karena war. " +
-            "Tag pemain dikirim ke ClashKing (api.clashk.ing) untuk mengambil status ini.",
-            "Shown on the Dashboard as info: the war/CWL you are in and when its war day ends. " +
-            "During CWL, account name, clan & league are filled in automatically. The plan does not hold heroes for wars. " +
-            "Player tags are sent to ClashKing (api.clashk.ing) to fetch this status."))
+        val key = Store.apiKey(this)
+        val has = key.isNotBlank()
+        sub(tr("🔌 Sumber data akun", "🔌 Account data source"),
+            if (has) tr("API resmi Clash of Clans (API key Anda)", "Official Clash of Clans API (your API key)") else tr("ClashKing — tanpa API key", "ClashKing — no API key"))
+        note(if (has) tr("Dengan API key: status serangan War/CWL & pengingat 3 jam sebelum berakhir (juga Raid Weekend), jadwal CWL asli — hero ditahan selama CWL kecuali yang sempat selesai sebelum serangan berikutnya, upgrade yang selesai lebih cepat (book, potion, gem) ditandai otomatis, akhir Gold Pass, nama & statistik akun. Bila API gagal, status War/CWL tetap diambil dari ClashKing.",
+            "With an API key: War/CWL attack status & a reminder 3 hours before the end (Raid Weekend too), the real CWL schedule — heroes are held during CWL except those that finish before your next attack, upgrades finished early (book, potion, gems) are marked automatically, Gold Pass end, account name & stats. If the API fails, War/CWL status still comes from ClashKing.")
+        else tr("Tanpa API key, aplikasi memakai ClashKing: war/CWL yang sedang diikuti dan kapan berakhir (info saja, rencana tidak menahan hero), nama akun, clan & liga CWL. Tempel API key Anda sendiri untuk status serangan, pengingat serangan, dan deteksi upgrade selesai lebih cepat.",
+            "Without an API key the app uses ClashKing: the war/CWL you are in and when it ends (info only, the plan does not hold heroes), account name, clan & CWL league. Paste your own API key for attack status, attack reminders and early-finish detection."))
+        row("API key", if (has) "•••• ${key.takeLast(6)}" else tr("Belum diisi — ketuk untuk menempel", "Not set — tap to paste")) { askApiKey() }
         val status = Store.apiStatus(this)
         if (status.isNotBlank()) note("Status: $status · ${Fmt.at(Store.apiTried(this), java.time.ZoneId.systemDefault())}")
-        box.addView(Ui.outlined(this, tr("Perbarui sekarang", "Refresh now")) { syncNow() }.apply { isAllCaps = false }, Ui.matchWrap())
+        box.addView(Ui.outlined(this, if (has) tr("Tes & perbarui", "Test & refresh") else tr("Perbarui sekarang", "Refresh now")) { syncNow() }.apply { isAllCaps = false }, Ui.matchWrap())
+        sub(tr("Cara membuat API key", "How to create an API key"), tr("Gratis, dari Supercell", "Free, from Supercell"))
+        note(tr("1. Buka developer.clashofclans.com, daftar / masuk.\n2. My Account → Create New Key, nama & deskripsi bebas.\n3. Allowed IP address: ${CocApi.PROXY_IP}\n4. Create Key → salin Token → tempel di sini.\n\nPermintaan dikirim lewat proxy RoyaleAPI (cocproxy.royaleapi.dev) karena key Supercell terkunci ke alamat IP. Key hanya disimpan di HP ini dan tidak ikut pindah data / cadangan.",
+            "1. Open developer.clashofclans.com, sign up / sign in.\n2. My Account → Create New Key, any name & description.\n3. Allowed IP address: ${CocApi.PROXY_IP}\n4. Create Key → copy the Token → paste it here.\n\nRequests go through the RoyaleAPI proxy (cocproxy.royaleapi.dev) because Supercell keys are locked to an IP address. The key is stored on this phone only and is not included in data transfer / backups."))
+        val r = Ui.hbox(this)
+        r.addView(Ui.outlined(this, tr("Salin IP", "Copy IP")) {
+            getSystemService(android.content.ClipboardManager::class.java)?.setPrimaryClip(android.content.ClipData.newPlainText("IP", CocApi.PROXY_IP))
+            Toast.makeText(this, tr("Disalin: ", "Copied: ") + CocApi.PROXY_IP, Toast.LENGTH_SHORT).show()
+        }.apply { isAllCaps = false }, Ui.weight1())
+        r.addView(Ui.outlined(this, tr("Buka situs developer", "Open developer site")) {
+            runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(CocApi.DEV_SITE))) }
+        }.apply { isAllCaps = false }, Ui.weight1().apply { marginStart = Ui.dp(this@SettingsActivity, 8) })
+        box.addView(r)
+        if (has) box.addView(Ui.flat(this, tr("Hapus API key (kembali ke ClashKing)", "Remove API key (back to ClashKing)")) { saveKey("") }.apply { isAllCaps = false })
+    }
+
+    /** Simpan / hapus key, lalu langsung sinkron dengan sumber yang sesuai. */
+    private fun saveKey(raw: String) {
+        val k = raw.replace("\\s".toRegex(), "")
+        Store.setApiKey(this, k)
+        if (k.isBlank()) {
+            Store.clearApiData(this)
+            Attacks.clear(this)
+        }
+        render()
+        syncNow()
+    }
+
+    private fun askApiKey() {
+        val input = android.widget.EditText(this).apply {
+            hint = "eyJ0eXAiOiJKV1Qi…"
+            setText(Store.apiKey(this@SettingsActivity))
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE or
+                android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+            minLines = 3
+            maxLines = 6
+        }
+        val wrap = LinearLayout(this).apply {
+            setPadding(Ui.dp(this@SettingsActivity, 20), Ui.dp(this@SettingsActivity, 8), Ui.dp(this@SettingsActivity, 20), 0)
+            addView(input, Ui.matchWrap())
+        }
+        MaterialAlertDialogBuilder(this)
+            .setTitle("API key (Token)")
+            .setView(wrap)
+            .setPositiveButton(tr("Simpan & tes", "Save & test")) { _, _ -> saveKey(input.text.toString()) }
+            .setNeutralButton(tr("Tempel", "Paste")) { _, _ ->
+                val cm = getSystemService(android.content.ClipboardManager::class.java)
+                saveKey(cm?.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString().orEmpty())
+            }
+            .setNegativeButton(tr("Batal", "Cancel"), null)
+            .show()
     }
 
     private fun syncNow() {
-        Toast.makeText(this, tr("Menghubungi ClashKing…", "Contacting ClashKing…"), Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, if (Store.apiKey(this).isBlank()) tr("Menghubungi ClashKing…", "Contacting ClashKing…") else tr("Menghubungi API resmi…", "Contacting the official API…"), Toast.LENGTH_SHORT).show()
         ApiSync.syncAsync(this) { msg ->
             Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
             render()

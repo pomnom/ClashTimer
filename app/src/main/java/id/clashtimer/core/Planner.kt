@@ -3,9 +3,9 @@ package id.clashtimer.core
 import kotlin.math.sqrt
 
 enum class Strategy(private val labelId: String, private val descId: String, private val targetId: String) {
-    MAX("Seimbang (max TH)", "Target: semua upgrade di TH sekarang (builder, lab & pet) selesai secepatnya — hero jalan bersamaan, bangunan esensial (Army Camp, Clan Castle, Barracks, Workshop, Blacksmith, Lab) sebelum pertahanan & trap; Town Hall berikutnya dimulai begitu builder kehabisan pekerjaan", "max TH"),
-    RUSH("Rush TH", "Target: Town Hall berikutnya secepatnya — bangunan baru dipasang dulu, lalu TH; sesudahnya hero & bangunan esensial, baru pertahanan & trap", "Town Hall naik"),
-    HERO("Hero dulu", "Target: semua level hero di TH sekarang selesai secepatnya; builder lain mengerjakan bangunan esensial dulu (Army Camp, Clan Castle, Barracks, Spell Factory, Workshop, Blacksmith, Lab), lalu sisanya", "hero max");
+    MAX("Seimbang (max TH)", "Target: semua upgrade di TH sekarang (builder, lab & pet) selesai secepatnya — bangunan esensial dulu (Lab, Pet House, Hero Hall, Blacksmith, Clan Castle, Army Camp, lalu Spell Factory, Barracks, Workshop), kemudian semua hero bersamaan, baru pertahanan & trap; Town Hall berikutnya dimulai begitu builder kehabisan pekerjaan", "max TH"),
+    RUSH("Rush TH", "Target: Town Hall berikutnya secepatnya — bangunan baru dipasang dulu, lalu TH; sesudahnya bangunan esensial (Lab, Pet House, Blacksmith, Clan Castle, Army Camp, dll.), kemudian hero, baru pertahanan & trap", "Town Hall naik"),
+    HERO("Hero dulu", "Target: semua level hero di TH sekarang selesai secepatnya — Hero Hall & hero paling dulu; builder lain mengerjakan bangunan esensial (Lab, Pet House, Blacksmith, Clan Castle, Army Camp, lalu Spell Factory, Barracks, Workshop), baru sisanya", "hero max");
 
     val label: String get() = if (!Lang.en) labelId else when (this) {
         MAX -> "Balanced (max TH)"
@@ -13,9 +13,9 @@ enum class Strategy(private val labelId: String, private val descId: String, pri
         HERO -> "Heroes first"
     }
     val desc: String get() = if (!Lang.en) descId else when (this) {
-        MAX -> "Target: every upgrade at the current TH (builders, lab & pets) done as soon as possible — heroes in parallel, essential buildings (Army Camp, Clan Castle, Barracks, Workshop, Blacksmith, Lab) before defenses & traps; the next Town Hall starts as soon as builders run out of work"
-        RUSH -> "Target: the next Town Hall as soon as possible — new buildings first, then the TH; after that heroes & essential buildings, then defenses & traps"
-        HERO -> "Target: every hero level at the current TH done as soon as possible; other builders do essential buildings first (Army Camp, Clan Castle, Barracks, Spell Factory, Workshop, Blacksmith, Lab), then the rest"
+        MAX -> "Target: every upgrade at the current TH (builders, lab & pets) done as soon as possible — essential buildings first (Lab, Pet House, Hero Hall, Blacksmith, Clan Castle, Army Camp, then Spell Factory, Barracks, Workshop), then all heroes in parallel, then defenses & traps; the next Town Hall starts as soon as builders run out of work"
+        RUSH -> "Target: the next Town Hall as soon as possible — new buildings first, then the TH; after that essential buildings (Lab, Pet House, Blacksmith, Clan Castle, Army Camp, etc.), then heroes, then defenses & traps"
+        HERO -> "Target: every hero level at the current TH done as soon as possible — Hero Hall & heroes first; other builders do essential buildings (Lab, Pet House, Blacksmith, Clan Castle, Army Camp, then Spell Factory, Barracks, Workshop), then the rest"
     }
     val target: String get() = if (!Lang.en) targetId else when (this) {
         MAX -> "max TH"
@@ -294,10 +294,14 @@ object Planner {
         val storage: Double, val collector: Double, val worker: Double, val townHall: Double,
     )
 
+    private val W_MAX = W(2.2, 1.6, 1.0, 0.5, 0.6, 0.3, 0.6, 0.05)
+    private val W_RUSH = W(3.0, 2.5, 0.2, 0.1, 0.6, 0.02, 0.2, 8.0)
+    private val W_HERO = W(5.0, 1.6, 0.7, 0.3, 0.4, 0.2, 0.4, 0.05)
+
     private fun weights(s: Strategy) = when (s) {
-        Strategy.MAX -> W(2.2, 1.6, 1.0, 0.5, 0.6, 0.3, 0.6, 0.05)
-        Strategy.RUSH -> W(3.0, 2.5, 0.2, 0.1, 0.6, 0.02, 0.2, 8.0)
-        Strategy.HERO -> W(5.0, 1.6, 0.7, 0.3, 0.4, 0.2, 0.4, 0.05)
+        Strategy.MAX -> W_MAX
+        Strategy.RUSH -> W_RUSH
+        Strategy.HERO -> W_HERO
     }
 
     private val keyBuildings = setOf(
@@ -305,6 +309,12 @@ object Planner {
         "Star Laboratory", "Builder Barracks", "Reinforcement Camp",
     )
     private val keyDefenses = setOf("Inferno Tower", "Eagle Artillery", "Scattershot", "Monolith")
+
+    /** Bit 1 = bangunan kunci, bit 2 = pertahanan kunci (per item; diingat supaya tidak membandingkan nama terus). */
+    private val keyMemo = java.util.concurrent.ConcurrentHashMap<Int, Int>()
+    private fun keyFlags(it: Item): Int = keyMemo.getOrPut(it.id) {
+        (if (it.name in keyBuildings) 1 else 0) or (if (it.name in keyDefenses) 2 else 0)
+    }
 
     fun importance(c: Candidate, strategy: Strategy): Double {
         val w = weights(strategy)
@@ -324,8 +334,9 @@ object Planner {
             }
         }
         var mult = 1.0
-        if (it.name in keyBuildings) mult *= 3.0
-        if (it.name in keyDefenses) mult *= if (strategy == Strategy.RUSH) 4.5 else 2.0
+        val key = keyFlags(it)
+        if (key and 1 != 0) mult *= 3.0
+        if (key and 2 != 0) mult *= if (strategy == Strategy.RUSH) 4.5 else 2.0
         if (c.isNew) mult *= 2.0
         if (strategy == Strategy.RUSH && it.isTownHall) mult *= 100.0
         return base * mult
@@ -397,6 +408,9 @@ object Planner {
 
     private fun isPlacement(c: Candidate) = c.isNew && (c.item.cat == Cat.BUILDING || c.item.cat == Cat.TRAP)
 
+    /** Trap / bangunan baru yang pemasangannya instan: tidak memakai waktu builder, jadi selalu dipasang dulu. */
+    private fun isInstantPlacement(c: Candidate) = isPlacement(c) && c.baseDuration <= 0L
+
     /**
      * Bangunan esensial (offense & pendukung hero): semua bangunan bertipe Army di Home Village — Army Camp,
      * Clan Castle, Barracks, Dark Barracks, Spell Factory, Dark Spell Factory, Workshop, Blacksmith,
@@ -405,24 +419,53 @@ object Planner {
     fun isEssential(c: Candidate) = !c.lane.bb && c.item.cat == Cat.BUILDING && c.item.type == "Army" && !c.item.isTownHall
 
     /**
-     * Kelompok urutan Home Village pada urutan nilai per waktu & biaya (jarak antarkelompok besar supaya
-     * trap/pertahanan yang murah & cepat tidak menyalip):
-     * - Seimbang & Hero dulu: hero (& Hero Hall) → bangunan esensial → sisanya.
-     * - Rush TH: Town Hall → bangunan baru → hero & bangunan esensial → sisanya.
+     * Urutan tetap di dalam bangunan esensial (besar = lebih dulu): yang membuka riset, pet & level hero
+     * paling dulu, lalu yang langsung menambah kekuatan serang, baru pembuka troop/spell baru.
+     */
+    private fun essentialRank(it: Item): Int = when (it.id) {
+        GameData.LAB -> 9
+        GameData.PET_HOUSE -> 8
+        GameData.HERO_HALL -> 7
+        GameData.BLACKSMITH -> 6
+        GameData.CLAN_CASTLE -> 5
+        GameData.ARMY_CAMP -> 4
+        GameData.SPELL_FACTORY, GameData.DARK_SPELL_FACTORY -> 3
+        GameData.BARRACKS, GameData.DARK_BARRACKS -> 2
+        else -> 1
+    }
+
+    /** Jarak antarkelompok urutan: 1000× per tingkat, supaya yang murah & cepat tidak menyalip kelompok di atasnya. */
+    private val TIER = DoubleArray(16) { Math.pow(1e3, it.toDouble()) }
+
+    /**
+     * Kelompok urutan Home Village pada urutan nilai per waktu & biaya:
+     * - Seimbang: bangunan esensial (urutan tetap, lihat [essentialRank]) → hero → sisanya.
+     * - Rush TH: Town Hall → bangunan baru → bangunan esensial → hero → sisanya.
+     * - Hero dulu: Hero Hall → hero → bangunan esensial → sisanya.
      */
     private fun strategyGroup(c: Candidate, ps: PlanSettings): Double {
         if (c.lane.bb || c.lane != Lane.BUILDER) return 1.0
-        val hero = (c.item.cat == Cat.HERO && !c.gear) || c.item.id == GameData.HERO_HALL
+        val hero = c.item.cat == Cat.HERO && !c.gear
+        val essential = isEssential(c)
         return when (ps.strategy) {
-            Strategy.MAX, Strategy.HERO -> when {
-                hero -> 1e6
-                isEssential(c) -> 1e3
+            Strategy.MAX -> when {
+                isInstantPlacement(c) -> TIER[15]
+                essential -> TIER[3 + essentialRank(c.item)]
+                hero -> TIER[1]
+                else -> 1.0
+            }
+            Strategy.HERO -> when {
+                isInstantPlacement(c) -> TIER[15]
+                c.item.id == GameData.HERO_HALL -> TIER[14]
+                hero -> TIER[13]
+                essential -> TIER[essentialRank(c.item)]
                 else -> 1.0
             }
             Strategy.RUSH -> when {
-                c.item.isTownHall -> 1e9
-                isPlacement(c) -> 1e6
-                hero || isEssential(c) -> 1e3
+                c.item.isTownHall -> TIER[15]
+                isPlacement(c) -> TIER[14]
+                essential -> TIER[3 + essentialRank(c.item)]
+                hero -> TIER[1]
                 else -> 1.0
             }
         }
@@ -439,26 +482,30 @@ object Planner {
             c.gate -> 1e3
             else -> 1.0
         }
+        val essential = isEssential(c)
         return when (ps.strategy) {
             Strategy.MAX -> when {
                 it.isTownHall -> 1e-6
+                isInstantPlacement(c) -> TIER[15]
+                essential -> TIER[2 + essentialRank(it)]
                 c.gate -> 1e3
                 // Tiap hero hanya bisa di-upgrade satu level sekaligus: semua hero dijalankan bersamaan.
                 it.cat == Cat.HERO && !c.gear && HERO_PARALLEL -> 1e2
-                isEssential(c) -> 10.0
                 else -> 1.0
             }
             Strategy.HERO -> when {
                 it.isTownHall -> 1e-6
-                it.id == GameData.HERO_HALL -> 1e5
-                it.cat == Cat.HERO && !c.gear -> 1e4
-                c.gate || isEssential(c) -> 1e3
+                isInstantPlacement(c) -> TIER[15]
+                it.id == GameData.HERO_HALL -> TIER[13]
+                it.cat == Cat.HERO && !c.gear -> TIER[12]
+                essential -> TIER[essentialRank(it)]
+                c.gate -> 1e3
                 else -> 1.0
             }
             Strategy.RUSH -> when {
-                it.isTownHall -> 1e8
-                isPlacement(c) -> 1e6
-                isEssential(c) -> 1e3
+                it.isTownHall -> TIER[15]
+                isPlacement(c) -> TIER[14]
+                essential -> TIER[2 + essentialRank(it)]
                 else -> importance(c, Strategy.RUSH)
             }
         }
@@ -504,8 +551,7 @@ object Planner {
     /** Hasil [chainOf] (data game tetap; kunci = item, level, hall, Gold Pass). */
     private val chainMemo = java.util.concurrent.ConcurrentHashMap<Long, Long>()
 
-    private fun chainOf(v: Village, gd: GameData, item: Item, from: Int, lane: Lane, gold: GoldPass): Long {
-        val hall = if (lane.bb) v.bh else v.th
+    private fun chainOf(gd: GameData, item: Item, from: Int, lane: Lane, gold: GoldPass, hall: Int): Long {
         val key = (((item.id.toLong() * 512 + from) * 64 + hall) * 128 + gold.pctFor(lane)) * 2 + if (lane.bb) 1 else 0
         chainMemo[key]?.let { return it }
         return chainCalc(gd, item, from, lane, gold, hall).also { if (chainMemo.size < 50_000) chainMemo[key] = it }
@@ -533,10 +579,38 @@ object Planner {
     fun candidates(
         v: Village, gd: GameData, lane: Lane, gold: GoldPass, includeHall: Boolean,
         skip: Set<Int> = emptySet(),
-    ): List<Candidate> = candidatesRaw(v, gd, lane, gold, includeHall, skip).filter { !Capacity.never(v, gd, it) }.map { c ->
-        if (c.gear) c
-        else Candidate(c.lane, c.item, c.inst, c.fromLevel, c.toLevel, c.duration, c.cost, c.isNew, c.count, c.gear, c.baseDuration,
-            maxOf(c.duration, chainOf(v, gd, c.item, c.fromLevel, lane, gold)), c.item.id in GATES)
+    ): List<Candidate> {
+        // Kapasitas terbesar di hall ini dihitung sekali per resource (bukan per kandidat).
+        val maxCap = HashMap<String, Long>(8)
+        fun never(c: Candidate): Boolean {
+            if (c.gear) return false
+            val res = c.item.resource
+            val max = maxCap.getOrPut(res) { Capacity.maxAt(v, gd, res) ?: NO_CAP }
+            return max != NO_CAP && c.cost > max
+        }
+        val hall = if (lane.bb) v.bh else v.th
+        val out = ArrayList<Candidate>()
+        for (c in candidatesRaw(v, gd, lane, gold, includeHall, skip)) {
+            if (never(c)) continue
+            out += if (c.gear) c
+            else Candidate(c.lane, c.item, c.inst, c.fromLevel, c.toLevel, c.duration, c.cost, c.isNew, c.count, c.gear, c.baseDuration,
+                maxOf(c.duration, chainOf(gd, c.item, c.fromLevel, lane, gold, hall)), c.item.id in GATES)
+        }
+        return out
+    }
+
+    /** Penanda "resource ini tidak dibatasi kapasitas" di tabel sementara. */
+    private const val NO_CAP = Long.MIN_VALUE
+
+    /** Kapasitas gudang satu keadaan desa: dihitung sekali per resource, dipakai untuk semua kandidat. */
+    private class Caps(private val v: Village) {
+        private val now = HashMap<String, Long>(8)
+        fun of(res: String): Long? = now.getOrPut(res) { Capacity.of(v, res) ?: NO_CAP }.takeIf { it != NO_CAP }
+        fun blocked(c: Candidate, cost: Long): Boolean {
+            if (c.gear) return false
+            val cap = of(c.item.resource) ?: return false
+            return cost > cap
+        }
     }
 
     /** Kandidat mentah (tanpa saringan gudang) — untuk uji & penjelasan. */
@@ -565,6 +639,7 @@ object Planner {
             else -> 0
         }
         if ((lane == Lane.LAB || lane == Lane.PET || lane == Lane.STAR_LAB) && reqLevel == 0) return out
+        val heroHall = if (lane == Lane.BUILDER) v.heroHall else 0
 
         // Upgrade level berikutnya untuk yang sudah ada
         for (inst in v.insts) {
@@ -577,7 +652,7 @@ object Planner {
             if (item.cat != Cat.BB_TROOP && next.hall > hall) continue
             if (item.isTownHall && !includeHall) continue
             when (item.cat) {
-                Cat.HERO -> if (next.req > v.heroHall) continue
+                Cat.HERO -> if (next.req > heroHall) continue
                 Cat.TROOP, Cat.SPELL, Cat.PET, Cat.BB_TROOP -> if (next.req > reqLevel) continue
                 else -> {}
             }
@@ -590,15 +665,25 @@ object Planner {
         // Bangunan baru yang sudah boleh dibangun
         var placements = 0
         if (lane == Lane.BUILDER || lane == Lane.BB_BUILDER) {
+            // Jumlah bangunan per id & yang sudah dilebur (merge): sekali jalan, bukan per jenis bangunan.
+            val counts = HashMap<Int, Int>(128)
+            val merged = HashMap<Int, Int>()
+            for (i in v.insts) {
+                counts[i.item.id] = (counts[i.item.id] ?: 0) + 1
+                if (i.item.merges.isNotEmpty()) for ((lvl, srcs) in i.item.merges) {
+                    if (lvl <= i.level) for (s in srcs) merged[s.id] = (merged[s.id] ?: 0) + 1
+                }
+            }
             for (id in gd.unlockIds(bb)) {
                 if (id in skipNew) continue
                 val item = gd.item(id) ?: continue
                 if (item.cat != Cat.BUILDING && item.cat != Cat.TRAP && item.cat != Cat.BB_BUILDING && item.cat != Cat.BB_TRAP) continue
                 if (item.isWall || item.levels.isEmpty() || item.merges[1] != null) continue
                 // Army Camp / Reinforcement Camp BB: waktu & biaya menurut bangunan ke berapa.
-                val lv1 = item.build(v.count(id) + 1) ?: continue
+                val have = counts[id] ?: 0
+                val lv1 = item.build(have + 1) ?: continue
                 if (lv1.hall > hall) continue
-                val missing = allowed(v, gd, id, hall, bb) - v.count(id)
+                val missing = (gd.allowedCount(id, hall, bb) - (merged[id] ?: 0)).coerceAtLeast(0) - have
                 if (missing <= 0) continue
                 // Kamp pasukan tidak menahan Builder Hall (bukan syarat naik hall).
                 if (item.instances.isEmpty()) placements++
@@ -610,10 +695,10 @@ object Planner {
         if (placements > 0) out.removeAll { it.item.isTownHall }
 
         // Hero baru
-        if (lane == Lane.BUILDER && v.heroHall > 0) {
-            for (item in gd.items.values) {
-                if (item.cat != Cat.HERO || v.has(item.id)) continue
-                if (item.prodLevel > v.heroHall) continue
+        if (lane == Lane.BUILDER && heroHall > 0) {
+            for (item in gd.itemsOf(Cat.HERO)) {
+                if (v.has(item.id)) continue
+                if (item.prodLevel > heroHall) continue
                 val lv1 = item.lv(1) ?: continue
                 if (lv1.hall > hall) continue
                 // Hero baru dibuka gratis & langsung (level berikutnya baru butuh waktu & biaya).
@@ -622,8 +707,8 @@ object Planner {
         }
         // Hero Builder Base baru (Battle Copter mulai di Lv15)
         if (lane == Lane.BB_BUILDER) {
-            for (item in gd.items.values) {
-                if (item.cat != Cat.BB_HERO || v.has(item.id)) continue
+            for (item in gd.itemsOf(Cat.BB_HERO)) {
+                if (v.has(item.id)) continue
                 if (!bbHeroUnlocked(gd, item, hall)) continue
                 val first = item.levels.minByOrNull { it.level } ?: continue
                 if (first.hall > hall) continue
@@ -632,10 +717,10 @@ object Planner {
             }
         }
         // Pet baru
-        if (lane == Lane.PET && v.petHouse > 0) {
-            for (item in gd.items.values) {
-                if (item.cat != Cat.PET || v.has(item.id)) continue
-                if (item.prodLevel > v.petHouse) continue
+        if (lane == Lane.PET && reqLevel > 0) {
+            for (item in gd.itemsOf(Cat.PET)) {
+                if (v.has(item.id)) continue
+                if (item.prodLevel > reqLevel) continue
                 val lv1 = item.lv(1) ?: continue
                 if (lv1.hall > hall) continue
                 out += Candidate(lane, item, null, 0, 1, gold.apply(lv1.time, lane), lv1.cost, true, baseDuration = lv1.time)
@@ -745,16 +830,33 @@ object Planner {
      * Riset Laboratory / Pet House teratas yang tertahan gudang (Home). Kedua = lab itu tidak punya riset
      * lain yang muat (akan menganggur), sehingga storage-nya paling didahulukan.
      */
-    private fun homeLabNext(v: Village, gd: GameData, ps: PlanSettings, start: Long): List<Pair<Scored, Boolean>> {
+    private fun homeLabNext(v: Village, gd: GameData, ps: PlanSettings, start: Long, caps: Caps): List<Pair<Scored, Boolean>> {
         val out = ArrayList<Pair<Scored, Boolean>>()
-        for (lane in listOf(Lane.LAB, Lane.PET)) {
-            val all = candidates(v, gd, lane, ps.gold, includeHall = false, skip = ps.planSkip).map { score(it, start, ps) }
-            if (all.isEmpty()) continue
+        // Riset termahal yang mungkin di TH ini masih muat di gudang → tidak ada yang tertahan, tak perlu dicek satu-satu.
+        if (labCostBound(gd, v.th).all { (res, max) -> (caps.of(res) ?: Long.MAX_VALUE) >= max }) return out
+        for (lane in HOME_LABS) {
+            val cands = candidates(v, gd, lane, ps.gold, includeHall = false, skip = ps.planSkip)
+            // Biaya saat event tidak pernah lebih mahal: bila tak satu pun melebihi gudang dengan harga penuh,
+            // riset teratas pasti muat — tidak perlu menilai semuanya.
+            if (cands.none { caps.blocked(it, it.cost) }) continue
+            val all = cands.map { score(it, start, ps) }
             val top = all.maxByOrNull { it.score } ?: continue
-            if (!Capacity.blocked(v, top.c, top.cost)) continue
-            out += top to all.all { Capacity.blocked(v, it.c, it.cost) }
+            if (!caps.blocked(top.c, top.cost)) continue
+            out += top to all.all { caps.blocked(it.c, it.cost) }
         }
         return out
+    }
+
+    private val HOME_LABS = listOf(Lane.LAB, Lane.PET)
+
+    /** Biaya riset / pet termahal per resource yang bisa muncul di Town Hall [hall] (data game tetap; diingat). */
+    private val labBoundMemo = java.util.concurrent.ConcurrentHashMap<Int, Map<String, Long>>()
+    private fun labCostBound(gd: GameData, hall: Int): Map<String, Long> = labBoundMemo.getOrPut(hall) {
+        val m = HashMap<String, Long>()
+        for (cat in listOf(Cat.TROOP, Cat.SPELL, Cat.PET)) for (item in gd.itemsOf(cat)) for (l in item.levels) {
+            if (l.hall <= hall && l.cost > (m[item.resource] ?: 0L)) m[item.resource] = l.cost
+        }
+        m
     }
 
     private fun starLabNext(v: Village, gd: GameData, ps: PlanSettings, start: Long): Scored? {
@@ -782,13 +884,14 @@ object Planner {
     ): List<Scored> {
         if (if (lane.bb) state.bh <= 0 else state.th <= 0) return list
         fun more(a: Scored, b: Scored) = if (tiered) a.tier < b.tier || (a.tier == b.tier && a.score > b.score) else a.score > b.score
-        val ok = list.filter { !Capacity.blocked(state, it.c, it.cost) }
+        val caps = Caps(state)
+        val ok = list.filter { !caps.blocked(it.c, it.cost) }
         if (lane != Lane.BB_BUILDER && lane != Lane.BUILDER) return ok
         // Kebutuhan per resource: langkah terpenting yang tidak muat di gudang (setelah storage yang sedang naik selesai).
         val need = HashMap<String, Scored>()
         val labWaits = HashSet<String>()
-        val labs = if (lane == Lane.BUILDER) homeLabNext(state, gd, ps, start) else listOfNotNull(starLabNext(state, gd, ps, start)?.let { it to true })
-        val wants = list.filter { Capacity.blocked(state, it.c, it.cost) }.map { it to false } + labs
+        val labs = if (lane == Lane.BUILDER) homeLabNext(state, gd, ps, start, caps) else listOfNotNull(starLabNext(state, gd, ps, start)?.let { it to true })
+        val wants = list.filter { caps.blocked(it.c, it.cost) }.map { it to false } + labs
         for ((w, starved) in wants) {
             val res = w.c.item.resource
             val cap = plannedCap(state, res) ?: continue
@@ -805,8 +908,8 @@ object Planner {
                 val res = Capacity.storedBy(c.item.id) ?: return@mapNotNull null
                 val w = need[res] ?: return@mapNotNull null
                 val base = score(c, start, ps)
-                if (Capacity.blocked(state, c, base.cost)) return@mapNotNull null
-                val cap = Capacity.of(state, res) ?: 0
+                if (caps.blocked(c, base.cost)) return@mapNotNull null
+                val cap = caps.of(res) ?: 0
                 val why = tr("📦 Gudang ${Capacity.short(res)} ${Fmt.money(cap)}, ${w.c.shortTitle} butuh ${Fmt.money(w.cost)}", "📦 ${Capacity.short(res)} storage ${Fmt.money(cap)}, ${w.c.shortTitle} needs ${Fmt.money(w.cost)}")
                 // Star Lab yang tertahan gudang akan menganggur: storage-nya paling didahulukan.
                 val labWait = res in labWaits
@@ -1027,6 +1130,17 @@ object Planner {
             if (sixthDoneAt == null && Sixth.done(v)) sixthDoneAt = at
         }
 
+        fun openLane(item: Item, at: Long) {
+            val lane = when (item.id) {
+                GameData.LAB -> Lane.LAB
+                GameData.PET_HOUSE -> Lane.PET
+                GameData.STAR_LAB -> Lane.STAR_LAB
+                else -> return
+            }
+            if (lane !in lanesWanted || lanes.any { it.lane == lane }) return
+            lanes += SimLane(lane, 1, at)
+        }
+
         fun applyCompletions(t: Long) {
             val due = runs.filter { it.finish <= t }.sortedBy { it.finish }
             for (r in due) {
@@ -1044,7 +1158,11 @@ object Planner {
                         r.inst.remaining = 0
                     }
                 } else r.inst.complete()
-                if (item.cat == Cat.BUILDING || item.cat == Cat.BB_BUILDING) unlockUnits(v, gd, item)
+                if (item.cat == Cat.BUILDING || item.cat == Cat.BB_BUILDING) {
+                    unlockUnits(v, gd, item)
+                    // Laboratory / Pet House / Star Laboratory yang baru dibangun: jalur risetnya mulai bekerja.
+                    openLane(item, r.finish)
+                }
                 if (item.cat == Cat.HERO && !r.inst.gearing) heroDone = maxOf(heroDone ?: 0L, r.finish)
                 runs.remove(r)
                 trackSixth(r.finish)
@@ -1274,6 +1392,28 @@ object Planner {
      * gudang yang sama: simulasikan tiap [Policy] untuk semua pekerja, pilih yang terbaik per jenis pekerja
      * (builder, lab, pet, …), lalu uji gabungannya. Seri (selisih < 1 jam) → cara yang lebih awal di daftar.
      */
+    /** Jumlah simulasi yang dijalankan bersamaan: inti − 1 (maks 4), supaya layar tetap lancar. */
+    private val simThreads = System.getProperty("clashtimer.simThreads")?.toIntOrNull()
+        ?: (Runtime.getRuntime().availableProcessors() - 1).coerceIn(1, 4)
+    private val simPool: java.util.concurrent.ExecutorService by lazy {
+        java.util.concurrent.Executors.newFixedThreadPool(simThreads) { r ->
+            Thread(r, "plan-sim").apply { isDaemon = true; priority = Thread.NORM_PRIORITY - 1 }
+        }
+    }
+
+    /** [f] untuk tiap item, hasil dalam urutan yang sama. Satu inti / satu item: langsung di thread ini. */
+    private fun <A, B> parallel(items: List<A>, f: (A) -> B): List<B> {
+        if (simThreads <= 1 || items.size <= 1) return items.map(f)
+        val futures = items.map { simPool.submit(java.util.concurrent.Callable { f(it) }) }
+        return futures.map {
+            try {
+                it.get()
+            } catch (e: java.util.concurrent.ExecutionException) {
+                throw e.cause ?: e
+            }
+        }
+    }
+
     fun optimize(
         v: Village, gd: GameData, ps: PlanSettings, now: Long, finishes: Map<String, Long>,
         lanes: Set<Lane>, keepSteps: Int, policies: List<Policy> = Policy.entries,
@@ -1284,7 +1424,8 @@ object Planner {
         fun key(s: SimResult) = hours(listOf(target(s, ps, bb))) + idleKey(s, lanes, now) + hours(secondary(s, bb))
         val cutEvent = ps.events.any { e -> e.enabled && e.timePct > 0 && e.end > now && lanes.any { e.covers(it) } }
         val tryList = policies.filter { (it != Policy.CRITICAL || bb) && (it != Policy.EVENT_END || cutEvent) }
-        val runs = tryList.map { p -> all(p) to simulate(v, gd, ps.withPolicies(all(p)), now, finishes, lanes, keepSteps = keepSteps) }
+        // Tiap cara mengurutkan disimulasikan terpisah (tidak saling bergantung): dijalankan bersamaan di beberapa inti.
+        val runs = parallel(tryList) { p -> all(p) to simulate(v, gd, ps.withPolicies(all(p)), now, finishes, lanes, keepSteps = keepSteps) }
         var best = runs.minWithOrNull { a, b -> keyOrder.compare(key(a.second), key(b.second)) }!!
         // Terbaik per jenis pekerja (antar jenis hampir tidak saling memengaruhi), lalu uji gabungannya.
         val mix = lanes.associateWith { lane ->

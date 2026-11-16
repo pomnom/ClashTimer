@@ -110,17 +110,44 @@ class Village(
     /** Potion yang sedang aktif menurut export; null bila export tidak memuat bagian "boosts". */
     val potions: ExportPotions? = null,
 ) {
-    fun level(id: Int): Int = insts.filter { it.item.id == id }.maxOfOrNull { it.level } ?: 0
+    // Dipanggil sangat sering oleh simulasi: tanpa membuat daftar sementara.
+    fun level(id: Int): Int {
+        var m = 0
+        for (i in insts) if (i.item.id == id && i.level > m) m = i.level
+        return m
+    }
     fun isUpgrading(id: Int): Boolean = insts.any { it.item.id == id && it.upgrading }
-    fun has(id: Int): Boolean = insts.any { it.item.id == id }
-    fun count(id: Int): Int = insts.count { it.item.id == id }
+    fun has(id: Int): Boolean {
+        for (i in insts) if (i.item.id == id) return true
+        return false
+    }
+    fun count(id: Int): Int {
+        var n = 0
+        for (i in insts) if (i.item.id == id) n++
+        return n
+    }
 
-    val th: Int get() = level(GameData.TOWN_HALL).coerceAtLeast(1)
-    val bh: Int get() = level(GameData.BUILDER_HALL)
-    val labLevel: Int get() = level(GameData.LAB)
-    val heroHall: Int get() = level(GameData.HERO_HALL)
-    val petHouse: Int get() = level(GameData.PET_HOUSE)
-    val starLab: Int get() = level(GameData.STAR_LAB)
+    // Bangunan tunggal yang levelnya ditanyakan ribuan kali per simulasi: objeknya diingat begitu ditemukan
+    // (levelnya tetap dibaca langsung, jadi upgrade di tengah simulasi ikut terbaca). Salinan desa mencari ulang.
+    private var thInst: Inst? = null
+    private var bhInst: Inst? = null
+    private var labInst: Inst? = null
+    private var heroHallInst: Inst? = null
+    private var petHouseInst: Inst? = null
+    private var starLabInst: Inst? = null
+
+    private fun find(id: Int): Inst? {
+        var best: Inst? = null
+        for (i in insts) if (i.item.id == id && (best == null || i.level > best.level)) best = i
+        return best
+    }
+
+    val th: Int get() = ((thInst ?: find(GameData.TOWN_HALL)?.also { thInst = it })?.level ?: 0).coerceAtLeast(1)
+    val bh: Int get() = (bhInst ?: find(GameData.BUILDER_HALL)?.also { bhInst = it })?.level ?: 0
+    val labLevel: Int get() = (labInst ?: find(GameData.LAB)?.also { labInst = it })?.level ?: 0
+    val heroHall: Int get() = (heroHallInst ?: find(GameData.HERO_HALL)?.also { heroHallInst = it })?.level ?: 0
+    val petHouse: Int get() = (petHouseInst ?: find(GameData.PET_HOUSE)?.also { petHouseInst = it })?.level ?: 0
+    val starLab: Int get() = (starLabInst ?: find(GameData.STAR_LAB)?.also { starLabInst = it })?.level ?: 0
 
     fun helper(id: Int): HelperState? = helpers.firstOrNull { it.id == id }
 

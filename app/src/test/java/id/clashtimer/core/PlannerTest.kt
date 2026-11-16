@@ -1,6 +1,7 @@
 package id.clashtimer.core
 
 import id.clashtimer.core.TestData.gd
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -82,21 +83,87 @@ class PlannerTest {
         }
     }
 
+    private fun PlannedStep.essential() = item?.cat == Cat.BUILDING && item?.type == "Army"
+
+    /**
+     * Bangunan esensial yang belum dimulai pada saat [t] padahal sudah bisa dikerjakan (level sebelumnya dari
+     * bangunan yang sama tidak sedang berjalan).
+     */
+    private fun essentialWaiting(steps: List<PlannedStep>, t: Long): List<PlannedStep> {
+        val ess = steps.filter { it.lane == Lane.BUILDER && it.essential() }
+        return ess.filter { e -> e.start > t && ess.none { it.item?.id == e.item?.id && it.start <= t && it.finish > t } }
+    }
+
     @Test fun bangunanEsensialSebelumPertahanan() {
         // Semua strategi: builder yang tidak menaikkan hero mengerjakan Army Camp, Barracks, Workshop, dll.
-        // sebelum pertahanan & trap (Rush TH: Town Hall & bangunan baru tetap paling dulu).
-        val v = TestData.village("th12_bh9")
+        // sebelum pertahanan & trap (Rush TH: Town Hall & bangunan baru tetap paling dulu; trap baru yang
+        // pemasangannya instan dipasang dulu di semua strategi).
+        for (name in listOf("th12_bh9", "th14_bh8")) {
+            val v = TestData.village(name)
+            for (strat in Strategy.entries) {
+                val ps = TestData.settings(home = strat)
+                val s = Planner.optimize(v, gd, ps, v.exportAt, TestData.finishes(v), TestData.HOME, keepSteps = 5000).sim
+                val all = s.running + s.steps
+                val other = s.steps.filter { it.lane == Lane.BUILDER && it.item?.cat != Cat.HERO && it.item?.isTownHall != true && !it.essential() }
+                    // Bangunan baru di Rush TH & trap baru yang instan memang dipasang lebih dulu.
+                    .filter { !(it.isNew && (strat == Strategy.RUSH || it.finish == it.start)) }
+                assertTrue("$name $strat: tidak ada bangunan esensial tersisa di contoh desa", s.steps.any { it.essential() })
+                val early = other.filter { essentialWaiting(all, it.start).isNotEmpty() }
+                assertTrue("$name $strat: menyalip bangunan esensial: ${early.take(5).map { it.title }}", early.isEmpty())
+            }
+        }
+    }
+
+    @Test fun esensialSebelumHeroDiSeimbangDanRush() {
+        // Seimbang & Rush TH: hero baru dimulai setelah tidak ada lagi bangunan esensial yang bisa dikerjakan.
+        for (name in listOf("th12_bh9", "th14_bh8")) {
+            val v = TestData.village(name)
+            for (strat in listOf(Strategy.MAX, Strategy.RUSH)) {
+                val ps = TestData.settings(home = strat)
+                val s = Planner.optimize(v, gd, ps, v.exportAt, TestData.finishes(v), TestData.HOME, keepSteps = 5000).sim
+                val all = s.running + s.steps
+                val early = s.steps.filter { it.lane == Lane.BUILDER && it.item?.cat == Cat.HERO && !it.gear }
+                    .filter { essentialWaiting(all, it.start).isNotEmpty() }
+                assertTrue("$name $strat: hero menyalip bangunan esensial: ${early.take(5).map { it.title }}", early.isEmpty())
+            }
+        }
+    }
+
+    @Test fun heroDuluHeroTetapPertama() {
+        // Hero dulu: tanggal hero selesai tidak boleh lebih lambat daripada strategi Seimbang.
+        for (name in listOf("th12_bh9", "th14_bh8")) {
+            val v = TestData.village(name)
+            fun heroDone(strat: Strategy) =
+                Planner.optimize(v, gd, TestData.settings(home = strat), v.exportAt, TestData.finishes(v), TestData.HOME, keepSteps = 10).sim.heroDone!!
+            assertTrue("$name: Hero dulu lebih lambat daripada Seimbang", heroDone(Strategy.HERO) <= heroDone(Strategy.MAX))
+        }
+    }
+
+    @Test fun trapBaruLangsungDipasang() {
+        // Trap baru (instan) dipasang sebelum upgrade lain yang memakai waktu builder dimulai — hari yang sama.
+        val v = TestData.village("th14_bh8")
         for (strat in Strategy.entries) {
             val ps = TestData.settings(home = strat)
             val s = Planner.optimize(v, gd, ps, v.exportAt, TestData.finishes(v), TestData.HOME, keepSteps = 5000).sim
-            val work = s.steps.filter { it.lane == Lane.BUILDER && it.item?.cat != Cat.HERO && it.item?.isTownHall != true }
-                .filter { strat != Strategy.RUSH || !it.isNew }
-            val essential = work.filter { it.item?.cat == Cat.BUILDING && it.item?.type == "Army" }
-            val other = work.filter { it !in essential }
-            assertTrue("$strat: tidak ada bangunan esensial tersisa di contoh desa", essential.isNotEmpty())
-            val lastEssential = essential.maxOf { it.start }
-            val early = other.filter { it.start < lastEssential }
-            assertTrue("$strat: menyalip bangunan esensial: ${early.take(5).map { it.title }}", early.isEmpty())
+            val traps = s.steps.filter { it.lane == Lane.BUILDER && it.isNew && it.item?.cat == Cat.TRAP }
+            assertTrue("$strat: contoh desa harus punya trap baru", traps.isNotEmpty())
+            val first = s.steps.filter { it.lane == Lane.BUILDER }.minOf { it.start }
+            assertTrue("$strat: trap baru terlambat dipasang", traps.all { it.start - first < DAY })
+        }
+    }
+
+    @Test fun jalurPetDibukaSetelahPetHouseDibangun() {
+        // TH14 tanpa Pet House: pet ikut direncanakan begitu Pet House selesai dibangun.
+        val v = TestData.village("th14_bh8")
+        assertEquals("contoh desa harus belum punya Pet House", 0, v.petHouse)
+        for (strat in Strategy.entries) {
+            val ps = TestData.settings(home = strat)
+            val s = Planner.optimize(v, gd, ps, v.exportAt, TestData.finishes(v), TestData.HOME, keepSteps = 5000).sim
+            val house = s.steps.first { it.item?.id == GameData.PET_HOUSE }
+            val pets = s.steps.filter { it.lane == Lane.PET }
+            assertTrue("$strat: pet tidak direncanakan", pets.isNotEmpty())
+            assertTrue("$strat: pet dimulai sebelum Pet House selesai", pets.all { it.start >= house.finish })
+            assertTrue("$strat: tanggal pet selesai kosong", s.petDone != null)
         }
     }
 

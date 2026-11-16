@@ -74,6 +74,8 @@ object VillageOptions {
         } else {
             parts += "💡 " + shortStrategy(ps.strategy)
             parts += "🎫 " + goldLabel(ps, false)
+            // CWL hanya memengaruhi rencana bila ada API key sendiri (jadwal & status serangan dari API resmi).
+            if (Store.apiKey(act).isNotBlank()) parts += if (ps.cwl.enabled) "⚔️ CWL" else tr("⚔️ tanpa CWL", "⚔️ no CWL")
         }
         if (ps.skipCollectors) parts += tr("⛏️ tanpa collector", "⛏️ no collectors")
         val nPin = Store.pins(act, tag).size
@@ -253,6 +255,7 @@ object VillageOptions {
         row("Gold Pass", goldAuto(act, tag, ps, bb), goldLabel(ps, bb).let { if (it.endsWith("%") && !bb && !it.contains("·")) tr("Builder $it · Riset $it", "Builder $it · Research $it") else it } +
             (stepsText(act, tag)?.let { tr(" · naik: ", " · rises: ") + it.substringBefore(" · ") } ?: gpEnd(act))) { pickGoldPass(act, tag) }
         if (bb) row("Builder Builder Base", false, if (ps.bbBuilders > 0) tr("${ps.bbBuilders} builder", "${ps.bbBuilders} builders") else tr("otomatis dari export", "automatic from export")) { pickBbBuilders(act, tag) }
+        else if (Store.apiKey(act).isNotBlank()) row("CWL", Store.cwlAuto(act, tag) != null, cwlLabel(act, tag, ps)) { pickCwl(act, tag) }
 
         val sw = androidx.appcompat.widget.SwitchCompat(act).apply {
             isChecked = !ps.skipCollectors

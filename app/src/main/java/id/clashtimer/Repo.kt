@@ -46,12 +46,31 @@ class PlanBundle(
     val simBB: SimResult?,
     val computedAt: Long,
     val version: Int,
-    /** Simulasi Builder Base strategi Max (untuk progres bila strategi = builder ke-6). */
-    val simBBMax: SimResult? = simBB,
+    private val bbMax: Lazy<SimResult?> = lazyOf(simBB),
     /** Urutan tercepat ke target (Home / Builder Base) dan perbandingannya dengan cara lama. */
     val homeTarget: PlanTarget? = null,
     val bbTarget: PlanTarget? = null,
-)
+    /** Penanda daftar timer & teks export saat dihitung: bila berubah, hasil ini tidak berlaku lagi. */
+    val stamp: Int = 0,
+    val export: String? = null,
+    /**
+     * Sampai kapan hasil ini masih berlaku tanpa dihitung ulang: sampai ada pekerja yang bebas atau langkah yang
+     * waktunya tiba (paling cepat [FRESH_MIN], paling lama [FRESH_MAX] sesudah dihitung).
+     */
+    val freshUntil: Long = computedAt + FRESH_MIN,
+) {
+    /**
+     * Simulasi Builder Base strategi Max (untuk progres bila strategi = builder ke-6). Hanya dipakai layar
+     * Progres Builder Base, jadi baru dihitung saat pertama diminta — di background, lihat [bbMaxReady].
+     */
+    val simBBMax: SimResult? get() = bbMax.value
+    val bbMaxReady: Boolean get() = bbMax.isInitialized()
+
+    companion object {
+        const val FRESH_MIN = 5 * 60_000L
+        const val FRESH_MAX = 30 * 60_000L
+    }
+}
 
 /** Penghubung antara penyimpanan Android dan logika inti. */
 object Repo {
@@ -499,6 +518,9 @@ object Repo {
 
     /** Hitung saran, progres dan simulasi (berat — jalankan di background). */
     fun computePlan(ctx: Context, tag: String): PlanBundle? {
+        // Penanda diambil sebelum data dibaca: bila data berubah selagi dihitung, hasil ini langsung dianggap usang.
+        val stamp = Store.upgradesStamp(ctx)
+        val export = Store.exportText(ctx, tag)
         val v = village(ctx, tag) ?: return null
         val gd = gameData(ctx)
         val ps0 = Store.planSettings(ctx, tag)
@@ -538,9 +560,19 @@ object Repo {
         }
         val slots = Planner.suggest(v, gd, ps, now, fin)
         val tips = ItemAdvisor.tips(v, gd, ps, now, fin, Store.items(ctx, tag))
-        val simBBMax = if (simBB?.sixth != null && ps.bbStrategy == id.clashtimer.core.BBStrategy.SIXTH) Planner.simulate(v, gd, ps.withBB(BBStrategy.MAX), now, fin, bbLanes, keepSteps = 10) else simBB
+        // Simulasi "Max" Builder Base hanya dipakai layar Progres BB: dihitung saat layar itu dibuka.
+        val bbMax: Lazy<SimResult?> = if (simBB?.sixth != null && ps.bbStrategy == BBStrategy.SIXTH) {
+            lazy { runCatching { Planner.simulate(v, gd, ps.withBB(BBStrategy.MAX), now, fin, bbLanes, keepSteps = 10) }.getOrDefault(simBB) }
+        } else lazyOf(simBB)
         Store.setLastPct(ctx, tag, home.pct.toFloat())
         runCatching { History.snapshot(ctx, tag, home.pct, bb?.pct) }
-        return PlanBundle(tag, v, ps, slots, tips, home, bb, simHome, simBB, now, Store.planVersion(ctx), simBBMax, homeTarget, bbTarget)
+        // Hasil tetap berlaku sampai ada pekerja yang bebas / langkah berikutnya tiba waktunya. Bila ada yang bisa
+        // dimulai sekarang, rencananya bergeser mengikuti jam → disegarkan tiap 5 menit seperti sebelumnya.
+        val nextChange = listOfNotNull(simHome, simBB).flatMap { s -> s.steps.map { it.start } + s.running.map { it.finish } }.minOrNull()
+        val freshUntil = now + ((nextChange ?: Long.MAX_VALUE) - now).coerceIn(PlanBundle.FRESH_MIN, PlanBundle.FRESH_MAX)
+        // Widget & daftar desa memakai desa + saran yang sama (tidak mengurai export & menghitung saran lagi).
+        val version = Store.planVersion(ctx)
+        Widgets.remember(tag, version, stamp, export, v, slots, ps, now, freshUntil)
+        return PlanBundle(tag, v, ps, slots, tips, home, bb, simHome, simBB, now, version, bbMax, homeTarget, bbTarget, stamp, export, freshUntil)
     }
 }

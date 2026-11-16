@@ -83,6 +83,7 @@ class MainActivity : AppCompatActivity() {
     private val exec = Executors.newSingleThreadExecutor()
     private val planCache = HashMap<String, PlanBundle>()
     private var computing: String? = null
+    private var bbMaxFor: PlanBundle? = null
     private var planError: String? = null
     private var failedTag: String? = null
     private var failedVersion = -1
@@ -608,7 +609,12 @@ class MainActivity : AppCompatActivity() {
                 Tab.HOME -> HomeView.render(this, body, tag, showBB, b)
                 Tab.BUILDERS -> PlanView.render(this, body, tag, showBB, lab = false, b = b)
                 Tab.LAB -> PlanView.render(this, body, tag, showBB, lab = true, b = b)
-                Tab.PROGRESS -> if (b == null) waiting(tag) else ProgressView.render(this, body, b, showBB)
+                Tab.PROGRESS -> when {
+                    b == null -> waiting(tag)
+                    // Progres Builder Base memakai simulasi "Max" yang baru dihitung saat layar ini dibuka.
+                    showBB && !b.bbMaxReady -> { waiting(tag); requestBBMax(b) }
+                    else -> ProgressView.render(this, body, b, showBB)
+                }
             }
         } catch (e: Exception) {
             body.addView(Ui.text(this, tr("Gagal menampilkan: ${e.message}", "Could not display: ${e.message}"), Ui.BODY_M))
@@ -631,10 +637,27 @@ class MainActivity : AppCompatActivity() {
         val b = planCache[tag]
         val now = System.currentTimeMillis()
         val version = Store.planVersion(this)
-        val stale = b == null || b.version != version || now - b.computedAt > 5 * 60_000L
+        // Dihitung ulang hanya bila data / pengaturan berubah, atau waktunya sudah lewat (pekerja bebas, langkah
+        // berikutnya tiba) — bukan tiap 5 menit.
+        val stale = b == null || b.version != version || now > b.freshUntil ||
+            b.stamp != Store.upgradesStamp(this) || b.export != Store.exportText(this, tag)
         val failedHere = failedTag == tag && failedVersion == version
         if (stale && !failedHere) requestPlan(tag)
         return b
+    }
+
+    /** Hitung simulasi "Max" Builder Base milik [b] di background, lalu tampilkan Progres. */
+    private fun requestBBMax(b: PlanBundle) {
+        if (bbMaxFor === b) return
+        bbMaxFor = b
+        exec.execute {
+            runCatching { b.simBBMax }
+            runOnUiThread {
+                if (bbMaxFor === b) bbMaxFor = null
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                if (planCache[b.tag] === b && b.tag == currentTag()) renderBody()
+            }
+        }
     }
 
     private fun requestPlan(tag: String) {
@@ -642,8 +665,10 @@ class MainActivity : AppCompatActivity() {
         computing = tag
         val app = applicationContext
         val version = Store.planVersion(this)
+        // Sedang di Progres Builder Base: simulasi "Max"-nya ikut dihitung sekarang supaya layar tidak berkedip.
+        val wantBBMax = tab == Tab.PROGRESS && showBB
         exec.execute {
-            val r = runCatching { Repo.computePlan(app, tag) }
+            val r = runCatching { Repo.computePlan(app, tag)?.also { if (wantBBMax) it.simBBMax } }
             runOnUiThread {
                 computing = null
                 if (isFinishing || isDestroyed) return@runOnUiThread
@@ -670,6 +695,7 @@ class MainActivity : AppCompatActivity() {
     /** Data berubah (import, item, mulai, tandai selesai) → hitung ulang. */
     fun dataChanged() {
         planCache.clear()
+        Widgets.forget()
         villageRowsVersion = -1
         onDataChanged?.invoke()
         planError = null

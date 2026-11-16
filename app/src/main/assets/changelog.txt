@@ -1,4 +1,11 @@
-# Bangunan esensial didahulukan
-- Semua strategi Home Village: builder yang tidak sedang menaikkan hero kini mengerjakan bangunan esensial dulu (Army Camp, Clan Castle, Barracks, Dark Barracks, Spell Factory, Workshop, Blacksmith, Lab), baru pertahanan & trap. Sebelumnya trap & pertahanan yang murah dan cepat didahulukan.
-- Rush TH: Town Hall & bangunan baru tetap paling dulu, lalu hero & bangunan esensial.
-- Target tiap strategi tidak mundur (Seimbang, Rush TH & Hero dulu diuji dengan tiga contoh desa).
+# Urutan strategi baru, lebih cepat, API key sendiri
+- Seimbang: bangunan esensial kini dikerjakan sebelum hero, jadi Clan Castle, Blacksmith, Army Camp, dll. selesai beberapa minggu lebih cepat. Hero selesai beberapa hari lebih lambat; tanggal target tidak berubah.
+- Rush TH: setelah Town Hall & bangunan baru, bangunan esensial didahulukan sebelum hero.
+- Hero dulu: Hero Hall & hero tetap paling dulu; tanggal hero selesai tidak berubah.
+- Urutan tetap di dalam bangunan esensial: Lab, Pet House, Hero Hall, Blacksmith, Clan Castle, Army Camp, lalu Spell Factory, Barracks, Workshop.
+- Trap baru (pemasangan instan) langsung dipasang di semua strategi.
+- Perbaikan: pet tidak ikut direncanakan bila Pet House belum dibangun. Sekarang riset pet masuk jadwal begitu Pet House selesai.
+- Perhitungan rencana sekitar 3× lebih cepat dan jauh lebih ringan di HP spek rendah.
+- Aplikasi lebih hemat: rencana hanya dihitung ulang saat data berubah atau saat ada pekerja yang bebas (bukan tiap 5 menit), simulasi Builder Base "Max" baru dihitung saat Progres Builder Base dibuka, dan widget memakai hasil hitung yang sama.
+- API key sendiri (opsional): tempel di Pengaturan → Data & akun. Dengan key, aplikasi memakai API resmi — status serangan War/CWL di Dashboard, pengingat serangan 3 jam sebelum berakhir (juga Raid Weekend), hero ditahan selama CWL, upgrade yang selesai lebih cepat ditandai otomatis, dan statistik akun. Tanpa key tetap memakai ClashKing seperti sebelumnya.
+- API key hanya disimpan di HP itu dan tidak ikut pindah data / cadangan.

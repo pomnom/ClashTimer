@@ -89,12 +89,19 @@ class Item(
         return "$p/level_$l.webp"
     }
 
-    private val byLevel: Map<Int, Lv> = levels.associateBy { it.level }
+    /** Data level per indeks (level kecil & rapat): lebih cepat daripada tabel hash. */
+    private val byLevel: Array<Lv?> = arrayOfNulls<Lv>((levels.maxOfOrNull { it.level } ?: 0) + 1).also { a ->
+        for (l in levels) if (l.level >= 0) a[l.level] = l
+    }
 
-    fun lv(level: Int): Lv? = byLevel[level]
+    fun lv(level: Int): Lv? = if (level >= 0 && level < byLevel.size) byLevel[level] else null
 
     /** Level tertinggi yang boleh dicapai pada level hall ini. */
-    fun maxLevelFor(hall: Int): Int = levels.filter { it.hall <= hall }.maxOfOrNull { it.level } ?: 0
+    fun maxLevelFor(hall: Int): Int {
+        var m = 0
+        for (l in levels) if (l.hall <= hall && l.level > m) m = l.level
+        return m
+    }
 
     val lane: Lane get() = Lane.of(cat)
     val isWall: Boolean get() = type == "Wall"
@@ -128,15 +135,26 @@ class GameData(
 
     /** Jumlah bangunan [id] yang boleh dimiliki pada level hall ini (tanpa koreksi penggabungan). */
     fun allowedCount(id: Int, hall: Int, bb: Boolean): Int {
+        // Data game tetap: hasilnya diingat (dipanggil ribuan kali per simulasi).
+        val key = (id.toLong() * 256 + hall) * 2 + if (bb) 1 else 0
+        allowedMemo[key]?.let { return it }
         val table = if (bb) bbUnlocks else homeUnlocks
         var n = 0
         for ((lvl, list) in table) if (lvl <= hall) for ((uid, q) in list) if (uid == id) n += q
+        allowedMemo[key] = n
         return n
     }
 
+    private val allowedMemo = java.util.concurrent.ConcurrentHashMap<Long, Int>()
+    private val homeUnlockIds: Set<Int> by lazy { homeUnlocks.values.flatten().map { it.first }.toSet() }
+    private val bbUnlockIds: Set<Int> by lazy { bbUnlocks.values.flatten().map { it.first }.toSet() }
+
     /** Semua id bangunan yang muncul di tabel unlock. */
-    fun unlockIds(bb: Boolean): Set<Int> =
-        (if (bb) bbUnlocks else homeUnlocks).values.flatten().map { it.first }.toSet()
+    fun unlockIds(bb: Boolean): Set<Int> = if (bb) bbUnlockIds else homeUnlockIds
+
+    /** Item per kategori, urutan sama dengan [items] (untuk mencari hero / pet yang belum dimiliki). */
+    private val byCat = java.util.concurrent.ConcurrentHashMap<Cat, List<Item>>()
+    fun itemsOf(cat: Cat): List<Item> = byCat.getOrPut(cat) { items.values.filter { it.cat == cat } }
 
     companion object {
         const val TOWN_HALL = 1000001
@@ -146,6 +164,13 @@ class GameData(
         const val BOB_HUT = 1000064
         const val PET_HOUSE = 1000068
         const val HERO_HALL = 1000071
+        const val ARMY_CAMP = 1000000
+        const val BARRACKS = 1000006
+        const val CLAN_CASTLE = 1000014
+        const val SPELL_FACTORY = 1000020
+        const val DARK_BARRACKS = 1000026
+        const val DARK_SPELL_FACTORY = 1000029
+        const val BLACKSMITH = 1000070
         const val HELPER_HUT = 1000093
         const val BUILDER_HALL = 1000034
         const val BB_WALL = 1000033

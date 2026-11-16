@@ -18,7 +18,8 @@ import java.util.zip.GZIPOutputStream
 object Backup {
     private const val PREFIX = "CLASHTIMER-DATA:"
     /** Kunci khusus perangkat ini (clipboard) tidak ikut dipindah. */
-    private val LOCAL_KEYS = setOf("clip_seen", "clip_dismissed")
+    /** Tidak ikut dipindah/cadangan & tetap milik perangkat ini saat memulihkan (API key milik tiap pengguna/HP). */
+    private val LOCAL_KEYS = setOf("clip_seen", "clip_dismissed", "api_key")
 
     private fun prefs(ctx: Context) = ctx.getSharedPreferences(Store.PREFS, Context.MODE_PRIVATE)
 
@@ -100,6 +101,7 @@ object Backup {
         Notifier.createChannels(ctx)
         AlarmScheduler.schedule(ctx)
         Attacks.schedule(ctx)
+        Widgets.forget()
         Widgets.updateAll(ctx)
     }
 }

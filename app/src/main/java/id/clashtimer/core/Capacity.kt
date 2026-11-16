@@ -80,7 +80,10 @@ object Capacity {
         val tb = t ?: return null
         val id = storageFor(resource) ?: return null
         if (hallLv <= 0) return null
-        return at(hallTable(tb, resource), hallLv) + v.insts.filter { it.item.id == id }.sumOf { at(table(tb, resource), it.level) }
+        val st = table(tb, resource)
+        var sum = at(hallTable(tb, resource), hallLv)
+        for (i in v.insts) if (i.item.id == id) sum += at(st, i.level)
+        return sum
     }
 
     /** Tambahan kapasitas bila storage [resource] naik dari [from] ke [to]. */
@@ -101,7 +104,7 @@ object Capacity {
         if (hallLv <= 0) return null
         val item = gd.item(id) ?: return null
         val lvl = item.maxLevelFor(hallLv)
-        val n = maxOf(gd.allowedCount(id, hallLv, bb), v.insts.count { it.item.id == id })
+        val n = maxOf(gd.allowedCount(id, hallLv, bb), v.count(id))
         return at(hallTable(tb, resource), hallLv) + n * at(table(tb, resource), lvl)
     }
 

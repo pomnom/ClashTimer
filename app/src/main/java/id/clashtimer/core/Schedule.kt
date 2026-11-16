@@ -21,7 +21,11 @@ class OfflineSchedule(
     val work: DailyWindow,
     val zone: ZoneId,
 ) {
-    private val cache = HashMap<Long, List<LongRange>>()
+    private val cache = java.util.concurrent.ConcurrentHashMap<Long, List<LongRange>>()
+
+    /** Hari lokal terakhir yang ditanyakan: [first]..[last] ms → epoch day (hindari konversi tanggal berulang). */
+    private class DaySpan(val first: Long, val last: Long, val day: Long)
+    @Volatile private var lastSpan: DaySpan? = null
 
     /** Jendela offline (sudah digabung) di sekitar hari [day] (epoch day lokal). */
     private fun windowsForDay(day: Long): List<LongRange> = cache.getOrPut(day) {
@@ -52,8 +56,16 @@ class OfflineSchedule(
         return out
     }
 
-    private fun localDay(t: Long): Long =
-        Instant.ofEpochMilli(t).atZone(zone).toLocalDate().toEpochDay()
+    private fun localDay(t: Long): Long {
+        lastSpan?.let { if (t >= it.first && t <= it.last) return it.day }
+        val date = Instant.ofEpochMilli(t).atZone(zone).toLocalDate()
+        val first = date.atStartOfDay(zone).toInstant().toEpochMilli()
+        val last = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() - 1
+        val day = date.toEpochDay()
+        // Jaga-jaga pergantian zona waktu yang aneh: hanya diingat bila [t] memang di dalam rentangnya.
+        if (t in first..last) lastSpan = DaySpan(first, last, day)
+        return day
+    }
 
     fun windowAt(t: Long): LongRange? = windowsForDay(localDay(t)).firstOrNull { t in it }
 

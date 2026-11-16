@@ -64,7 +64,7 @@ if (System.getenv("CI") != null) {
 
 tasks.withType<Test>().configureEach {
     testLogging {
-        events("failed")
+        events("failed", "skipped")
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
     }
 }
