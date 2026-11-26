@@ -152,6 +152,23 @@ class PlannerTest {
         }
     }
 
+    @Test fun bangunanBelumDikenalTetapMemakaiBuilder() {
+        // Upgrade bangunan yang belum ada di data game (bangunan baru) tetap menyibukkan satu builder:
+        // rencana tidak boleh memulai lebih banyak pekerjaan daripada builder yang benar-benar bebas.
+        val text = java.io.File("src/test/resources/villages/th14_bh8.json").readText()
+        val known = TestData.village("th14_bh8")
+        val json = text.replaceFirst("\"buildings\":[", "\"buildings\":[{\"data\":1999999,\"lvl\":0,\"timer\":200000},")
+        assertTrue("contoh desa tidak punya daftar buildings", json != text)
+        val v = ExportReader.read(json, gd, Long.MAX_VALUE / 4)
+        val ghost = v.timers.single { it.cat == null && it.lane == Lane.BUILDER }
+        val s = Planner.simulate(v, gd, TestData.settings(), v.exportAt, TestData.finishes(v), TestData.HOME, keepSteps = 5000)
+        val base = Planner.simulate(known, gd, TestData.settings(), known.exportAt, TestData.finishes(known), TestData.HOME, keepSteps = 5000)
+        assertTrue("timer bangunan baru tidak muncul di pekerjaan berjalan", s.running.any { it.lane == Lane.BUILDER && it.item == null })
+        val ghostEnd = v.exportAt + ghost.remaining * 1000
+        fun startedBefore(r: SimResult) = r.steps.count { it.lane == Lane.BUILDER && it.start < ghostEnd && it.finish > it.start }
+        assertTrue("builder yang sedang membangun bangunan baru dianggap bebas", startedBefore(s) < startedBefore(base))
+    }
+
     @Test fun jalurPetDibukaSetelahPetHouseDibangun() {
         // TH14 tanpa Pet House: pet ikut direncanakan begitu Pet House selesai dibangun.
         val v = TestData.village("th14_bh8")

@@ -1,54 +1,58 @@
-# data game 4ae117dea4ad2119
+# data game d1ab9ce9debc23fd
 # th11_bh9 — dibuat otomatis oleh GoldenPlanTest (UPDATE_GOLDEN=1); jangan diubah dengan tangan
 == Home MAX · cara B=LPT L=LPT P=LPT
-target H+28 · hero H+16 · builder H+16 · lab H+28 · pet - · TH - · 60 langkah
-B H+000 Elixir Collector 12>13
+target H+28 · hero H+16 · builder H+16 · lab H+28 · pet - · TH - · 64 langkah
+B H+000 +Squad Barracks
 B H+000 Elixir Collector 12>13
 B H+000 Elixir Collector 12>13
 L H+000 Golem 6>7
-B H+000 Archer Queen 47>48
-B H+000 Elixir Collector 13>14
 B H+000 Elixir Collector 13>14
 B H+000 Elixir Collector 13>14
 B H+000 Barbarian King 43>44
-B H+000 Elixir Collector 12>13
+B H+000 Archer Queen 47>48
 B H+000 Elixir Collector 12>13
 B H+000 Elixir Collector 12>13
 B H+001 Elixir Collector 12>13
-B H+001 Gold Mine 12>13
-B H+001 Gold Mine 12>13
+B H+001 Elixir Collector 12>13
 B H+001 Elixir Collector 13>14
 B H+001 Elixir Collector 13>14
 B H+001 Elixir Collector 13>14
 B H+001 Elixir Collector 13>14
-B H+001 Gold Mine 13>14
-B H+001 Gold Mine 13>14
+B H+001 Elixir Collector 12>13
 B H+001 Gold Mine 12>13
-B H+001 Gold Mine 12>13
-B H+001 Gold Mine 12>13
+B H+001 Elixir Collector 13>14
 B H+001 Gold Mine 13>14
-B H+001 Gold Mine 13>14
-B H+001 Gold Mine 13>14
+B H+002 Squad Barracks 1>2
 B H+002 Gold Mine 12>13
 B H+002 Gold Mine 12>13
-B H+002 Town Hall 11>12
 B H+002 Gold Mine 13>14
 B H+002 Gold Mine 13>14
 L H+002 Miner 2>3
-B H+003 Barbarian King 44>45
+B H+002 Gold Mine 12>13
+B H+002 Gold Mine 12>13
+B H+002 Gold Mine 13>14
+B H+002 Gold Mine 13>14
 B H+003 Archer Queen 48>49
+B H+003 Gold Mine 12>13
+B H+003 Gold Mine 12>13
+B H+003 Barbarian King 44>45
+B H+003 Gold Mine 13>14
+B H+003 Gold Mine 13>14
+B H+003 Town Hall 11>12
 L H+004 Miner 3>4
+B H+004 Squad Barracks 2>3
 B H+005 Barbarian King 45>46
 B H+005 Archer Queen 49>50
 L H+005 Miner 4>5
 L H+007 Haste Spell 2>3
 B H+007 Barbarian King 46>47
+B H+008 Squad Barracks 3>4
 L H+009 Haste Spell 3>4
-B H+009 Barbarian King 47>48
+B H+010 Barbarian King 47>48
 L H+011 Haste Spell 4>5
 B H+012 Barbarian King 48>49
-B H+014 Barbarian King 49>50
 L H+014 Archer 6>7
+B H+014 Barbarian King 49>50
 L H+014 Archer 7>8
 L H+015 Giant 6>7
 L H+017 Giant 7>8
@@ -62,55 +66,59 @@ L H+024 Barbarian 7>8
 L H+025 Skeleton Spell 1>2
 L H+026 Skeleton Spell 2>3
 L H+026 Skeleton Spell 3>4
-== Home RUSH · cara B=LPT L=LPT P=LPT
-target H+5 · hero H+16 · builder H+16 · lab H+28 · pet - · TH H+5 · 60 langkah
+== Home RUSH · cara B=VALUE L=LPT P=VALUE
+target H+5 · hero H+16 · builder H+16 · lab H+28 · pet - · TH H+5 · 64 langkah
+B H+000 +Squad Barracks
 B H+000 Town Hall 11>12
 B H+000 Elixir Collector 12>13
-B H+000 Elixir Collector 12>13
 L H+000 Golem 6>7
-B H+000 Elixir Collector 13>14
-B H+000 Elixir Collector 13>14
+B H+000 Elixir Collector 12>13
 B H+000 Barbarian King 43>44
 B H+000 Archer Queen 47>48
 B H+000 Elixir Collector 12>13
-B H+000 Elixir Collector 12>13
 B H+001 Elixir Collector 12>13
 B H+001 Elixir Collector 12>13
-B H+001 Elixir Collector 13>14
-B H+001 Elixir Collector 13>14
-B H+001 Elixir Collector 13>14
-B H+001 Elixir Collector 13>14
+B H+001 Elixir Collector 12>13
 B H+001 Elixir Collector 12>13
 B H+001 Gold Mine 12>13
-B H+001 Elixir Collector 13>14
-B H+001 Gold Mine 13>14
+B H+002 Gold Mine 12>13
+B H+002 Squad Barracks 1>2
 B H+002 Gold Mine 12>13
 B H+002 Gold Mine 12>13
-B H+002 Gold Mine 13>14
-B H+002 Gold Mine 13>14
 L H+002 Miner 2>3
 B H+002 Gold Mine 12>13
 B H+002 Gold Mine 12>13
-B H+002 Gold Mine 13>14
-B H+002 Gold Mine 13>14
-B H+003 Gold Mine 12>13
 B H+003 Gold Mine 12>13
 B H+003 Barbarian King 44>45
 B H+003 Archer Queen 48>49
-B H+003 Gold Mine 13>14
-B H+003 Gold Mine 13>14
+B H+003 Elixir Collector 13>14
+B H+003 Elixir Collector 13>14
+B H+003 Elixir Collector 13>14
+B H+003 Elixir Collector 13>14
 L H+004 Miner 3>4
+B H+004 Elixir Collector 13>14
+B H+004 Squad Barracks 2>3
+B H+004 Elixir Collector 13>14
+B H+004 Elixir Collector 13>14
+B H+004 Gold Mine 13>14
+B H+005 Gold Mine 13>14
+B H+005 Gold Mine 13>14
+B H+005 Gold Mine 13>14
 B H+005 Barbarian King 45>46
 B H+005 Archer Queen 49>50
+B H+005 Gold Mine 13>14
+B H+005 Gold Mine 13>14
 L H+005 Miner 4>5
+B H+005 Gold Mine 13>14
 L H+007 Haste Spell 2>3
 B H+007 Barbarian King 46>47
+B H+008 Squad Barracks 3>4
 L H+009 Haste Spell 3>4
-B H+009 Barbarian King 47>48
+B H+010 Barbarian King 47>48
 L H+011 Haste Spell 4>5
 B H+012 Barbarian King 48>49
-B H+014 Barbarian King 49>50
 L H+014 Archer 6>7
+B H+014 Barbarian King 49>50
 L H+014 Archer 7>8
 L H+015 Giant 6>7
 L H+017 Giant 7>8
@@ -125,53 +133,57 @@ L H+025 Skeleton Spell 1>2
 L H+026 Skeleton Spell 2>3
 L H+026 Skeleton Spell 3>4
 == Home HERO · cara B=LPT L=LPT P=LPT
-target H+16 · hero H+16 · builder H+16 · lab H+28 · pet - · TH - · 59 langkah
-B H+000 Elixir Collector 12>13
+target H+16 · hero H+16 · builder H+16 · lab H+28 · pet - · TH - · 63 langkah
+B H+000 +Squad Barracks
 B H+000 Elixir Collector 12>13
 B H+000 Elixir Collector 12>13
 L H+000 Golem 6>7
-B H+000 Archer Queen 47>48
-B H+000 Elixir Collector 13>14
 B H+000 Elixir Collector 13>14
 B H+000 Elixir Collector 13>14
 B H+000 Barbarian King 43>44
-B H+000 Elixir Collector 12>13
+B H+000 Archer Queen 47>48
 B H+000 Elixir Collector 12>13
 B H+000 Elixir Collector 12>13
 B H+001 Elixir Collector 12>13
-B H+001 Gold Mine 12>13
-B H+001 Gold Mine 12>13
+B H+001 Elixir Collector 12>13
 B H+001 Elixir Collector 13>14
 B H+001 Elixir Collector 13>14
 B H+001 Elixir Collector 13>14
 B H+001 Elixir Collector 13>14
-B H+001 Gold Mine 13>14
-B H+001 Gold Mine 13>14
+B H+001 Elixir Collector 12>13
 B H+001 Gold Mine 12>13
-B H+001 Gold Mine 12>13
-B H+001 Gold Mine 12>13
+B H+001 Elixir Collector 13>14
 B H+001 Gold Mine 13>14
-B H+001 Gold Mine 13>14
-B H+001 Gold Mine 13>14
+B H+002 Squad Barracks 1>2
 B H+002 Gold Mine 12>13
 B H+002 Gold Mine 12>13
 B H+002 Gold Mine 13>14
 B H+002 Gold Mine 13>14
 L H+002 Miner 2>3
-B H+002 Archer Queen 48>49
+B H+002 Gold Mine 12>13
+B H+002 Gold Mine 12>13
+B H+002 Gold Mine 13>14
+B H+002 Gold Mine 13>14
+B H+003 Archer Queen 48>49
+B H+003 Gold Mine 12>13
+B H+003 Gold Mine 12>13
 B H+003 Barbarian King 44>45
+B H+003 Gold Mine 13>14
+B H+003 Gold Mine 13>14
 L H+004 Miner 3>4
-B H+005 Archer Queen 49>50
+B H+004 Squad Barracks 2>3
 B H+005 Barbarian King 45>46
+B H+005 Archer Queen 49>50
 L H+005 Miner 4>5
 L H+007 Haste Spell 2>3
 B H+007 Barbarian King 46>47
+B H+008 Squad Barracks 3>4
 L H+009 Haste Spell 3>4
-B H+009 Barbarian King 47>48
+B H+010 Barbarian King 47>48
 L H+011 Haste Spell 4>5
-B H+011 Barbarian King 48>49
-B H+014 Barbarian King 49>50
+B H+012 Barbarian King 48>49
 L H+014 Archer 6>7
+B H+014 Barbarian King 49>50
 L H+014 Archer 7>8
 L H+015 Giant 6>7
 L H+017 Giant 7>8

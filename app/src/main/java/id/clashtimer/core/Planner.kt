@@ -1034,7 +1034,12 @@ object Planner {
             val n = laneCount(v, lane, ps)
             val all = v.insts.filter { it.upgrading && it.lane == lane }
             val busy = all.filter { !it.extra }
-            val count = maxOf(n, busy.size)
+            // Upgrade yang bangunannya belum dikenal data game (bangunan baru): pekerjanya tetap sibuk sampai
+            // timer-nya selesai — tanpa ini rencana mengira ada pekerja bebas & urutan pekerja bergeser.
+            val ghosts = v.timers.filter { it.lane == lane && it.cat == null && !it.extra }
+                .map { it to maxOf(finishes[it.uid] ?: (v.exportAt + it.remaining * 1000), now) }
+                .filter { it.second > now }
+            val count = maxOf(n, busy.size + ghosts.size)
             if (count == 0 && all.isEmpty()) continue
             val laneObjs = (0 until count).map { SimLane(lane, it + 1, now) }
             lanes += laneObjs
@@ -1052,11 +1057,20 @@ object Planner {
                 runs += SimRun(inst, f, l).also { it.step = st }
             }
             // B1 = pekerja yang paling cepat bebas
-            busy.sortedBy { finishOf(v, it, finishes) }.forEachIndexed { idx, inst ->
-                val f = maxOf(finishOf(v, inst, finishes), now)
+            val order = (busy.map { it to maxOf(finishOf(v, it, finishes), now) } + ghosts.map { null to it.second }).sortedBy { it.second }
+            val ghostQueue = ArrayDeque(ghosts.sortedBy { it.second })
+            order.forEachIndexed { idx, (inst, f) ->
                 val l = laneObjs[idx]
                 l.freeAt = f
                 l.lastFinish = f
+                if (inst == null) {
+                    val t = ghostQueue.removeFirst().first
+                    running += PlannedStep(
+                        lane, l.index, "${t.name} → ${t.fromLevel + 1}", now, f, 0, null, (f - now) / 1000, null,
+                        t.fromLevel, t.fromLevel + 1, t.fromLevel == 0, false, running = true,
+                    )
+                    return@forEachIndexed
+                }
                 val st = PlannedStep(
                     lane, l.index, runTitle(inst), now, f, 0, null, (f - now) / 1000, inst.item,
                     inst.level, if (inst.gearing) inst.level else inst.level + 1, inst.level == 0, inst.gearing, running = true,

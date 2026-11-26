@@ -408,14 +408,14 @@ object PlanView {
         // Langkah berjalan di rencana yang sama (selesai paling dekat dengan timer ini).
         val rs = sim?.running?.filter { it.lane == lane }?.minByOrNull { kotlin.math.abs(it.finish - u.finishAt) }
             ?.takeIf { kotlin.math.abs(it.finish - u.finishAt) < 5 * 60_000L }
-        val idx = rs?.laneIndex ?: label?.drop(1)?.toIntOrNull()
+        // Label kartu (B1, B2, …) bukan nomor pekerja di rencana: bila timer ini tidak ditemukan di rencana,
+        // jangan menebak langkah berikutnya / waktu menganggur dari labelnya.
+        val idx = rs?.laneIndex
+        if (rs == null && (lane == Lane.BUILDER || lane == Lane.BB_BUILDER)) return done to Ui.TEXT2
         val next = sim?.steps?.filter { it.lane == lane && !it.running && (lane != Lane.BUILDER && lane != Lane.BB_BUILDER || it.laneIndex == idx) && it.start >= u.finishAt - 60_000L }
             ?.minByOrNull { it.start }
-        val wait = when {
-            rs != null -> rs.idle
-            next != null -> (next.start - u.finishAt).coerceAtLeast(0)
-            else -> 0L
-        }
+        // Menganggur = jeda antara selesainya upgrade ini dan langkah berikutnya pekerja yang sama.
+        val wait = if (next != null) (next.start - u.finishAt).coerceAtLeast(0) else 0L
         return when {
             wait > 30 * 60_000L -> tr("$done · menganggur ±${Fmt.dur(wait)}", "$done · idle ±${Fmt.dur(wait)}") to Ui.IDLE
             next != null -> tr("$done · lalu ${short(next)}", "$done · then ${short(next)}") to Ui.TEXT2
