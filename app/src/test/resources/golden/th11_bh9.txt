@@ -1,4 +1,4 @@
-# data game d1ab9ce9debc23fd
+# data game fc9563c2930ad2fe
 # th11_bh9 — dibuat otomatis oleh GoldenPlanTest (UPDATE_GOLDEN=1); jangan diubah dengan tangan
 == Home MAX · cara B=LPT L=LPT P=LPT
 target H+28 · hero H+16 · builder H+16 · lab H+28 · pet - · TH - · 64 langkah

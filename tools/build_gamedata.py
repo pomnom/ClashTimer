@@ -75,6 +75,12 @@ def build(data, paths, ovr, version):
     cats = {"buildings": ("b", "B"), "traps": ("t", "T"), "heroes": ("h", "H"),
             "troops": ("u", "U"), "spells": ("s", "s"), "pets": ("p", "p")}
     weapons, wpn_items = {}, []
+    # (id bangunan, level) → Town Hall yang dibutuhkan, dan Town Hall tertinggi di data: untuk bangunan hasil
+    # gabungan yang syarat Town Hall-nya belum dicatat ClashKing (mis. Firecracker Tower saat TH19 rilis).
+    hall_of = {(it["_id"], l["level"]): l.get("required_townhall") or 0
+               for it in data["buildings"] if it.get("village") != "builderBase" for l in it.get("levels") or []}
+    newest_hall = max((len(it.get("levels") or []) for it in data["buildings"]
+                       if it.get("name") == "Town Hall" and it.get("village") != "builderBase"), default=0)
     # Urutan: semua Home (bangunan, jebakan, hero, troop, spell, pet), lalu Builder Base.
     passes = [(False, ["buildings", "traps", "heroes", "troops", "spells", "pets"]),
               (True, ["buildings", "heroes", "troops", "traps"])]
@@ -101,10 +107,18 @@ def build(data, paths, ovr, version):
             else:
                 o["pb"], o["pbl"] = "", 0
             rows = []
+            merged = f == "buildings" and not bb and any(l.get("merge_requirement") for l in levels)
+            prev_hall = 0
             for l in levels:
                 t = l.get("upgrade_time", l.get("build_time")) or 0
                 cost = l.get("upgrade_cost", l.get("build_cost")) or 0
                 hall = l.get("required_townhall") or 0
+                if not hall and merged:
+                    # Bangunan gabungan selalu hadir bersama Town Hall terbaru; tidak pernah lebih rendah dari
+                    # kebutuhan bahan gabungannya atau level sebelumnya.
+                    need = [hall_of.get((m["_id"], m["level"]), 0) for m in l.get("merge_requirement") or []]
+                    hall = max(need + [prev_hall, newest_hall])
+                prev_hall = hall
                 req = l.get(REQ.get(f, ""), 0) or 0 if f in REQ else 0
                 rows.append([l["level"], t, cost, hall, req])
             o["lv"] = rows
@@ -182,7 +196,37 @@ def build(data, paths, ovr, version):
 FROM_ROWS = set("ushpUH")
 
 
-def validate(g):
+def keep_level_numbers(g, old):
+    """
+    ClashKing kadang menomori ulang level dari 1 (mis. pasukan Builder Base & super troop setelah update
+    November 2026), padahal level di export & di game tidak berubah. Bila level awal sebuah item berbeda dari
+    data sebelumnya, nomor level lama dipertahankan (level baru di ujung ikut bergeser).
+
+    Item yang hilang dari ClashKing (mis. Inferno Artillery setelah update November 2026) disalin dari data
+    sebelumnya supaya export yang masih memuatnya tetap dikenali. Kembalikan daftar catatan perbaikan.
+    """
+    if not old:
+        return []
+    prev = {(it["id"], it["c"]): it for it in old.get("items", [])}
+    fixed = []
+    for it in g["items"]:
+        o = prev.get((it["id"], it["c"]))
+        if not o or not o["lv"] or not it["lv"] or o["lv"][0][0] == it["lv"][0][0]:
+            continue
+        shift = o["lv"][0][0] - it["lv"][0][0]
+        for r in it["lv"]:
+            r[0] += shift
+        fixed.append(f"{it['n']} ({'+' if shift > 0 else ''}{shift})")
+    now = {(it["id"], it["c"]) for it in g["items"]}
+    for k, it in prev.items():
+        if k not in now:
+            g["items"].append(it)
+            g["names"].setdefault(str(it["id"]), it["n"])
+            fixed.append(f"{it['n']} (disalin, hilang dari ClashKing)")
+    return fixed
+
+
+def validate(g, warn=None):
     """Pemeriksaan data. Kembalikan daftar masalah (kosong = lolos)."""
     bad = []
     items = {it["id"]: it for it in g["items"] if it["c"] in "bthusp"}
@@ -198,16 +242,20 @@ def validate(g):
         sid = 1000005 if res == "Gold" else 1000003
         return at(cap["home"]["hall"], th) + count(sid, th) * at(cap["home"]["storage"], maxlv(sid, th))
     h = cap["home"]
-    if len(h["hall"]) < g["maxTH"] or len(h["hall_dark"]) < g["maxTH"]:
-        bad.append(f"kapasitas Town Hall kurang dari TH{g['maxTH']}")
+    warn = warn if warn is not None else []
+    # Town Hall tertinggi yang kapasitas gudangnya sudah diketahui (tools/overrides.json). Town Hall di atasnya
+    # (baru rilis, angka resmi belum ada) tidak diperiksa — aplikasi menganggap gudangnya tidak membatasi.
+    known_th = min(len(h["hall"]), len(h["hall_dark"]))
     for sid, key in ((1000005, "storage"), (1000024, "dark_storage")):
-        top = max(r[0] for r in items[sid]["lv"])
-        if len(h[key]) < top:
-            bad.append(f"kapasitas {items[sid]['n']} hanya {len(h[key])} level, data game {top}")
+        lv = len(h[key])
+        known_th = min(known_th, min([r[3] for r in items[sid]["lv"] if r[0] > lv] or [99]) - 1)
+    if known_th < g["maxTH"]:
+        warn.append(f"kapasitas gudang TH{known_th + 1}–TH{g['maxTH']} belum diketahui: tidak diperiksa, "
+                    "aplikasi tidak membatasi biaya di Town Hall itu (isi tools/overrides.json bila angkanya ada)")
     b = cap["bb"]
     if len(b["hall"]) < g["maxBH"]:
         bad.append(f"kapasitas Builder Hall kurang dari BH{g['maxBH']}")
-    for th in range(7, g["maxTH"] + 1):
+    for th in range(7, min(g["maxTH"], known_th) + 1):
         for res in ("Gold", "Elixir", "Dark Elixir"):
             best = (0, "")
             for it in items.values():
@@ -244,7 +292,10 @@ def main():
     a = ap.parse_args()
     if a.validate:
         g = json.load(open(a.out, encoding="utf-8"))
-        bad = validate(g)
+        warn = []
+        bad = validate(g, warn)
+        for w in warn:
+            print("⚠️", w)
         if bad:
             print("❌ Pemeriksaan data gagal:", *bad, sep="\n  ", file=sys.stderr)
             sys.exit(1)
@@ -253,12 +304,18 @@ def main():
     data, paths, version = load_src(a.src)
     ovr = json.load(open(OVR, encoding="utf-8"))
     g = build(data, paths, ovr, version)
-    bad = validate(g)
+    old = open(a.out, encoding="utf-8").read() if os.path.exists(a.out) else ""
+    fixed = keep_level_numbers(g, json.loads(old) if old else None)
+    if fixed:
+        print("ℹ️ Nomor level dipertahankan seperti data sebelumnya:", ", ".join(fixed))
+    warn = []
+    bad = validate(g, warn)
+    for w in warn:
+        print("⚠️", w)
     if bad:
         print("❌ Pemeriksaan data gagal:", *bad, sep="\n  ", file=sys.stderr)
         sys.exit(1)
     text = json.dumps(g, ensure_ascii=False, separators=(",", ":"))
-    old = open(a.out, encoding="utf-8").read() if os.path.exists(a.out) else ""
     same = old and json.loads(old) | {"v": g["v"]} == g
     if a.check:
         print("✅ sama dengan file sekarang" if same else "⚠️ berbeda dari file sekarang")

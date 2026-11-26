@@ -81,15 +81,23 @@ object Capacity {
         val id = storageFor(resource) ?: return null
         if (hallLv <= 0) return null
         val st = table(tb, resource)
-        var sum = at(hallTable(tb, resource), hallLv)
-        for (i in v.insts) if (i.item.id == id) sum += at(st, i.level)
+        val ht = hallTable(tb, resource)
+        // Hall / gudang baru yang kapasitasnya belum diketahui (baru rilis): tidak dibatasi.
+        if (hallLv > ht.size) return null
+        var sum = at(ht, hallLv)
+        for (i in v.insts) if (i.item.id == id) {
+            if (i.level > st.size) return null
+            sum += at(st, i.level)
+        }
         return sum
     }
 
     /** Tambahan kapasitas bila storage [resource] naik dari [from] ke [to]. */
     fun gain(resource: String, from: Int, to: Int): Long {
         val tb = t ?: return 0
-        return at(table(tb, resource), to) - at(table(tb, resource), from)
+        val st = table(tb, resource)
+        if (to > st.size) return 0
+        return at(st, to) - at(st, from)
     }
 
     /**
@@ -104,8 +112,12 @@ object Capacity {
         if (hallLv <= 0) return null
         val item = gd.item(id) ?: return null
         val lvl = item.maxLevelFor(hallLv)
+        val ht = hallTable(tb, resource)
+        val st = table(tb, resource)
+        // Kapasitas hall / level gudang tertinggi belum diketahui (baru rilis): tidak dibatasi.
+        if (hallLv > ht.size || lvl > st.size) return null
         val n = maxOf(gd.allowedCount(id, hallLv, bb), v.count(id))
-        return at(hallTable(tb, resource), hallLv) + n * at(table(tb, resource), lvl)
+        return at(ht, hallLv) + n * at(st, lvl)
     }
 
     /** Biaya [c] tidak akan muat di hall ini walau semua storage sudah max. */

@@ -1,3 +1,8 @@
+# Data game update November (Town Hall 19)
+- Data game diperbarui ke update November: biaya & waktu terbaru (banyak riset lab kini lebih cepat), Town Hall 19 beserta level barunya, Firecracker Tower, Spiky Tower, Guardian Shrine, Squads dan Heroic Spell.
+- Kapasitas gudang Town Hall 19 belum diketahui: di TH19 biaya upgrade sementara tidak dibatasi gudang.
+- Nomor level pasukan Builder Base, Battle Copter & super troop tetap seperti di game (sumber data sempat menomori ulang dari 1).
+
 # Urutan strategi baru, lebih cepat, API key sendiri
 - Seimbang: bangunan esensial kini dikerjakan sebelum hero, jadi Clan Castle, Blacksmith, Army Camp, dll. selesai beberapa minggu lebih cepat. Hero selesai beberapa hari lebih lambat; tanggal target tidak berubah.
 - Rush TH: setelah Town Hall & bangunan baru, bangunan esensial didahulukan sebelum hero.

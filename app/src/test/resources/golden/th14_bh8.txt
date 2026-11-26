@@ -1,7 +1,7 @@
-# data game d1ab9ce9debc23fd
+# data game fc9563c2930ad2fe
 # th14_bh8 — dibuat otomatis oleh GoldenPlanTest (UPDATE_GOLDEN=1); jangan diubah dengan tangan
-== Home MAX · cara B=VALUE L=FIT P=VALUE
-target H+177 · hero H+56 · builder H+106 · lab H+177 · pet H+104 · TH - · 362 langkah
+== Home MAX · cara B=VALUE L=LPT P=VALUE
+target H+163 · hero H+56 · builder H+102 · lab H+163 · pet H+104 · TH - · 362 langkah
 B H+000 +Bomb
 B H+000 +Air Bomb
 B H+000 +Skeleton Trap
@@ -26,75 +26,72 @@ B H+004 Dark Spell Factory 6>7
 P H+005 +Mighty Yak
 P H+005 Mighty Yak 1>2
 B H+005 Barracks 15>16
-L H+005 Baby Dragon 6>7
+L H+005 Electro Dragon 4>5
 B H+005 Dark Barracks 10>11
 P H+006 Mighty Yak 2>3
 B H+006 +Squad Barracks
 P H+007 L.A.S.S.I 4>5
 B H+007 Workshop 5>6
 B H+008 Squad Barracks 1>2
-L H+008 Miner 6>7
 P H+009 +Unicorn
 P H+009 Unicorn 1>2
 B H+010 Grand Warden 49>50
 P H+010 Electro Owl 2>3
 B H+010 Squad Barracks 2>3
 B H+011 Royal Champion 23>24
-L H+011 Ice Block Spell 1>2
+L H+011 Dragon Rider 2>3
 B H+011 Minion Prince 50>51
 B H+011 Barbarian King 75>76
 P H+012 Mighty Yak 3>4
 B H+012 Grand Warden 50>51
-B H+013 Royal Champion 24>25
+B H+012 Royal Champion 24>25
 P H+013 Unicorn 2>3
-B H+014 Squad Barracks 3>4
 B H+014 Royal Champion 25>26
-B H+015 Minion Prince 51>52
+B H+014 Squad Barracks 3>4
+B H+014 Minion Prince 51>52
 B H+015 Archer Queen 75>76
 P H+015 Mighty Yak 4>5
 B H+015 Grand Warden 51>52
-B H+017 Royal Champion 26>27
+B H+016 Royal Champion 26>27
+L H+017 Electro Titan 1>2
 P H+017 L.A.S.S.I 5>6
-B H+018 Minion Prince 52>53
+B H+017 Minion Prince 52>53
 B H+018 Barbarian King 76>77
 B H+019 Squad Barracks 4>5
-B H+019 Grand Warden 52>53
-L H+019 Log Launcher 1>2
 B H+019 Royal Champion 27>28
+B H+019 Grand Warden 52>53
 P H+019 Electro Owl 3>4
 B H+021 Minion Prince 53>54
 B H+021 Archer Queen 76>77
-L H+021 Log Launcher 2>3
-B H+022 Royal Champion 28>29
+B H+021 Royal Champion 28>29
 P H+022 Mighty Yak 5>6
 B H+022 Grand Warden 53>54
+L H+023 Balloon 9>10
 B H+024 Royal Champion 29>30
-P H+024 L.A.S.S.I 6>7
-L H+024 Golem 9>10
-B H+024 Squad Barracks 5>6
 B H+024 Minion Prince 54>55
+P H+024 L.A.S.S.I 6>7
+B H+024 Squad Barracks 5>6
 B H+024 Barbarian King 77>78
 B H+025 Grand Warden 54>55
-B H+027 Archer Queen 77>78
+B H+026 Archer Queen 77>78
 P H+027 Unicorn 3>4
-L H+027 Overgrowth Spell 2>3
 B H+027 Minion Prince 55>56
 B H+027 Barbarian King 78>79
+L H+028 Recall Spell 2>3
 B H+028 Grand Warden 55>56
+B H+029 Archer Queen 78>79
 P H+029 Mighty Yak 6>7
-B H+030 Archer Queen 78>79
 B H+030 Squad Barracks 6>7
-B H+031 Minion Prince 56>57
+B H+030 Minion Prince 56>57
 B H+031 Barbarian King 79>80
 B H+031 Grand Warden 56>57
 P H+032 Electro Owl 4>5
-B H+033 Archer Queen 79>80
-L H+034 Flame Flinger 1>2
-B H+034 Minion Prince 57>58
+B H+032 Archer Queen 79>80
+B H+033 Minion Prince 57>58
+L H+034 Dragon 8>9
 B H+034 Barbarian King 80>81
-B H+034 Grand Warden 57>58
+B H+035 Grand Warden 57>58
 P H+035 L.A.S.S.I 7>8
-L H+036 Flame Flinger 2>3
 B H+036 Archer Queen 80>81
 B H+036 Bomb 1>2
 B H+036 Bomb 2>3
@@ -103,10 +100,10 @@ B H+036 Bomb 3>4
 B H+036 Air Bomb 2>3
 B H+036 Giant Bomb 1>2
 B H+036 Bomb 4>5
-B H+036 Cannon 17>18
+B H+037 Cannon 17>18
+B H+037 Minion Prince 58>59
 B H+037 Bomb 5>6
 B H+037 Giant Bomb 2>3
-B H+037 Minion Prince 58>59
 B H+037 Bomb 6>7
 B H+037 Air Bomb 3>4
 B H+037 Cannon 17>18
@@ -119,12 +116,12 @@ B H+038 Cannon 17>18
 P H+038 L.A.S.S.I 8>9
 B H+039 Skeleton Trap 2>3
 B H+039 Seeking Air Mine 1>2
-L H+039 Apprentice Warden 2>3
+L H+039 Yeti 3>4
 B H+039 Cannon 17>18
-B H+040 Bomb 8>9
-B H+040 Air Bomb 4>5
-B H+040 Minion Prince 59>60
 B H+040 Archer Queen 81>82
+B H+040 Bomb 8>9
+B H+040 Minion Prince 59>60
+B H+040 Air Bomb 4>5
 B H+040 Cannon 17>18
 B H+041 Giant Bomb 4>5
 B H+041 Grand Warden 59>60
@@ -134,238 +131,241 @@ B H+042 Air Bomb 5>6
 P H+042 Unicorn 4>5
 B H+042 Cannon 18>19
 B H+043 Skeleton Trap 3>4
+B H+043 Archer Tower 17>18
 B H+043 Cannon 18>19
-B H+043 Cannon 18>19
+B H+044 Archer Queen 82>83
 B H+044 Air Bomb 6>7
 B H+044 Archer Tower 17>18
 B H+044 Cannon 18>19
-B H+044 Archer Queen 82>83
-B H+044 Archer Tower 17>18
+B H+044 Cannon 18>19
+L H+045 Apprentice Warden 2>3
 B H+045 Giant Bomb 5>6
-L H+045 Electro Dragon 4>5
 B H+045 Giant Bomb 5>6
+B H+045 Archer Tower 17>18
 B H+045 Archer Tower 17>18
 P H+045 Mighty Yak 7>8
 B H+045 Archer Tower 17>18
-B H+045 Archer Tower 17>18
 B H+046 Barbarian King 83>84
+B H+046 Giant Bomb 5>6
 B H+046 Giant Bomb 5>6
 B H+046 Archer Tower 17>18
 B H+046 Archer Tower 17>18
 B H+046 Cannon 19>20
 B H+047 Giant Bomb 5>6
-B H+047 Giant Bomb 5>6
+B H+047 Seeking Air Mine 2>3
 B H+047 Cannon 19>20
 B H+047 Cannon 19>20
 B H+047 Cannon 19>20
-B H+048 Seeking Air Mine 2>3
+B H+048 Archer Queen 83>84
 B H+048 Bomb 9>10
 B H+048 Cannon 19>20
-B H+048 Archer Queen 83>84
 B H+048 Cannon 19>20
 B H+048 Cannon 19>20
 P H+048 Electro Owl 5>6
+B H+049 Bomb 9>10
 B H+049 Bomb 9>10
 B H+049 Archer Tower 18>19
 B H+049 Archer Tower 18>19
 B H+049 Archer Tower 18>19
 B H+050 Barbarian King 84>85
 B H+050 Archer Tower 18>19
+L H+050 Earthquake Spell 5>6
 B H+050 Archer Tower 18>19
 B H+050 Archer Tower 18>19
-L H+051 Dragon Rider 2>3
 B H+051 Archer Tower 18>19
 B H+051 Archer Tower 19>20
-B H+051 Archer Tower 19>20
-P H+052 L.A.S.S.I 9>10
+B H+051 Air Bomb 7>8
 B H+052 Archer Queen 84>85
+B H+052 Bomb 9>10
+P H+052 L.A.S.S.I 9>10
 B H+052 Archer Tower 19>20
 B H+052 Air Bomb 7>8
 B H+052 Air Bomb 7>8
 B H+053 Bomb 9>10
 B H+053 Bomb 9>10
+B H+053 Archer Tower 19>20
 B H+053 Air Bomb 7>8
 B H+053 Air Bomb 7>8
-B H+053 Air Bomb 7>8
 B H+054 Bomb 9>10
 B H+054 Bomb 9>10
-B H+054 Bomb 9>10
-B H+054 Bomb 9>10
+B H+054 Giant Bomb 6>7
 B H+054 Archer Tower 19>20
 B H+054 Archer Tower 19>20
 B H+054 Archer Tower 19>20
-B H+054 Archer Tower 19>20
+B H+054 Giant Bomb 6>7
+B H+055 Giant Bomb 6>7
+B H+055 Archer Tower 19>20
 B H+055 Giant Bomb 6>7
 B H+055 Giant Bomb 6>7
 B H+055 Giant Bomb 6>7
-B H+055 Giant Bomb 6>7
-B H+056 Giant Bomb 6>7
-B H+056 Giant Bomb 6>7
 B H+056 Giant Bomb 6>7
 B H+056 Spring Trap 7>8
 B H+056 Spring Trap 7>8
+B H+056 Spring Trap 7>8
+L H+056 Overgrowth Spell 2>3
 P H+056 Electro Owl 6>7
 B H+056 Archer Tower 19>20
-B H+056 Giant Bomb 7>8
-B H+056 Giant Bomb 7>8
-B H+056 Giant Bomb 7>8
+B H+056 Hidden Tesla 11>12
+B H+056 Hidden Tesla 11>12
+B H+056 Hidden Tesla 11>12
 B H+056 Wizard Tower 11>12
-B H+057 Spring Trap 7>8
-B H+057 Spring Trap 7>8
-B H+057 Spring Trap 7>8
-L H+057 Earthquake Spell 5>6
 B H+057 Wizard Tower 11>12
-B H+057 Spring Trap 7>8
-B H+057 Wizard Tower 11>12
-B H+057 Wizard Tower 11>12
-B H+058 Wizard Tower 11>12
+B H+058 Spring Trap 7>8
 B H+058 Wizard Tower 12>13
+B H+058 Mortar 13>14
+B H+058 Mortar 13>14
+B H+058 Mortar 13>14
+B H+059 Spring Trap 7>8
 B H+059 Wizard Tower 12>13
-B H+059 Wizard Tower 12>13
-B H+059 Wizard Tower 12>13
-B H+059 Wizard Tower 12>13
-B H+059 Giant Bomb 7>8
+B H+060 Spring Trap 7>8
+B H+060 Wizard Tower 11>12
 P H+060 Mighty Yak 8>9
-B H+060 Giant Bomb 7>8
-B H+060 Giant Bomb 7>8
-B H+060 Air Bomb 8>9
-B H+060 Air Bomb 8>9
+B H+060 Wizard Tower 11>12
+B H+060 Wizard Tower 11>12
+B H+060 Mortar 13>14
 B H+061 Spring Trap 8>9
-B H+061 Mortar 13>14
-B H+061 Air Bomb 8>9
-B H+061 Air Bomb 8>9
-B H+061 Air Bomb 8>9
-B H+061 Air Bomb 8>9
-B H+062 Mortar 13>14
-B H+062 Air Bomb 8>9
+L H+061 Ice Block Spell 1>2
+B H+061 Wizard Tower 12>13
+B H+061 Wizard Tower 12>13
+B H+061 Wizard Tower 12>13
+B H+061 Giant Bomb 7>8
+B H+062 Wizard Tower 13>14
 B H+062 Giant Bomb 7>8
-B H+062 Spring Trap 8>9
 B H+063 Spring Trap 8>9
 B H+063 Spring Trap 8>9
-B H+063 Spring Trap 8>9
-B H+063 Spring Trap 8>9
-L H+063 Recall Spell 2>3
-B H+063 Spring Trap 8>9
-B H+063 Spring Trap 8>9
-B H+063 Spring Trap 8>9
-B H+064 Mortar 13>14
+B H+063 Wizard Tower 13>14
+B H+063 Giant Bomb 7>8
+B H+064 Giant Bomb 7>8
+B H+064 Giant Bomb 7>8
+B H+064 Spring Trap 8>9
 P H+064 Unicorn 5>6
-B H+064 Mortar 13>14
-B H+064 Hidden Tesla 11>12
-B H+064 Hidden Tesla 11>12
-B H+064 Hidden Tesla 11>12
-B H+065 Wizard Tower 13>14
+B H+064 Spring Trap 8>9
+B H+064 Giant Bomb 7>8
+B H+064 Air Bomb 8>9
+B H+064 Air Bomb 8>9
+B H+065 Air Bomb 8>9
+B H+065 Spring Trap 8>9
+B H+065 Air Bomb 8>9
+B H+065 Air Bomb 8>9
+B H+065 Air Bomb 8>9
+B H+065 Air Bomb 8>9
+B H+066 Giant Bomb 7>8
+B H+066 Spring Trap 8>9
+B H+066 Spring Trap 8>9
 B H+066 Wizard Tower 13>14
-B H+066 Inferno Tower 7>8
-B H+066 Inferno Tower 7>8
-B H+066 Inferno Tower 7>8
+B H+066 Wizard Tower 13>14
+B H+066 Spring Trap 8>9
+L H+066 Druid 1>2
+B H+067 Wizard Tower 13>14
+B H+067 Inferno Tower 7>8
+B H+067 Inferno Tower 7>8
 P H+067 Mighty Yak 9>10
-B H+068 Wizard Tower 13>14
-B H+068 Seeking Air Mine 3>4
-L H+069 Electro Titan 1>2
-B H+069 Wizard Tower 13>14
-B H+070 Seeking Air Mine 3>4
-B H+071 Wizard Tower 13>14
+B H+068 Inferno Tower 7>8
+B H+068 Hidden Tesla 12>13
+B H+069 Hidden Tesla 12>13
+B H+070 Hidden Tesla 12>13
+B H+071 Hidden Tesla 12>13
+B H+071 Hidden Tesla 12>13
 B H+071 Seeking Air Mine 3>4
-B H+071 Seeking Air Mine 3>4
-B H+071 Elixir Storage 14>15
 P H+071 Unicorn 6>7
 B H+072 Seeking Air Mine 3>4
-B H+072 Seeking Air Mine 3>4
+L H+072 Healer 6>7
 B H+072 Seeking Air Mine 3>4
 B H+073 Seeking Air Mine 3>4
-B H+073 Hidden Tesla 12>13
-B H+073 Elixir Storage 14>15
-B H+073 Elixir Storage 14>15
-B H+073 Elixir Storage 14>15
-B H+074 Hidden Tesla 12>13
-B H+075 Hidden Tesla 12>13
-B H+075 Hidden Tesla 12>13
-B H+075 Hidden Tesla 12>13
-L H+075 Druid 1>2
+B H+073 Seeking Air Mine 3>4
+B H+073 Seeking Air Mine 3>4
+B H+073 Seeking Air Mine 3>4
+B H+073 Seeking Air Mine 3>4
+B H+074 Bomb Tower 8>9
+B H+074 Bomb Tower 8>9
+B H+074 Air Defense 11>12
+B H+074 Elixir Storage 14>15
+B H+074 Elixir Storage 14>15
 P H+075 Electro Owl 7>8
-B H+076 Gold Storage 14>15
+B H+076 Elixir Storage 14>15
+B H+076 Air Defense 11>12
+B H+077 Elixir Storage 14>15
 B H+077 Gold Storage 14>15
+L H+077 Poison Spell 7>8
 B H+077 Gold Storage 14>15
 B H+078 Gold Storage 14>15
+B H+078 Gold Storage 14>15
 B H+078 Builder's Hut 1>2
-B H+078 Builder's Hut 1>2
-B H+078 Builder's Hut 1>2
-B H+079 Scattershot 2>3
 B H+079 Builder's Hut 1>2
-B H+079 Builder's Hut 1>2
-B H+079 Scattershot 2>3
+B H+079 Air Defense 11>12
+B H+079 Air Defense 11>12
 P H+080 Unicorn 7>8
-B H+080 Elixir Collector 15>16
-B H+081 Bomb Tower 8>9
-B H+081 Bomb Tower 8>9
-B H+081 Eagle Artillery 4>5
-L H+081 Healer 6>7
-B H+084 Elixir Collector 15>16
-B H+084 Elixir Collector 15>16
+B H+080 Scattershot 2>3
+B H+080 Scattershot 2>3
+B H+080 Builder's Hut 1>2
+L H+081 Ice Golem 5>6
+B H+082 Builder's Hut 2>3
+B H+082 Builder's Hut 1>2
+B H+082 Builder's Hut 1>2
+B H+084 Eagle Artillery 4>5
+B H+084 Builder's Hut 2>3
+B H+084 Builder's Hut 2>3
 P H+084 Electro Owl 8>9
-B H+085 Air Defense 11>12
-B H+085 Air Defense 11>12
-B H+085 Elixir Collector 15>16
-B H+085 Elixir Collector 15>16
-B H+086 Air Defense 11>12
-B H+086 Elixir Collector 15>16
-L H+086 Ice Golem 5>6
-B H+087 Air Defense 11>12
-B H+087 Elixir Collector 15>16
-B H+088 Gold Mine 15>16
-B H+089 Builder's Hut 2>3
-B H+089 Builder's Hut 2>3
-B H+089 Builder's Hut 2>3
+B H+086 Builder's Hut 2>3
+L H+086 Bowler 5>6
+B H+086 Builder's Hut 2>3
+B H+086 X-Bow 8>9
+B H+086 X-Bow 8>9
+B H+088 X-Bow 8>9
+B H+088 X-Bow 8>9
 P H+089 Unicorn 8>9
-B H+090 Builder's Hut 2>3
-B H+091 Builder's Hut 2>3
-L H+091 Valkyrie 7>8
+B H+089 Elixir Collector 15>16
+B H+089 Elixir Collector 15>16
+B H+089 Elixir Collector 15>16
+B H+090 Elixir Collector 15>16
+B H+090 Elixir Collector 15>16
+L H+090 Healing Spell 7>8
+B H+090 Elixir Collector 15>16
+B H+091 Elixir Collector 15>16
+B H+091 Gold Mine 15>16
 B H+091 Gold Mine 15>16
 B H+091 Gold Mine 15>16
 B H+091 Gold Mine 15>16
 B H+092 Gold Mine 15>16
 B H+092 Gold Mine 15>16
 B H+092 Gold Mine 15>16
-B H+092 X-Bow 8>9
-B H+093 X-Bow 8>9
-B H+093 X-Bow 8>9
-B H+093 X-Bow 8>9
+B H+092 Dark Elixir Storage 8>9
+B H+092 Builder's Hut 3>4
 B H+093 Builder's Hut 3>4
-L H+093 Balloon 9>10
+B H+093 Builder's Hut 3>4
+B H+093 Builder's Hut 3>4
 P H+094 Electro Owl 9>10
-B H+096 Builder's Hut 3>4
-B H+096 Builder's Hut 3>4
-B H+097 Builder's Hut 3>4
-B H+097 Builder's Hut 3>4
-B H+097 Dark Elixir Storage 8>9
-L H+099 Dragon 8>9
+L H+094 Hog Rider 10>11
+B H+095 Builder's Hut 3>4
+B H+095 Dark Elixir Drill 9>10
+B H+096 Dark Elixir Drill 9>10
+B H+096 Dark Elixir Drill 9>10
+B H+096 Town Hall 14>15
+L H+097 Clone Spell 6>7
 P H+099 Unicorn 9>10
-B H+099 Dark Elixir Drill 9>10
-B H+099 Dark Elixir Drill 9>10
-B H+100 Dark Elixir Drill 9>10
-B H+100 Town Hall 14>15
-L H+104 Poison Spell 7>8
-L H+109 Minion 8>9
-L H+111 Yeti 3>4
-L H+117 Log Launcher 3>4
-L H+122 Bowler 5>6
-L H+127 Flame Flinger 3>4
-L H+132 Baby Dragon 7>8
-L H+137 Wall Breaker 9>10
-L H+141 Hog Rider 10>11
-L H+145 Golem 10>11
-L H+149 Healing Spell 7>8
-L H+153 Clone Spell 6>7
-L H+157 Valkyrie 8>9
-L H+160 Miner 7>8
-L H+165 Minion 9>10
-L H+168 Skeleton Spell 6>7
-L H+171 Archer 9>10
-L H+173 Barbarian 9>10
-L H+175 Giant 9>10
-== Home RUSH · cara B=FIT L=FIT P=FIT
-target H+6 · hero H+51 · builder H+103 · lab H+177 · pet H+105 · TH H+6 · 362 langkah
+L H+101 Wall Breaker 9>10
+L H+104 Golem 9>10
+L H+107 Golem 10>11
+L H+110 Skeleton Spell 6>7
+L H+113 Baby Dragon 6>7
+L H+116 Baby Dragon 7>8
+L H+120 Miner 6>7
+L H+123 Miner 7>8
+L H+127 Log Launcher 1>2
+L H+129 Log Launcher 2>3
+L H+132 Log Launcher 3>4
+L H+137 Flame Flinger 1>2
+L H+140 Flame Flinger 2>3
+L H+143 Flame Flinger 3>4
+L H+148 Giant 9>10
+L H+150 Valkyrie 7>8
+L H+152 Valkyrie 8>9
+L H+155 Archer 9>10
+L H+157 Minion 8>9
+L H+159 Minion 9>10
+L H+162 Barbarian 9>10
+== Home RUSH · cara B=FIT L=CHAIN P=VALUE
+target H+6 · hero H+50 · builder H+98 · lab H+164 · pet H+104 · TH H+6 · 362 langkah
 B H+000 +Squad Barracks
 B H+000 +Pet House
 L H+000 Recall Spell 1>2
@@ -383,353 +383,353 @@ B H+001 Hero Hall 7>8
 B H+001 Blacksmith 6>7
 P H+001 L.A.S.S.I 2>3
 B H+002 Pet House 2>3
-P H+002 L.A.S.S.I 3>4
-P H+004 L.A.S.S.I 4>5
+P H+002 +Electro Owl
+P H+002 Electro Owl 1>2
+P H+003 L.A.S.S.I 3>4
 B H+004 Pet House 3>4
+P H+005 +Mighty Yak
+P H+005 Mighty Yak 1>2
 B H+005 Clan Castle 9>10
 L H+005 Baby Dragon 6>7
-P H+006 L.A.S.S.I 5>6
+P H+006 Mighty Yak 2>3
 B H+006 Dark Spell Factory 6>7
 B H+006 Dark Barracks 10>11
 B H+006 Barracks 15>16
+P H+007 L.A.S.S.I 4>5
 B H+007 Squad Barracks 1>2
-L H+008 Miner 6>7
-P H+008 L.A.S.S.I 6>7
+L H+008 Log Launcher 1>2
+P H+009 +Unicorn
+P H+009 Unicorn 1>2
 B H+010 Squad Barracks 2>3
+L H+010 Log Launcher 2>3
+P H+010 Electro Owl 2>3
 B H+011 Workshop 5>6
-P H+011 L.A.S.S.I 7>8
-L H+011 Golem 9>10
 B H+011 Grand Warden 49>50
+P H+012 Mighty Yak 3>4
 B H+012 Barbarian King 75>76
 B H+012 Archer Queen 75>76
+L H+013 Miner 6>7
+P H+013 Unicorn 2>3
 B H+014 Squad Barracks 3>4
 B H+014 Grand Warden 50>51
-P H+014 L.A.S.S.I 8>9
-L H+014 Ice Block Spell 1>2
 B H+015 Minion Prince 50>51
-B H+015 Royal Champion 23>24
+P H+015 Mighty Yak 4>5
 B H+015 Barbarian King 76>77
-B H+017 Archer Queen 76>77
+B H+015 Archer Queen 76>77
+L H+016 Flame Flinger 1>2
+P H+017 L.A.S.S.I 5>6
 B H+017 Grand Warden 51>52
-P H+018 L.A.S.S.I 9>10
 B H+018 Minion Prince 51>52
-B H+019 Squad Barracks 4>5
-B H+019 Barbarian King 77>78
-B H+020 Grand Warden 52>53
+L H+018 Flame Flinger 2>3
+B H+018 Barbarian King 77>78
+B H+018 Royal Champion 23>24
+B H+018 Squad Barracks 4>5
+P H+019 Electro Owl 3>4
 B H+020 Archer Queen 77>78
-B H+021 Royal Champion 24>25
-P H+022 +Mighty Yak
-P H+022 Mighty Yak 1>2
-L H+022 Log Launcher 1>2
-B H+022 Barbarian King 78>79
-P H+023 Mighty Yak 2>3
-B H+023 Minion Prince 52>53
-B H+023 Grand Warden 53>54
+B H+020 Grand Warden 52>53
+B H+021 Minion Prince 52>53
+L H+021 Golem 9>10
+B H+021 Barbarian King 78>79
+P H+022 Mighty Yak 5>6
 B H+023 Archer Queen 78>79
-P H+024 Mighty Yak 3>4
-L H+024 Log Launcher 2>3
+B H+023 Grand Warden 53>54
 B H+024 Squad Barracks 5>6
+L H+024 Electro Dragon 4>5
+P H+024 L.A.S.S.I 6>7
+B H+024 Minion Prince 53>54
 B H+025 Barbarian King 79>80
-P H+026 Mighty Yak 4>5
-B H+026 Minion Prince 53>54
-B H+026 Royal Champion 25>26
 B H+026 Archer Queen 79>80
-L H+027 Overgrowth Spell 2>3
-P H+028 Mighty Yak 5>6
+B H+026 Royal Champion 24>25
+P H+027 Unicorn 3>4
+B H+027 Grand Warden 54>55
 B H+028 Barbarian King 80>81
-B H+029 Grand Warden 54>55
-B H+029 Minion Prince 54>55
-B H+030 Archer Queen 80>81
+B H+028 Minion Prince 54>55
+P H+029 Mighty Yak 6>7
+B H+029 Archer Queen 80>81
 B H+030 Squad Barracks 6>7
-P H+030 Mighty Yak 6>7
-B H+032 Grand Warden 55>56
+L H+030 Dragon Rider 2>3
+B H+031 Grand Warden 55>56
+B H+031 Minion Prince 55>56
 B H+032 Barbarian King 81>82
-B H+032 Royal Champion 26>27
-P H+033 Mighty Yak 7>8
-B H+034 Archer Queen 81>82
-L H+034 Flame Flinger 1>2
-B H+035 Minion Prince 55>56
-B H+035 Grand Warden 56>57
-L H+036 Flame Flinger 2>3
-P H+036 Mighty Yak 8>9
+P H+032 Electro Owl 4>5
+B H+033 Archer Queen 81>82
+B H+034 Grand Warden 56>57
+B H+034 Royal Champion 25>26
+P H+035 L.A.S.S.I 7>8
+L H+036 Electro Titan 1>2
+B H+036 Minion Prince 56>57
 B H+036 Barbarian King 82>83
-B H+036 Royal Champion 27>28
-B H+038 Archer Queen 82>83
-B H+038 Minion Prince 56>57
-B H+038 Grand Warden 57>58
-B H+039 Royal Champion 28>29
-L H+039 Apprentice Warden 2>3
-P H+040 Mighty Yak 9>10
+B H+037 Royal Champion 26>27
+B H+037 Grand Warden 57>58
+B H+037 Archer Queen 82>83
+P H+038 L.A.S.S.I 8>9
+B H+039 Minion Prince 57>58
+B H+039 Royal Champion 27>28
 B H+040 Barbarian King 83>84
-B H+041 Minion Prince 57>58
-B H+041 Scattershot 2>3
-B H+041 Grand Warden 58>59
-B H+042 Archer Queen 83>84
-P H+044 +Unicorn
-P H+044 Unicorn 1>2
+B H+040 Grand Warden 58>59
+B H+041 Archer Queen 83>84
+B H+042 Royal Champion 28>29
+L H+042 Balloon 9>10
+P H+042 Unicorn 4>5
+B H+042 Minion Prince 58>59
+B H+043 Scattershot 2>3
 B H+044 Barbarian King 84>85
-B H+044 Minion Prince 58>59
-B H+045 Grand Warden 59>60
-L H+045 Electro Dragon 4>5
-P H+045 Unicorn 2>3
-B H+046 Archer Queen 84>85
-P H+047 Unicorn 3>4
-B H+047 Royal Champion 29>30
-B H+048 Minion Prince 59>60
+B H+044 Grand Warden 59>60
+B H+045 Archer Queen 84>85
+P H+045 Mighty Yak 7>8
+B H+045 Minion Prince 59>60
+L H+047 Recall Spell 2>3
+B H+047 Scattershot 2>3
+B H+048 Royal Champion 29>30
+P H+048 Electro Owl 5>6
 B H+048 Eagle Artillery 4>5
-B H+048 Scattershot 2>3
-P H+049 Unicorn 4>5
+B H+049 Inferno Tower 7>8
 B H+049 Inferno Tower 7>8
 B H+050 Inferno Tower 7>8
-B H+051 Inferno Tower 7>8
-L H+051 Dragon Rider 2>3
-P H+052 Unicorn 5>6
-B H+054 Dark Elixir Storage 8>9
-B H+054 Builder's Hut 1>2
+P H+052 L.A.S.S.I 9>10
+L H+053 Dragon 8>9
+B H+053 Dark Elixir Storage 8>9
+B H+053 Builder's Hut 1>2
+B H+053 Builder's Hut 1>2
+B H+054 Wizard Tower 11>12
 B H+054 Builder's Hut 1>2
 B H+055 Builder's Hut 1>2
-B H+056 Builder's Hut 1>2
-B H+056 Builder's Hut 1>2
-B H+056 Builder's Hut 2>3
-P H+056 Unicorn 6>7
-B H+056 Elixir Storage 14>15
-L H+057 Earthquake Spell 5>6
-B H+057 Air Defense 11>12
-B H+057 Elixir Storage 14>15
-B H+057 Elixir Storage 14>15
+B H+055 Builder's Hut 1>2
+B H+055 Builder's Hut 2>3
+B H+056 Wizard Tower 11>12
+B H+056 Wizard Tower 11>12
+P H+056 Electro Owl 6>7
+B H+056 Wizard Tower 11>12
+B H+056 Wizard Tower 11>12
+B H+057 Builder's Hut 2>3
+B H+057 Builder's Hut 2>3
+B H+057 Builder's Hut 2>3
 B H+058 Builder's Hut 2>3
-B H+058 Air Defense 11>12
-B H+059 Builder's Hut 2>3
-B H+059 Builder's Hut 2>3
-P H+060 Unicorn 7>8
-B H+060 Elixir Storage 14>15
-B H+061 Builder's Hut 2>3
+B H+058 Elixir Storage 14>15
+L H+058 Yeti 3>4
+B H+059 Hidden Tesla 11>12
+B H+059 Elixir Storage 14>15
+B H+059 Elixir Storage 14>15
+B H+059 Elixir Storage 14>15
+B H+060 Gold Storage 14>15
+P H+060 Mighty Yak 8>9
 B H+061 Gold Storage 14>15
 B H+061 Gold Storage 14>15
-B H+062 Wizard Tower 11>12
-B H+062 Wizard Tower 11>12
-B H+063 Wizard Tower 11>12
-B H+063 Wizard Tower 11>12
-L H+063 Recall Spell 2>3
-B H+063 Gold Storage 14>15
-B H+063 Gold Storage 14>15
-B H+063 Wizard Tower 11>12
+B H+061 Hidden Tesla 11>12
+B H+061 Hidden Tesla 11>12
+B H+061 Gold Storage 14>15
+B H+062 Wizard Tower 12>13
+B H+062 Wizard Tower 12>13
+B H+063 Air Defense 11>12
+B H+063 Air Defense 11>12
+B H+063 Air Defense 11>12
+L H+064 Apprentice Warden 2>3
+P H+064 Unicorn 5>6
 B H+064 Air Defense 11>12
-B H+064 Air Defense 11>12
-P H+064 Unicorn 8>9
-B H+065 Hidden Tesla 11>12
-B H+065 Hidden Tesla 11>12
-B H+065 Hidden Tesla 11>12
+B H+064 X-Bow 8>9
+B H+066 X-Bow 8>9
+B H+066 X-Bow 8>9
+B H+066 Wizard Tower 12>13
 B H+067 X-Bow 8>9
-B H+067 X-Bow 8>9
-B H+067 X-Bow 8>9
-B H+068 X-Bow 8>9
+B H+067 Archer Tower 17>18
+P H+067 Mighty Yak 9>10
 B H+068 Wizard Tower 12>13
-L H+069 Druid 1>2
-P H+069 Unicorn 9>10
-B H+070 Wizard Tower 12>13
+B H+068 Hidden Tesla 12>13
+L H+069 Earthquake Spell 5>6
+B H+069 Wizard Tower 12>13
+B H+069 Archer Tower 17>18
+B H+069 Archer Tower 17>18
+B H+070 Archer Tower 17>18
+B H+070 Archer Tower 17>18
+B H+070 Archer Tower 17>18
+B H+070 Archer Tower 17>18
+B H+071 Hidden Tesla 12>13
+B H+071 Hidden Tesla 12>13
+B H+071 Hidden Tesla 12>13
 B H+071 Builder's Hut 3>4
-B H+071 Wizard Tower 12>13
-B H+071 Wizard Tower 12>13
-B H+071 Wizard Tower 12>13
-B H+072 Builder's Hut 3>4
+B H+071 Builder's Hut 3>4
+P H+071 Unicorn 6>7
 B H+073 Builder's Hut 3>4
 B H+073 Builder's Hut 3>4
 B H+073 Builder's Hut 3>4
-P H+074 +Electro Owl
-P H+074 Electro Owl 1>2
-B H+074 Archer Tower 17>18
-L H+075 Electro Titan 1>2
-B H+075 Bomb Tower 8>9
-B H+075 Bomb Tower 8>9
-P H+075 Electro Owl 2>3
-B H+076 Archer Tower 17>18
-B H+076 Archer Tower 17>18
-B H+076 Archer Tower 17>18
+B H+074 Hidden Tesla 12>13
+B H+074 Archer Tower 18>19
+L H+074 Overgrowth Spell 2>3
+B H+075 Archer Tower 18>19
+P H+075 Electro Owl 7>8
+B H+076 Archer Tower 18>19
+B H+076 Bomb Tower 8>9
+B H+076 Bomb Tower 8>9
+B H+076 Archer Tower 18>19
+B H+076 Archer Tower 18>19
+B H+077 Archer Tower 18>19
+B H+077 Archer Tower 18>19
 B H+077 Wizard Tower 13>14
-B H+077 Wizard Tower 13>14
-B H+077 Wizard Tower 13>14
-P H+077 Electro Owl 3>4
-B H+078 Archer Tower 17>18
-B H+078 Archer Tower 17>18
-B H+079 Archer Tower 17>18
-B H+079 Hidden Tesla 12>13
-B H+079 Hidden Tesla 12>13
-B H+079 Hidden Tesla 12>13
-B H+079 Hidden Tesla 12>13
-P H+079 Electro Owl 4>5
-B H+080 Wizard Tower 13>14
-L H+081 Healer 6>7
-B H+082 Wizard Tower 13>14
-B H+082 Archer Tower 18>19
-B H+082 Archer Tower 18>19
-B H+082 Archer Tower 18>19
-B H+082 Hidden Tesla 12>13
-P H+083 Electro Owl 5>6
-B H+083 Archer Tower 18>19
-B H+083 Archer Tower 18>19
-B H+083 Archer Tower 18>19
-B H+084 Archer Tower 18>19
-B H+084 Mortar 13>14
-B H+084 Mortar 13>14
-B H+084 Mortar 13>14
-B H+085 Mortar 13>14
-B H+085 Cannon 17>18
-B H+085 Cannon 17>18
-B H+086 Cannon 17>18
-B H+086 Cannon 17>18
-B H+086 Cannon 17>18
-L H+086 Ice Golem 5>6
-B H+086 Cannon 18>19
-P H+086 Electro Owl 6>7
-B H+086 Cannon 18>19
-B H+086 Cannon 18>19
-B H+086 Cannon 18>19
-B H+087 Air Bomb 1>2
-B H+087 Air Bomb 2>3
-B H+087 Archer Tower 19>20
-B H+087 Air Bomb 3>4
-B H+087 Air Bomb 4>5
-B H+087 Archer Tower 19>20
-B H+087 Cannon 18>19
-B H+087 Archer Tower 19>20
-B H+087 Archer Tower 19>20
-B H+088 Archer Tower 19>20
-B H+088 Archer Tower 19>20
-B H+088 Archer Tower 19>20
-B H+088 Archer Tower 19>20
-B H+088 Air Bomb 5>6
-B H+089 Giant Bomb 1>2
-B H+089 Giant Bomb 2>3
-B H+089 Giant Bomb 3>4
-B H+089 Air Bomb 6>7
-B H+089 Giant Bomb 4>5
-B H+089 Seeking Air Mine 1>2
-B H+089 Cannon 19>20
-B H+089 Cannon 19>20
-B H+089 Cannon 19>20
-B H+089 Cannon 19>20
-B H+089 Cannon 19>20
-B H+090 Cannon 19>20
-B H+090 Cannon 19>20
-B H+090 Seeking Air Mine 3>4
-B H+090 Seeking Air Mine 3>4
-B H+090 Seeking Air Mine 3>4
-P H+090 Electro Owl 7>8
-B H+091 Seeking Air Mine 2>3
-B H+091 Giant Bomb 5>6
+B H+078 Wizard Tower 13>14
+B H+078 Wizard Tower 13>14
+B H+079 Wizard Tower 13>14
+B H+079 Wizard Tower 13>14
+B H+079 Mortar 13>14
+B H+080 Cannon 17>18
+L H+080 Ice Block Spell 1>2
+P H+080 Unicorn 7>8
+B H+080 Mortar 13>14
+B H+080 Cannon 17>18
+B H+081 Cannon 17>18
+B H+081 Cannon 17>18
+B H+081 Cannon 17>18
+B H+081 Air Bomb 1>2
+B H+081 Air Bomb 2>3
+B H+081 Air Bomb 3>4
+B H+081 Mortar 13>14
+B H+081 Mortar 13>14
+B H+081 Cannon 18>19
+B H+081 Cannon 18>19
+B H+082 Air Bomb 4>5
+B H+082 Archer Tower 19>20
+B H+082 Archer Tower 19>20
+B H+082 Archer Tower 19>20
+B H+083 Cannon 18>19
+B H+083 Archer Tower 19>20
+B H+083 Cannon 18>19
+B H+083 Cannon 18>19
+B H+083 Archer Tower 19>20
+B H+083 Air Bomb 5>6
+B H+084 Archer Tower 19>20
+B H+084 Archer Tower 19>20
+B H+084 Archer Tower 19>20
+P H+084 Electro Owl 8>9
+B H+084 Giant Bomb 1>2
+B H+084 Giant Bomb 2>3
+B H+084 Air Bomb 6>7
+B H+084 Giant Bomb 3>4
+B H+085 Giant Bomb 4>5
+B H+085 Seeking Air Mine 1>2
+B H+085 Giant Bomb 5>6
+B H+085 Giant Bomb 5>6
+B H+085 Cannon 19>20
+B H+085 Cannon 19>20
+B H+085 Cannon 19>20
+L H+085 Druid 1>2
+B H+085 Cannon 19>20
+B H+085 Cannon 19>20
+B H+086 Seeking Air Mine 2>3
+B H+086 Giant Bomb 5>6
+B H+086 Giant Bomb 5>6
+B H+086 Giant Bomb 5>6
+B H+086 Cannon 19>20
+B H+086 Cannon 19>20
+B H+086 Seeking Air Mine 3>4
+B H+086 Seeking Air Mine 3>4
+B H+086 Air Bomb 7>8
+B H+087 Air Bomb 7>8
+B H+087 Air Bomb 7>8
+B H+087 Air Bomb 7>8
+B H+087 Air Bomb 7>8
+B H+087 Bomb 1>2
+B H+087 Bomb 2>3
+B H+087 Bomb 3>4
+B H+087 Bomb 4>5
+B H+087 Giant Bomb 6>7
+B H+087 Giant Bomb 6>7
+B H+087 Giant Bomb 6>7
+B H+088 Giant Bomb 6>7
+B H+088 Giant Bomb 6>7
+B H+088 Giant Bomb 6>7
+B H+088 Giant Bomb 6>7
+B H+088 Seeking Air Mine 3>4
+B H+088 Seeking Air Mine 3>4
+B H+088 Seeking Air Mine 3>4
+B H+088 Seeking Air Mine 3>4
+B H+088 Seeking Air Mine 3>4
+P H+089 Unicorn 8>9
+B H+089 Seeking Air Mine 3>4
+B H+089 Spring Trap 7>8
+B H+089 Bomb 5>6
+B H+089 Giant Bomb 7>8
+B H+089 Giant Bomb 7>8
+B H+089 Spring Trap 7>8
+B H+089 Spring Trap 7>8
+B H+090 Spring Trap 7>8
+B H+090 Spring Trap 7>8
+B H+090 Skeleton Trap 1>2
+B H+090 Bomb 6>7
+B H+090 Giant Bomb 7>8
+B H+090 Giant Bomb 7>8
+B H+090 Giant Bomb 7>8
+B H+090 Giant Bomb 7>8
+B H+090 Air Bomb 8>9
 L H+091 Valkyrie 7>8
-B H+091 Air Bomb 7>8
-B H+091 Air Bomb 7>8
-B H+091 Air Bomb 7>8
-B H+091 Air Bomb 7>8
-B H+091 Air Bomb 7>8
-B H+092 Giant Bomb 5>6
-B H+092 Giant Bomb 5>6
-B H+092 Giant Bomb 5>6
-B H+092 Giant Bomb 5>6
-B H+092 Giant Bomb 6>7
-B H+092 Seeking Air Mine 3>4
-B H+092 Seeking Air Mine 3>4
-B H+092 Seeking Air Mine 3>4
-B H+092 Seeking Air Mine 3>4
-B H+092 Seeking Air Mine 3>4
-L H+093 Balloon 9>10
-B H+093 Bomb 1>2
-B H+093 Bomb 2>3
-B H+093 Bomb 3>4
-B H+093 Bomb 4>5
-B H+093 Giant Bomb 6>7
-B H+093 Giant Bomb 6>7
-B H+093 Giant Bomb 6>7
-B H+093 Giant Bomb 6>7
-B H+093 Giant Bomb 6>7
-B H+094 Giant Bomb 6>7
-B H+094 Spring Trap 7>8
-B H+094 Spring Trap 7>8
-B H+094 Spring Trap 7>8
-B H+094 Spring Trap 7>8
-B H+094 Bomb 5>6
-B H+094 Skeleton Trap 1>2
-B H+094 Giant Bomb 7>8
-B H+094 Giant Bomb 7>8
-B H+094 Giant Bomb 7>8
-B H+094 Bomb 6>7
-B H+094 Giant Bomb 7>8
-B H+094 Giant Bomb 7>8
-P H+095 Electro Owl 8>9
-B H+095 Spring Trap 7>8
-B H+095 Spring Trap 7>8
-B H+095 Giant Bomb 7>8
-B H+095 Air Bomb 8>9
-B H+095 Air Bomb 8>9
-B H+095 Air Bomb 8>9
-B H+095 Air Bomb 8>9
-B H+096 Bomb 7>8
-B H+096 Skeleton Trap 2>3
-B H+096 Bomb 8>9
-B H+096 Air Bomb 8>9
-B H+096 Air Bomb 8>9
-B H+096 Air Bomb 8>9
-B H+096 Giant Bomb 7>8
-B H+096 Spring Trap 8>9
-B H+097 Spring Trap 8>9
-B H+097 Spring Trap 8>9
-B H+097 Dark Elixir Drill 9>10
-B H+097 Dark Elixir Drill 9>10
-B H+097 Dark Elixir Drill 9>10
-B H+097 Spring Trap 8>9
-B H+097 Spring Trap 8>9
-B H+098 Bomb 9>10
-B H+098 Bomb 9>10
-B H+098 Spring Trap 8>9
-B H+098 Spring Trap 8>9
-L H+099 Dragon 8>9
-B H+099 Bomb 9>10
-B H+099 Bomb 9>10
-B H+099 Spring Trap 8>9
-B H+099 Spring Trap 8>9
-B H+099 Elixir Collector 15>16
-B H+099 Bomb 9>10
-B H+099 Bomb 9>10
-B H+100 Bomb 9>10
-B H+100 Bomb 9>10
-P H+100 Electro Owl 9>10
-B H+100 Skeleton Trap 3>4
-B H+100 Elixir Collector 15>16
-B H+100 Elixir Collector 15>16
-B H+100 Elixir Collector 15>16
-B H+100 Elixir Collector 15>16
-B H+100 Elixir Collector 15>16
-B H+101 Elixir Collector 15>16
-B H+101 Gold Mine 15>16
-B H+101 Gold Mine 15>16
-B H+101 Gold Mine 15>16
-B H+101 Gold Mine 15>16
-B H+102 Gold Mine 15>16
-B H+102 Gold Mine 15>16
-B H+102 Gold Mine 15>16
-L H+104 Poison Spell 7>8
-L H+109 Minion 8>9
-L H+111 Yeti 3>4
-L H+117 Log Launcher 3>4
-L H+122 Bowler 5>6
-L H+127 Flame Flinger 3>4
-L H+132 Baby Dragon 7>8
-L H+137 Wall Breaker 9>10
-L H+141 Hog Rider 10>11
-L H+145 Golem 10>11
-L H+149 Healing Spell 7>8
-L H+153 Clone Spell 6>7
-L H+157 Valkyrie 8>9
-L H+160 Miner 7>8
-L H+165 Minion 9>10
-L H+168 Skeleton Spell 6>7
-L H+171 Archer 9>10
-L H+173 Barbarian 9>10
-L H+175 Giant 9>10
-== Home HERO · cara B=FIT L=FIT P=FIT
-target H+41 · hero H+41 · builder H+101 · lab H+177 · pet H+106 · TH - · 361 langkah
+B H+091 Spring Trap 7>8
+B H+091 Bomb 7>8
+B H+091 Air Bomb 8>9
+B H+091 Air Bomb 8>9
+B H+091 Air Bomb 8>9
+B H+091 Air Bomb 8>9
+B H+091 Air Bomb 8>9
+B H+092 Skeleton Trap 2>3
+B H+092 Spring Trap 8>9
+B H+092 Spring Trap 8>9
+B H+092 Spring Trap 8>9
+B H+092 Air Bomb 8>9
+B H+092 Giant Bomb 7>8
+B H+092 Spring Trap 8>9
+B H+092 Spring Trap 8>9
+B H+092 Spring Trap 8>9
+L H+093 Healer 6>7
+B H+093 Bomb 8>9
+B H+093 Dark Elixir Drill 9>10
+B H+093 Dark Elixir Drill 9>10
+B H+093 Dark Elixir Drill 9>10
+B H+093 Bomb 9>10
+B H+093 Bomb 9>10
+B H+093 Spring Trap 8>9
+B H+094 Spring Trap 8>9
+P H+094 Electro Owl 9>10
+B H+094 Bomb 9>10
+B H+094 Bomb 9>10
+B H+094 Spring Trap 8>9
+B H+095 Bomb 9>10
+B H+095 Bomb 9>10
+B H+095 Bomb 9>10
+B H+095 Bomb 9>10
+B H+095 Skeleton Trap 3>4
+B H+095 Elixir Collector 15>16
+B H+095 Elixir Collector 15>16
+B H+095 Elixir Collector 15>16
+B H+095 Elixir Collector 15>16
+B H+095 Elixir Collector 15>16
+B H+096 Elixir Collector 15>16
+B H+096 Elixir Collector 15>16
+B H+096 Gold Mine 15>16
+B H+096 Gold Mine 15>16
+B H+096 Gold Mine 15>16
+B H+097 Gold Mine 15>16
+B H+097 Gold Mine 15>16
+B H+097 Gold Mine 15>16
+B H+097 Gold Mine 15>16
+L H+098 Minion 8>9
+P H+099 Unicorn 9>10
+L H+100 Poison Spell 7>8
+L H+104 Ice Golem 5>6
+L H+109 Log Launcher 3>4
+L H+114 Flame Flinger 3>4
+L H+120 Bowler 5>6
+L H+124 Baby Dragon 7>8
+L H+128 Miner 7>8
+L H+132 Healing Spell 7>8
+L H+136 Hog Rider 10>11
+L H+139 Golem 10>11
+L H+143 Clone Spell 6>7
+L H+146 Wall Breaker 9>10
+L H+149 Valkyrie 8>9
+L H+152 Skeleton Spell 6>7
+L H+155 Minion 9>10
+L H+158 Giant 9>10
+L H+160 Archer 9>10
+L H+162 Barbarian 9>10
+== Home HERO · cara B=FIT L=LPT P=VALUE
+target H+41 · hero H+41 · builder H+97 · lab H+163 · pet H+105 · TH - · 361 langkah
 B H+000 +Air Bomb
 B H+000 +Giant Bomb
 B H+000 +Seeking Air Mine
@@ -748,349 +748,349 @@ B H+002 Royal Champion 24>25
 P H+002 L.A.S.S.I 2>3
 B H+003 Pet House 2>3
 B H+003 Blacksmith 6>7
-P H+003 L.A.S.S.I 3>4
+P H+003 +Electro Owl
+P H+003 Electro Owl 1>2
 B H+003 Clan Castle 9>10
+P H+004 L.A.S.S.I 3>4
 B H+005 Barbarian King 75>76
-P H+005 L.A.S.S.I 4>5
 B H+005 Archer Queen 75>76
-L H+005 Baby Dragon 6>7
+L H+005 Electro Dragon 4>5
 B H+005 Grand Warden 50>51
-P H+007 L.A.S.S.I 5>6
+P H+006 +Mighty Yak
+P H+006 Mighty Yak 1>2
+P H+007 Mighty Yak 2>3
 B H+007 Minion Prince 50>51
 B H+008 Barbarian King 76>77
+P H+008 L.A.S.S.I 4>5
 B H+008 Archer Queen 76>77
-L H+008 Miner 6>7
 B H+008 Grand Warden 51>52
 B H+009 Royal Champion 25>26
-P H+009 L.A.S.S.I 6>7
+P H+010 Electro Owl 2>3
 B H+010 Minion Prince 51>52
+L H+011 Dragon Rider 2>3
 B H+011 Barbarian King 77>78
 B H+011 Royal Champion 26>27
-L H+011 Golem 9>10
 B H+011 Archer Queen 77>78
 B H+011 Grand Warden 52>53
-P H+012 L.A.S.S.I 7>8
+P H+012 Mighty Yak 3>4
+P H+013 Mighty Yak 4>5
 B H+013 Minion Prince 52>53
 B H+014 Royal Champion 27>28
-L H+014 Overgrowth Spell 2>3
 B H+014 Barbarian King 78>79
 B H+014 Archer Queen 78>79
 B H+015 Grand Warden 53>54
-P H+015 L.A.S.S.I 8>9
+P H+015 L.A.S.S.I 5>6
 B H+016 Royal Champion 28>29
 B H+017 Minion Prince 53>54
+L H+017 Balloon 9>10
 B H+017 Barbarian King 79>80
 B H+018 Archer Queen 79>80
+P H+018 Electro Owl 3>4
 B H+018 Grand Warden 54>55
 B H+019 Royal Champion 29>30
-P H+019 L.A.S.S.I 9>10
 B H+020 Minion Prince 54>55
+P H+020 L.A.S.S.I 6>7
 B H+021 Barbarian King 80>81
-L H+021 Log Launcher 1>2
 B H+021 Archer Queen 80>81
 B H+021 Grand Warden 55>56
 B H+021 Pet House 3>4
-P H+023 +Mighty Yak
-P H+023 Mighty Yak 1>2
+L H+022 Recall Spell 2>3
+P H+023 Mighty Yak 5>6
 B H+023 Minion Prince 55>56
-L H+023 Log Launcher 2>3
-P H+024 Mighty Yak 2>3
 B H+024 Dark Spell Factory 6>7
 B H+024 Grand Warden 56>57
 B H+025 Barbarian King 81>82
 B H+025 Archer Queen 81>82
-P H+025 Mighty Yak 3>4
-L H+026 Electro Dragon 4>5
+P H+025 +Unicorn
+P H+025 Unicorn 1>2
 B H+026 Minion Prince 56>57
-P H+027 Mighty Yak 4>5
+P H+027 Unicorn 2>3
 B H+027 Grand Warden 57>58
+L H+028 Dragon 8>9
+P H+028 Unicorn 3>4
 B H+029 Barbarian King 82>83
-P H+029 Mighty Yak 5>6
 B H+029 Archer Queen 82>83
 B H+029 Barracks 15>16
 B H+029 Minion Prince 57>58
 B H+031 Grand Warden 58>59
-P H+031 Mighty Yak 6>7
-L H+032 Ice Block Spell 1>2
+P H+031 Electro Owl 4>5
 B H+033 Barbarian King 83>84
 B H+033 Minion Prince 58>59
 B H+033 Archer Queen 83>84
+L H+033 Yeti 3>4
 B H+034 Grand Warden 59>60
-P H+034 Mighty Yak 7>8
+P H+034 L.A.S.S.I 7>8
 B H+035 Dark Barracks 10>11
 B H+036 Minion Prince 59>60
 B H+037 Barbarian King 84>85
 B H+037 Archer Queen 84>85
 B H+037 +Squad Barracks
-P H+037 Mighty Yak 8>9
+P H+037 Mighty Yak 6>7
 B H+039 Squad Barracks 1>2
+L H+039 Electro Titan 1>2
 B H+039 Workshop 5>6
-L H+040 Dragon Rider 2>3
+P H+040 Unicorn 4>5
 B H+041 Builder's Hut 1>2
 B H+041 Builder's Hut 1>2
-P H+041 Mighty Yak 9>10
 B H+041 Squad Barracks 2>3
 B H+041 Builder's Hut 1>2
 B H+042 Builder's Hut 1>2
 B H+042 Builder's Hut 1>2
-B H+043 Eagle Artillery 4>5
 B H+043 Scattershot 2>3
-B H+044 Scattershot 2>3
-B H+044 Builder's Hut 2>3
-P H+045 +Unicorn
-P H+045 Unicorn 1>2
+B H+043 Scattershot 2>3
+P H+043 Mighty Yak 7>8
+B H+044 Wizard Tower 11>12
+B H+044 Wizard Tower 11>12
+L H+045 Apprentice Warden 2>3
 B H+045 Squad Barracks 3>4
-P H+046 Unicorn 2>3
-L H+046 Flame Flinger 1>2
-B H+046 Inferno Tower 7>8
-P H+048 Unicorn 3>4
-L H+048 Flame Flinger 2>3
-B H+049 Inferno Tower 7>8
+B H+045 Eagle Artillery 4>5
+B H+045 Builder's Hut 2>3
+P H+046 L.A.S.S.I 8>9
+B H+047 Builder's Hut 2>3
+B H+049 Wizard Tower 11>12
+B H+049 Wizard Tower 11>12
 B H+049 Builder's Hut 2>3
-B H+050 Builder's Hut 2>3
 B H+050 Squad Barracks 4>5
-P H+050 Unicorn 4>5
-B H+051 Builder's Hut 2>3
-L H+051 Apprentice Warden 2>3
-B H+052 Builder's Hut 2>3
+P H+050 Electro Owl 5>6
+L H+050 Earthquake Spell 5>6
+B H+050 Builder's Hut 2>3
+B H+050 Builder's Hut 2>3
+B H+051 Wizard Tower 11>12
+B H+051 Hidden Tesla 11>12
+B H+052 Hidden Tesla 11>12
+B H+052 Hidden Tesla 11>12
 B H+052 Inferno Tower 7>8
-P H+053 Unicorn 5>6
-B H+053 Hidden Tesla 11>12
-B H+054 Air Defense 11>12
-B H+054 Air Defense 11>12
+B H+053 Inferno Tower 7>8
+P H+053 Mighty Yak 8>9
+B H+054 Inferno Tower 7>8
+B H+054 Wizard Tower 12>13
 B H+055 Squad Barracks 5>6
-B H+056 Wizard Tower 11>12
-B H+057 Wizard Tower 11>12
-P H+057 Unicorn 6>7
-L H+057 Earthquake Spell 5>6
-B H+057 Air Defense 11>12
+B H+056 Wizard Tower 12>13
+L H+056 Overgrowth Spell 2>3
+B H+056 Wizard Tower 12>13
+P H+057 L.A.S.S.I 9>10
+B H+057 Wizard Tower 12>13
+B H+057 Wizard Tower 12>13
 B H+058 Air Defense 11>12
-B H+058 X-Bow 8>9
-B H+058 X-Bow 8>9
-P H+061 Unicorn 7>8
+B H+058 Air Defense 11>12
+B H+059 Air Defense 11>12
+B H+059 Air Defense 11>12
 B H+061 X-Bow 8>9
+P H+061 Electro Owl 6>7
+L H+061 Ice Block Spell 1>2
 B H+061 Squad Barracks 6>7
+B H+061 X-Bow 8>9
 B H+062 X-Bow 8>9
-B H+062 Builder's Hut 3>4
-B H+062 Builder's Hut 3>4
-L H+063 Recall Spell 2>3
-B H+065 Builder's Hut 3>4
-B H+065 Wizard Tower 12>13
-P H+065 Unicorn 8>9
-B H+065 Wizard Tower 12>13
+B H+062 X-Bow 8>9
+B H+064 Archer Tower 17>18
+B H+064 Archer Tower 17>18
+B H+065 Air Bomb 1>2
+B H+065 Air Bomb 2>3
+P H+065 Mighty Yak 9>10
+B H+065 Archer Tower 17>18
+B H+065 Archer Tower 17>18
+B H+065 Archer Tower 17>18
+B H+065 Archer Tower 17>18
+B H+066 Air Bomb 3>4
+B H+066 Air Bomb 4>5
+B H+066 Archer Tower 17>18
 B H+066 Builder's Hut 3>4
-B H+067 Wizard Tower 11>12
-B H+067 Wizard Tower 11>12
-B H+067 Wizard Tower 11>12
-B H+068 Wizard Tower 12>13
-B H+068 Wizard Tower 12>13
-B H+068 Builder's Hut 3>4
-B H+069 Hidden Tesla 11>12
-L H+069 Electro Titan 1>2
-B H+069 Wizard Tower 12>13
-B H+070 Hidden Tesla 11>12
+B H+066 Builder's Hut 3>4
+B H+066 Builder's Hut 3>4
+L H+066 Druid 1>2
+B H+067 Hidden Tesla 12>13
+B H+067 Builder's Hut 3>4
+B H+069 Hidden Tesla 12>13
+B H+069 Hidden Tesla 12>13
+B H+069 Hidden Tesla 12>13
+P H+069 Unicorn 5>6
+B H+069 Builder's Hut 3>4
 B H+070 Dark Elixir Storage 8>9
-P H+070 Unicorn 9>10
 B H+071 Bomb Tower 8>9
 B H+071 Bomb Tower 8>9
-B H+071 Archer Tower 17>18
-B H+072 Archer Tower 17>18
-B H+072 Archer Tower 17>18
-B H+073 Air Bomb 1>2
-B H+073 Air Bomb 2>3
-B H+073 Archer Tower 17>18
-B H+073 Archer Tower 17>18
-B H+073 Archer Tower 17>18
-B H+074 Air Bomb 3>4
+B H+071 Archer Tower 18>19
+L H+072 Healer 6>7
+B H+072 Hidden Tesla 12>13
+B H+072 Archer Tower 18>19
+B H+073 Air Bomb 5>6
+P H+073 Unicorn 6>7
+B H+073 Archer Tower 18>19
+B H+073 Archer Tower 18>19
+B H+074 Archer Tower 18>19
+B H+074 Archer Tower 18>19
+B H+074 Archer Tower 18>19
+B H+074 Giant Bomb 1>2
+B H+074 Giant Bomb 2>3
+B H+074 Giant Bomb 3>4
 B H+074 Wizard Tower 13>14
 B H+074 Wizard Tower 13>14
-B H+074 Wizard Tower 13>14
-B H+074 Air Bomb 4>5
-B H+074 Archer Tower 17>18
-B H+074 Hidden Tesla 12>13
-B H+075 Hidden Tesla 12>13
-L H+075 Druid 1>2
-P H+075 +Electro Owl
-P H+075 Electro Owl 1>2
-B H+076 Hidden Tesla 12>13
-B H+076 Hidden Tesla 12>13
-B H+076 Hidden Tesla 12>13
-P H+076 Electro Owl 2>3
-B H+077 Wizard Tower 13>14
-B H+078 Wizard Tower 13>14
-P H+078 Electro Owl 3>4
-B H+079 Dark Elixir Drill 9>10
-B H+079 Dark Elixir Drill 9>10
-B H+079 Dark Elixir Drill 9>10
-B H+079 Archer Tower 18>19
-B H+080 Air Bomb 5>6
-B H+080 Archer Tower 18>19
-P H+080 Electro Owl 4>5
-B H+080 Archer Tower 18>19
-L H+081 Healer 6>7
-B H+081 Archer Tower 18>19
-B H+081 Archer Tower 18>19
-B H+081 Archer Tower 18>19
-B H+081 Archer Tower 18>19
-B H+081 Giant Bomb 1>2
-B H+081 Mortar 13>14
-B H+082 Giant Bomb 2>3
-B H+082 Mortar 13>14
-B H+082 Mortar 13>14
-B H+082 Mortar 13>14
-B H+082 Cannon 17>18
-B H+083 Giant Bomb 3>4
-B H+083 Giant Bomb 4>5
-B H+083 Cannon 17>18
-B H+083 Cannon 17>18
-P H+084 Electro Owl 5>6
-B H+084 Cannon 17>18
-B H+084 Cannon 17>18
-B H+084 Elixir Storage 14>15
-B H+084 Air Bomb 6>7
-B H+084 Elixir Storage 14>15
-B H+084 Elixir Storage 14>15
-B H+084 Elixir Storage 14>15
-B H+085 Seeking Air Mine 1>2
-B H+085 Seeking Air Mine 2>3
-B H+085 Gold Storage 14>15
-B H+086 Gold Storage 14>15
-B H+086 Giant Bomb 5>6
-B H+086 Giant Bomb 5>6
-B H+086 Giant Bomb 5>6
-L H+086 Valkyrie 7>8
-B H+086 Gold Storage 14>15
-B H+086 Gold Storage 14>15
-B H+086 Cannon 18>19
-B H+087 Giant Bomb 5>6
-B H+087 Giant Bomb 5>6
-B H+087 Cannon 18>19
-P H+087 Electro Owl 6>7
-B H+087 Cannon 18>19
-B H+087 Cannon 18>19
-B H+088 Air Bomb 7>8
-B H+088 Air Bomb 7>8
-B H+088 Air Bomb 7>8
-B H+088 Cannon 18>19
-B H+088 Archer Tower 19>20
-B H+088 Air Bomb 7>8
-L H+088 Balloon 9>10
-B H+088 Air Bomb 7>8
-B H+088 Giant Bomb 6>7
-B H+089 Giant Bomb 6>7
-B H+089 Giant Bomb 6>7
-B H+089 Giant Bomb 6>7
-B H+089 Giant Bomb 6>7
-B H+089 Archer Tower 19>20
-B H+089 Archer Tower 19>20
-B H+089 Archer Tower 19>20
-B H+089 Archer Tower 19>20
-B H+089 Bomb 1>2
-B H+089 Bomb 2>3
-B H+089 Bomb 3>4
-B H+089 Giant Bomb 6>7
-B H+090 Giant Bomb 6>7
-B H+090 Archer Tower 19>20
-B H+090 Bomb 4>5
-B H+090 Bomb 5>6
-B H+090 Spring Trap 7>8
-B H+090 Spring Trap 7>8
-B H+090 Spring Trap 7>8
-B H+090 Spring Trap 7>8
-B H+091 Archer Tower 19>20
-B H+091 Archer Tower 19>20
-B H+091 Seeking Air Mine 3>4
-B H+091 Seeking Air Mine 3>4
-B H+091 Seeking Air Mine 3>4
-P H+091 Electro Owl 7>8
-B H+092 Seeking Air Mine 3>4
-B H+092 Seeking Air Mine 3>4
-B H+092 Seeking Air Mine 3>4
-B H+092 Seeking Air Mine 3>4
-B H+092 Spring Trap 7>8
-B H+093 Seeking Air Mine 3>4
-B H+093 Skeleton Trap 1>2
-B H+093 Bomb 6>7
-B H+093 Cannon 19>20
-B H+093 Elixir Collector 15>16
-B H+093 Elixir Collector 15>16
-B H+093 Elixir Collector 15>16
-L H+094 Dragon 8>9
-B H+094 Spring Trap 7>8
-B H+094 Bomb 7>8
-B H+094 Elixir Collector 15>16
-B H+094 Elixir Collector 15>16
-B H+094 Elixir Collector 15>16
-B H+094 Elixir Collector 15>16
-B H+094 Gold Mine 15>16
-B H+095 Skeleton Trap 2>3
+B H+075 Wizard Tower 13>14
+B H+075 Wizard Tower 13>14
+B H+075 Wizard Tower 13>14
+B H+076 Dark Elixir Drill 9>10
+B H+076 Dark Elixir Drill 9>10
+L H+077 Poison Spell 7>8
+P H+077 Electro Owl 7>8
+B H+077 Dark Elixir Drill 9>10
+B H+077 Cannon 17>18
+B H+077 Giant Bomb 4>5
+B H+077 Cannon 17>18
+B H+077 Cannon 17>18
+B H+078 Air Bomb 6>7
+B H+078 Mortar 13>14
+B H+078 Cannon 17>18
+B H+078 Cannon 17>18
+B H+078 Mortar 13>14
+B H+079 Seeking Air Mine 1>2
+B H+079 Elixir Storage 14>15
+B H+079 Giant Bomb 5>6
+B H+079 Mortar 13>14
+B H+079 Mortar 13>14
+B H+080 Elixir Storage 14>15
+B H+080 Elixir Storage 14>15
+B H+080 Elixir Storage 14>15
+B H+081 Gold Storage 14>15
+B H+081 Seeking Air Mine 2>3
+L H+081 Ice Golem 5>6
+P H+081 Electro Owl 8>9
+B H+081 Gold Storage 14>15
+B H+081 Gold Storage 14>15
+B H+082 Gold Storage 14>15
+B H+082 Giant Bomb 5>6
+B H+082 Cannon 18>19
+B H+082 Cannon 18>19
+B H+083 Giant Bomb 5>6
+B H+083 Giant Bomb 5>6
+B H+083 Giant Bomb 5>6
+B H+083 Giant Bomb 6>7
+B H+083 Cannon 18>19
+B H+083 Cannon 18>19
+B H+083 Cannon 18>19
+B H+083 Air Bomb 7>8
+B H+084 Air Bomb 7>8
+B H+084 Air Bomb 7>8
+B H+084 Giant Bomb 6>7
+B H+084 Giant Bomb 6>7
+B H+084 Giant Bomb 6>7
+B H+084 Giant Bomb 6>7
+B H+084 Air Bomb 7>8
+B H+084 Air Bomb 7>8
+B H+084 Giant Bomb 6>7
+B H+084 Giant Bomb 6>7
+B H+084 Spring Trap 7>8
+B H+085 Archer Tower 19>20
+B H+085 Archer Tower 19>20
+B H+085 Archer Tower 19>20
+B H+085 Archer Tower 19>20
+B H+085 Archer Tower 19>20
+L H+086 Bowler 5>6
+B H+086 Archer Tower 19>20
+P H+086 Unicorn 7>8
+B H+086 Archer Tower 19>20
+B H+086 Archer Tower 19>20
+B H+086 Seeking Air Mine 3>4
+B H+086 Seeking Air Mine 3>4
+B H+087 Seeking Air Mine 3>4
+B H+087 Seeking Air Mine 3>4
+B H+087 Seeking Air Mine 3>4
+B H+087 Seeking Air Mine 3>4
+B H+087 Seeking Air Mine 3>4
+B H+088 Seeking Air Mine 3>4
+B H+088 Bomb 1>2
+B H+088 Bomb 2>3
+B H+088 Bomb 3>4
+B H+088 Skeleton Trap 1>2
+B H+088 Bomb 4>5
+B H+088 Cannon 19>20
+B H+088 Bomb 5>6
+B H+088 Elixir Collector 15>16
+B H+088 Spring Trap 7>8
+B H+088 Spring Trap 7>8
+B H+089 Spring Trap 7>8
+B H+089 Spring Trap 7>8
+B H+089 Bomb 6>7
+B H+089 Elixir Collector 15>16
+B H+089 Elixir Collector 15>16
+B H+089 Elixir Collector 15>16
+B H+089 Elixir Collector 15>16
+B H+089 Spring Trap 7>8
+B H+090 Bomb 7>8
+B H+090 Skeleton Trap 2>3
+B H+090 Bomb 8>9
+B H+090 Elixir Collector 15>16
+L H+090 Healing Spell 7>8
+B H+090 Elixir Collector 15>16
+B H+090 Gold Mine 15>16
+B H+090 Gold Mine 15>16
+B H+090 Gold Mine 15>16
+P H+090 Unicorn 8>9
+B H+091 Spring Trap 8>9
+B H+091 Spring Trap 8>9
+B H+091 Spring Trap 8>9
+B H+091 Bomb 9>10
+B H+091 Gold Mine 15>16
+B H+091 Gold Mine 15>16
+B H+091 Gold Mine 15>16
+B H+091 Gold Mine 15>16
+B H+091 Cannon 19>20
+B H+092 Spring Trap 8>9
+B H+092 Cannon 19>20
+B H+092 Cannon 19>20
+B H+092 Cannon 19>20
+B H+092 Cannon 19>20
+B H+092 Cannon 19>20
+B H+093 Bomb 9>10
+B H+093 Giant Bomb 7>8
+B H+093 Giant Bomb 7>8
+B H+093 Giant Bomb 7>8
+B H+093 Giant Bomb 7>8
+B H+093 Giant Bomb 7>8
+B H+094 Spring Trap 8>9
+B H+094 Spring Trap 8>9
+B H+094 Spring Trap 8>9
+L H+094 Hog Rider 10>11
+B H+094 Bomb 9>10
+B H+094 Giant Bomb 7>8
+B H+094 Air Bomb 8>9
+B H+094 Air Bomb 8>9
+B H+094 Air Bomb 8>9
+B H+094 Air Bomb 8>9
 B H+095 Spring Trap 8>9
+P H+095 Electro Owl 9>10
+B H+095 Air Bomb 8>9
+B H+095 Air Bomb 8>9
+B H+095 Air Bomb 8>9
+B H+095 Giant Bomb 7>8
 B H+095 Spring Trap 8>9
-B H+095 Spring Trap 8>9
-B H+095 Gold Mine 15>16
-B H+095 Gold Mine 15>16
-B H+095 Gold Mine 15>16
-B H+095 Gold Mine 15>16
-B H+096 Gold Mine 15>16
-P H+096 Electro Owl 8>9
-B H+096 Spring Trap 8>9
-B H+096 Bomb 8>9
-B H+096 Gold Mine 15>16
-B H+096 Cannon 19>20
-B H+096 Cannon 19>20
-B H+096 Cannon 19>20
-B H+096 Cannon 19>20
-B H+097 Bomb 9>10
-B H+097 Cannon 19>20
-B H+097 Cannon 19>20
-B H+097 Giant Bomb 7>8
-B H+097 Giant Bomb 7>8
-B H+097 Giant Bomb 7>8
-B H+098 Spring Trap 8>9
-B H+098 Spring Trap 8>9
-B H+098 Spring Trap 8>9
-B H+098 Giant Bomb 7>8
-B H+098 Giant Bomb 7>8
-B H+098 Giant Bomb 7>8
-B H+098 Air Bomb 8>9
-B H+099 Air Bomb 8>9
-B H+099 Spring Trap 8>9
-B H+099 Bomb 9>10
-L H+099 Ice Golem 5>6
-B H+099 Air Bomb 8>9
-B H+099 Air Bomb 8>9
-B H+099 Air Bomb 8>9
-B H+099 Air Bomb 8>9
-B H+099 Air Bomb 8>9
-B H+100 Giant Bomb 7>8
-B H+100 Bomb 9>10
-B H+100 Bomb 9>10
-B H+100 Spring Trap 8>9
-B H+100 Bomb 9>10
-B H+100 Bomb 9>10
-B H+100 Bomb 9>10
-B H+101 Bomb 9>10
-B H+101 Skeleton Trap 3>4
-P H+101 Electro Owl 9>10
-L H+104 Minion 8>9
-L H+106 Yeti 3>4
-L H+112 Log Launcher 3>4
-L H+117 Poison Spell 7>8
-L H+122 Bowler 5>6
-L H+127 Flame Flinger 3>4
-L H+132 Baby Dragon 7>8
-L H+137 Wall Breaker 9>10
-L H+141 Hog Rider 10>11
-L H+145 Golem 10>11
-L H+149 Healing Spell 7>8
-L H+153 Clone Spell 6>7
-L H+157 Valkyrie 8>9
-L H+160 Miner 7>8
-L H+165 Minion 9>10
-L H+168 Skeleton Spell 6>7
-L H+171 Archer 9>10
-L H+173 Barbarian 9>10
-L H+175 Giant 9>10
+B H+096 Bomb 9>10
+B H+096 Bomb 9>10
+B H+096 Bomb 9>10
+B H+096 Bomb 9>10
+B H+096 Bomb 9>10
+B H+096 Skeleton Trap 3>4
+L H+097 Clone Spell 6>7
+P H+100 Unicorn 9>10
+L H+101 Wall Breaker 9>10
+L H+104 Golem 9>10
+L H+107 Golem 10>11
+L H+110 Skeleton Spell 6>7
+L H+113 Baby Dragon 6>7
+L H+116 Baby Dragon 7>8
+L H+120 Miner 6>7
+L H+123 Miner 7>8
+L H+127 Log Launcher 1>2
+L H+129 Log Launcher 2>3
+L H+132 Log Launcher 3>4
+L H+137 Flame Flinger 1>2
+L H+140 Flame Flinger 2>3
+L H+143 Flame Flinger 3>4
+L H+148 Giant 9>10
+L H+150 Valkyrie 7>8
+L H+152 Valkyrie 8>9
+L H+155 Archer 9>10
+L H+157 Minion 8>9
+L H+159 Minion 9>10
+L H+162 Barbarian 9>10
 == Builder Base SIXTH · cara b=CHAIN s=CHAIN
 target H+55 · builder H+55 · star lab H+56 · B.O.B H+55 · 75 langkah
 s H+000 Boxer Giant 4>5

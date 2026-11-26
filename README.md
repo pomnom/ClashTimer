@@ -293,6 +293,12 @@ python3 tools/build_gamedata.py --check  # hanya periksa apakah data sudah terba
 python3 tools/build_gamedata.py --validate  # periksa gamedata.json yang ada (tanpa unduh)
 ```
 - Data yang tidak ada di ClashKingAssets (kapasitas gudang, kamp Builder Base) diubah di `tools/overrides.json`.
+- Kesalahan umum ClashKingAssets saat update besar ditambal otomatis oleh skrip:
+  - Level yang dinomori ulang dari 1 → nomor level dari data sebelumnya dipertahankan
+  - Item yang hilang dari sumber → disalin dari data sebelumnya
+  - Bangunan gabungan tanpa syarat Town Hall → Town Hall terbaru
+  - Kapasitas gudang Town Hall baru yang belum diketahui → hanya peringatan; aplikasi tidak membatasi biaya di
+    Town Hall itu sampai angkanya diisi di `tools/overrides.json`
 - Sebelum menulis, skrip memeriksa: upgrade termahal di tiap Town Hall harus muat di gudang maksimal, tabel
   kapasitas mencakup level tertinggi, tidak ada id ganda atau level yang bolong. Bila ada yang gagal, file tidak
   ditulis dan masalahnya ditampilkan.
